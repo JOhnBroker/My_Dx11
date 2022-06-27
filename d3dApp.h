@@ -9,7 +9,12 @@
 #include <DirectXMath.h>
 #include "Mouse.h"
 #include "Keyboard.h"
-#include "GameTimer.h"
+#include "CPUTimer.h"
+#include "DXTrace.h"
+
+#include <imgui.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_win32.h>
 
 // 添加所有要引用的库
 #pragma comment(lib, "d2d1.lib")
@@ -23,7 +28,7 @@
 class D3DApp
 {
 public:
-	D3DApp(HINSTANCE hInstance);    // 在构造函数的初始化列表应当设置好初始参数
+	D3DApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);    // 在构造函数的初始化列表应当设置好初始参数
 	virtual ~D3DApp();
 
 	HINSTANCE AppInst()const;       // 获取应用实例的句柄
@@ -41,9 +46,8 @@ public:
 	// 窗口的消息回调函数
 protected:
 	bool InitMainWindow();      // 窗口初始化
-	bool InitDirect2D();		// Direct2D初始化
 	bool InitDirect3D();        // Direct3D初始化
-
+	bool InitImGui();           // ImGui初始化
 
 	void CalculateFrameStats(); // 计算每秒帧数并在窗口显示
 
@@ -58,16 +62,13 @@ protected:
 	bool	  m_Enable4xMsaa;	 // 是否开启4倍多重采样
 	UINT      m_4xMsaaQuality;   // MSAA支持的质量等级
 
-	GameTimer m_Timer;           // 计时器
+	CpuTimer m_Timer;           // 计时器
 
 
 	// 使用模板别名(C++11)简化类型名
 	template <class T>
 	using ComPtr = Microsoft::WRL::ComPtr<T>;
-	// Direct2D
-	ComPtr<ID2D1Factory> m_pd2dFactory;							// D2D工厂
-	ComPtr<ID2D1RenderTarget> m_pd2dRenderTarget;				// D2D渲染目标
-	ComPtr<IDWriteFactory> m_pdwriteFactory;					// DWrite工厂
+
 	// Direct3D 11
 	ComPtr<ID3D11Device> m_pd3dDevice;							// D3D11设备
 	ComPtr<ID3D11DeviceContext> m_pd3dImmediateContext;			// D3D11设备上下文

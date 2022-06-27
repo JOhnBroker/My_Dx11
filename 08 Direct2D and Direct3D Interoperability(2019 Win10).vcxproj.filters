@@ -21,7 +21,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GameTimer.cpp">
+    <ClCompile Include="CpuTimer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp">
@@ -60,9 +60,12 @@
     <ClCompile Include="WICTextureLoader.cpp">
       <Filter>通用文件</Filter>
     </ClCompile>
+    <ClCompile Include="WinMin.h">
+      <Filter>头文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GameTimer.h">
+    <ClInclude Include="CpuTimer.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="GameApp.h">
