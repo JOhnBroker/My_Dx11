@@ -33,7 +33,7 @@ bool GameApp::Init()
 void GameApp::OnResize()
 {
 	D3DApp::OnResize();
-	if (m_pCamera != nullptr) 
+	if (m_pCamera != nullptr)
 	{
 		// 更新摄像机参数
 		m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
@@ -55,26 +55,26 @@ void GameApp::UpdateScene(float dt)
 	Transform& woodCrateTransform = m_WoodCrate.GetTransform();
 
 	ImGuiIO& io = ImGui::GetIO();
-	if (m_CameraMode == CameraMode::FirstPerson || m_CameraMode == CameraMode::Free) 
+	if (m_CameraMode == CameraMode::FirstPerson || m_CameraMode == CameraMode::Free)
 	{
 		float d1 = 0.0f, d2 = 0.0f;
-		//if (ImGui::IsKeyDown('W')) 
-		//{
-		//	d1 += dt;
-		//}
-		//if (ImGui::IsKeyDown('S'))
-		//{
-		//	d1 -= dt;
-		//}
-		//if (ImGui::IsKeyDown('A'))
-		//{
-		//	d2 -= dt;
-		//}
-		//if (ImGui::IsKeyDown('D'))
-		//{
-		//	d2 += dt;
-		//}
-		if (m_CameraMode == CameraMode::FirstPerson) 
+		if (ImGui::IsKeyDown('W'))
+		{
+			d1 += dt;
+		}
+		if (ImGui::IsKeyDown('S'))
+		{
+			d1 -= dt;
+		}
+		if (ImGui::IsKeyDown('A'))
+		{
+			d2 -= dt;
+		}
+		if (ImGui::IsKeyDown('D'))
+		{
+			d2 += dt;
+		}
+		if (m_CameraMode == CameraMode::FirstPerson)
 		{
 			cam1st->Walk(d1 * 6.0f);
 		}
@@ -89,20 +89,20 @@ void GameApp::UpdateScene(float dt)
 		cam1st->SetPosition(adjustedPos);
 
 		//仅在第一人称模式移动摄像机的同时移动箱子
-		if (m_CameraMode == CameraMode::FirstPerson) 
+		if (m_CameraMode == CameraMode::FirstPerson)
 		{
 			woodCrateTransform.SetPosition(adjustedPos);
 		}
-		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) 
+		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
 		{
 			cam1st->Pitch(io.MouseDelta.y * 0.01f);
 			cam1st->RotateY(io.MouseDelta.x * 0.01f);
 		}
 	}
-	else if (m_CameraMode == CameraMode::ThirdPerson) 
+	else if (m_CameraMode == CameraMode::ThirdPerson)
 	{
 		cam3rd->SetTarget(woodCrateTransform.GetPosition());
-		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) 
+		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
 		{
 			cam3rd->RotateX(io.MouseDelta.y * 0.01f);
 			cam3rd->RotateY(io.MouseDelta.x * 0.01f);
@@ -269,7 +269,7 @@ bool GameApp::InitResource()
 	m_WoodCrate.SetTexture(texture.Get());
 
 	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\floor.dds", nullptr, texture.GetAddressOf()));
-	m_Floor.SetBuffer(m_pd3dDevice.Get(), Geometry::CreatePlane(XMFLOAT2(20.0f,20.0f),XMFLOAT2(5.0f,5.0f)));
+	m_Floor.SetBuffer(m_pd3dDevice.Get(), Geometry::CreatePlane(XMFLOAT2(20.0f, 20.0f), XMFLOAT2(5.0f, 5.0f)));
 	m_Floor.SetTexture(texture.Get());
 	m_Floor.GetTransform().SetPosition(0.0f, -1.0f, 0.0f);
 
@@ -298,7 +298,7 @@ bool GameApp::InitResource()
 	// 初始化常量缓冲区的值
 	//every frame
 	m_CameraMode = CameraMode::FirstPerson;
-    auto camera = std::make_shared<FirstPersonCamera>();
+	auto camera = std::make_shared<FirstPersonCamera>();
 	m_pCamera = camera;
 	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
 	camera->LookAt(XMFLOAT3(), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
@@ -317,7 +317,7 @@ bool GameApp::InitResource()
 	m_CBRarely.pointLight[0].ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_CBRarely.pointLight[0].diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 	m_CBRarely.pointLight[0].specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-    m_CBRarely.pointLight[0].att = XMFLOAT3(0.0f, 0.1f, 0.0f);
+	m_CBRarely.pointLight[0].att = XMFLOAT3(0.0f, 0.1f, 0.0f);
 	m_CBRarely.pointLight[0].range = 25.0f;
 
 	m_CBRarely.numDirLight = 1;
@@ -337,7 +337,7 @@ bool GameApp::InitResource()
 	HR(m_pd3dImmediateContext->Map(m_pConstantBuffers[3].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
 	memcpy_s(mappedData.pData, sizeof(CBChangesRarely), &m_CBRarely, sizeof(CBChangesRarely));
 	m_pd3dImmediateContext->Unmap(m_pConstantBuffers[3].Get(), 0);
-	
+
 	// ******************
 	// 给渲染管线各个阶段绑定好所需资源
 	// 设置图元类型，设定输入布局

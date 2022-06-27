@@ -3,8 +3,6 @@
 #ifndef WINMAIN_H
 #define WINMAIN_H
 
-#define IMGUI_DISABLE_OBSOLETE_KEYIO
-
 // 定义下面这些宏以去掉Windows中那些没用的组件
 
 #ifndef FULL_WINTARD
