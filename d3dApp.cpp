@@ -31,7 +31,7 @@ MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 D3DApp::D3DApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight)
 	: m_hAppInst(hInstance),
-	m_MainWndCaption(L"Texture Mapping"),
+	m_MainWndCaption(L"Camera"),
 	m_ClientWidth(initWidth),
 	m_ClientHeight(initHeight),
 	m_hMainWnd(nullptr),
@@ -130,10 +130,6 @@ bool D3DApp::Init()
 
 	if (!InitImGui())
 		return false;
-
-	// 初始化鼠标，键盘不需要
-	m_pMouse->SetWindow(m_hMainWnd);
-	m_pMouse->SetMode(DirectX::Mouse::MODE_RELATIVE);
 
 	return true;
 }
@@ -332,36 +328,36 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		((MINMAXINFO*)lParam)->ptMinTrackSize.y = 200;
 		return 0;
 	
-		// 监测这些键盘/鼠标事件
-	case WM_INPUT:
+	//	// 监测这些键盘/鼠标事件
+	//case WM_INPUT:
 
-	case WM_LBUTTONDOWN:
-	case WM_MBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-	case WM_XBUTTONDOWN:
+	//case WM_LBUTTONDOWN:
+	//case WM_MBUTTONDOWN:
+	//case WM_RBUTTONDOWN:
+	//case WM_XBUTTONDOWN:
 
-	case WM_LBUTTONUP:
-	case WM_MBUTTONUP:
-	case WM_RBUTTONUP:
-	case WM_XBUTTONUP:
+	//case WM_LBUTTONUP:
+	//case WM_MBUTTONUP:
+	//case WM_RBUTTONUP:
+	//case WM_XBUTTONUP:
 
-	case WM_MOUSEWHEEL:
-	case WM_MOUSEHOVER:
-	case WM_MOUSEMOVE:
-		m_pMouse->ProcessMessage(msg, wParam, lParam);
-		return 0;
+	//case WM_MOUSEWHEEL:
+	//case WM_MOUSEHOVER:
+	//case WM_MOUSEMOVE:
+	//	m_pMouse->ProcessMessage(msg, wParam, lParam);
+	//	return 0;
 
-	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN:
-	case WM_KEYUP:
-	case WM_SYSKEYUP:
-		m_pKeyboard->ProcessMessage(msg, wParam, lParam);
-		return 0;
+	//case WM_KEYDOWN:
+	//case WM_SYSKEYDOWN:
+	//case WM_KEYUP:
+	//case WM_SYSKEYUP:
+	//	m_pKeyboard->ProcessMessage(msg, wParam, lParam);
+	//	return 0;
 
-	case WM_ACTIVATEAPP:
-		m_pMouse->ProcessMessage(msg, wParam, lParam);
-		m_pKeyboard->ProcessMessage(msg, wParam, lParam);
-		return 0;
+	//case WM_ACTIVATEAPP:
+	//	m_pMouse->ProcessMessage(msg, wParam, lParam);
+	//	m_pKeyboard->ProcessMessage(msg, wParam, lParam);
+	//	return 0;
 	}
 
 	return DefWindowProc(hwnd, msg, wParam, lParam);
