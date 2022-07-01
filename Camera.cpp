@@ -125,7 +125,7 @@ void FirstPersonCamera::LookAt(const DirectX::XMFLOAT3& pos, const DirectX::XMFL
 void FirstPersonCamera::LookTo(const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& to, const DirectX::XMFLOAT3& up)
 {
 	m_Transform.SetPosition(pos);
-	m_Transform.LookAt(to, up);
+    m_Transform.LookTo(to, up);
 }
 
 void FirstPersonCamera::Strafe(float d)

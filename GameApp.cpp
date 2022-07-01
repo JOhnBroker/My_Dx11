@@ -1,11 +1,12 @@
 #include "GameApp.h"
 #include "d3dUtil.h"
 #include "DXTrace.h"
+#include <RenderStates.h>
 using namespace DirectX;
 
 GameApp::GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight)
 	: D3DApp(hInstance, windowName, initWidth, initHeight),
-	m_CameraMode(CameraMode::FirstPerson),
+    m_CameraMode(CameraMode::ThirdPerson),
 	m_CBFrame(),
 	m_CBOnResize(),
 	m_CBRarely()
@@ -52,7 +53,26 @@ void GameApp::UpdateScene(float dt)
 	auto cam1st = std::dynamic_pointer_cast<FirstPersonCamera>(m_pCamera);
 	auto cam3rd = std::dynamic_pointer_cast<ThirdPersonCamera>(m_pCamera);
 
-	Transform& woodCrateTransform = m_WoodCrate.GetTransform();
+	ImGuiIO& io = ImGui::GetIO();
+	// 绕物体旋转
+	if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+	{
+		cam3rd->RotateX(io.MouseDelta.y * 0.01f);
+		cam3rd->RotateY(io.MouseDelta.x * 0.01f);
+	}
+	cam3rd->Approach(-io.MouseWheel * 1.0f);
+
+	if (ImGui::Begin("Blending"))
+	{
+		ImGui::Text("Third Person Mode");
+		ImGui::Text("Hold the right mouse button and drag the view");
+	}
+	ImGui::End();
+	ImGui::Render();
+
+	/*
+	m_CameraMode = CameraMode::ThirdPerson;
+	Transform& woodCrateTransform = m_WireFence.GetTransform();
 
 	ImGuiIO& io = ImGui::GetIO();
 	if (m_CameraMode == CameraMode::FirstPerson || m_CameraMode == CameraMode::Free)
@@ -111,7 +131,7 @@ void GameApp::UpdateScene(float dt)
 	}
 
 	//更新观察矩阵
-	XMStoreFloat4(&m_CBFrame.eyePos, m_pCamera->GetPositionXM());
+	m_CBFrame.eyePos = m_pCamera->GetPositionXM();
 	m_CBFrame.view = XMMatrixTranspose(m_pCamera->GetViewXM());
 
 	if (ImGui::Begin("Camera"))
@@ -183,6 +203,10 @@ void GameApp::UpdateScene(float dt)
 	}
 	ImGui::End();
 	ImGui::Render();
+	*/
+
+	m_CBFrame.eyePos = m_pCamera->GetPositionXM();
+	m_CBFrame.view = XMMatrixTranspose(m_pCamera->GetViewXM());
 
 	D3D11_MAPPED_SUBRESOURCE mappedData;
 	HR(m_pd3dImmediateContext->Map(m_pConstantBuffers[1].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
@@ -198,13 +222,27 @@ void GameApp::DrawScene()
 	m_pd3dImmediateContext->ClearRenderTargetView(m_pRenderTargetView.Get(), reinterpret_cast<const float*>(&Colors::Black));
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	// 绘制几何模型
-	m_WoodCrate.Draw(m_pd3dImmediateContext.Get());
-	m_Floor.Draw(m_pd3dImmediateContext.Get());
+	//渲染不透明物体
+	m_pd3dImmediateContext->RSSetState(nullptr);
+	m_pd3dImmediateContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+
 	for (auto& wall : m_Walls)
 	{
 		wall.Draw(m_pd3dImmediateContext.Get());
 	}
+	m_Floor.Draw(m_pd3dImmediateContext.Get());
+
+	//渲染透明物体
+	m_pd3dImmediateContext->RSSetState(RenderStates::RSNoCull.Get());
+	m_pd3dImmediateContext->OMSetBlendState(RenderStates::BSTransparent.Get(), nullptr, 0xFFFFFFFF);
+
+	Transform& wireFrameTransform = m_WireFence.GetTransform();
+	wireFrameTransform.SetPosition(2.0f, 0.01f, 0.0f);
+	m_WireFence.Draw(m_pd3dImmediateContext.Get());
+	wireFrameTransform.SetPosition(-2.0f, -0.01f, 0.0f);
+	m_WireFence.Draw(m_pd3dImmediateContext.Get());
+
+	m_Water.Draw(m_pd3dImmediateContext.Get());
 
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -264,46 +302,54 @@ bool GameApp::InitResource()
 
 	//初始化游戏对象
 	ComPtr<ID3D11ShaderResourceView> texture;
-	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\WoodCrate.dds", nullptr, texture.GetAddressOf()));
-	m_WoodCrate.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateBox());
-	m_WoodCrate.SetTexture(texture.Get());
+	Material material{};
+	material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	material.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 16.0f);
 
-	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\floor.dds", nullptr, texture.GetAddressOf()));
+	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\WireFence.dds", nullptr, texture.GetAddressOf()));
+	m_WireFence.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateBox());
+	m_WireFence.SetTexture(texture.Get());
+	m_WireFence.SetMaterial(material);
+
+	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\floor.dds", nullptr, texture.ReleaseAndGetAddressOf()));
 	m_Floor.SetBuffer(m_pd3dDevice.Get(),
 		Geometry::CreatePlane(XMFLOAT2(20.0f, 20.0f), XMFLOAT2(5.0f, 5.0f)));
 	m_Floor.SetTexture(texture.Get());
+	m_Floor.SetMaterial(material);
 	m_Floor.GetTransform().SetPosition(0.0f, -1.0f, 0.0f);
 
 	m_Walls.resize(4);
-	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\brick.dds", nullptr, texture.GetAddressOf()));
+	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\brick.dds", nullptr, texture.ReleaseAndGetAddressOf()));
 	for (int i = 0; i < 4; ++i)
 	{
-		m_Walls[i].SetBuffer(m_pd3dDevice.Get(), 
+		m_Walls[i].SetBuffer(m_pd3dDevice.Get(),
 			Geometry::CreatePlane(XMFLOAT2(20.0f, 8.0f), XMFLOAT2(5.0f, 1.5f)));
+		m_Walls[i].SetMaterial(material);
 		Transform& transform = m_Walls[i].GetTransform();
 		transform.SetRotation(-XM_PIDIV2, XM_PIDIV2 * i, 0.0f);
 		transform.SetPosition(i % 2 ? -10.0f * (i - 2) : 0.0f, 3.0f, i % 2 == 0 ? -10.0f * (i - 1) : 0.0f);
 		m_Walls[i].SetTexture(texture.Get());
 	}
-
-	D3D11_SAMPLER_DESC sampDesc;
-	ZeroMemory(&sampDesc, sizeof(sampDesc));
-	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	sampDesc.MinLOD = 0;
-	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	HR(m_pd3dDevice->CreateSamplerState(&sampDesc, m_pSamplerState.GetAddressOf()));
+	//Water
+	material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	material.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+	material.specular = XMFLOAT4(0.8f, 0.8f, 0.8f, 32.0f);
+	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"Texture\\water.dds", nullptr, texture.ReleaseAndGetAddressOf()));
+	m_Water.SetBuffer(m_pd3dDevice.Get(),
+		Geometry::CreatePlane(XMFLOAT2(20.0f, 20.0f), XMFLOAT2(10.0f, 10.0f)));
+	m_Water.SetTexture(texture.Get());
+	m_Water.SetMaterial(material);
 
 	// 初始化常量缓冲区的值
 	//every frame
-	m_CameraMode = CameraMode::FirstPerson;
-	auto camera = std::make_shared<FirstPersonCamera>();
+	auto camera = std::make_shared<ThirdPersonCamera>();
 	m_pCamera = camera;
 	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
-	camera->LookAt(XMFLOAT3(), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	camera->SetTarget(XMFLOAT3(0.0f, 0.5f, 0.0f));
+	camera->SetDistance(8.0f);
+	camera->SetDistanceMinMax(2.0f, 14.0f);
+	camera->SetRotationX(XM_PIDIV4);
 
 	//OnResize
 	m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
@@ -315,6 +361,7 @@ bool GameApp::InitResource()
 	m_CBRarely.dirLight[0].diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 	m_CBRarely.dirLight[0].specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_CBRarely.dirLight[0].direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
 	m_CBRarely.pointLight[0].position = XMFLOAT3(0.0f, 10.0f, 0.0f);
 	m_CBRarely.pointLight[0].ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_CBRarely.pointLight[0].diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
@@ -325,10 +372,6 @@ bool GameApp::InitResource()
 	m_CBRarely.numDirLight = 1;
 	m_CBRarely.numPointLight = 1;
 	m_CBRarely.numSpotLight = 0;
-	// 初始化材质
-	m_CBRarely.material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_CBRarely.material.diffuse = XMFLOAT4(0.6f, 0.6f, 0.6f, 1.0f);
-	m_CBRarely.material.specular = XMFLOAT4(0.1f, 0.1f, 0.1f, 50.0f);
 
 	// 更新不容易被修改的常量缓冲区资源
 	D3D11_MAPPED_SUBRESOURCE mappedData;
@@ -340,22 +383,30 @@ bool GameApp::InitResource()
 	memcpy_s(mappedData.pData, sizeof(CBChangesRarely), &m_CBRarely, sizeof(CBChangesRarely));
 	m_pd3dImmediateContext->Unmap(m_pConstantBuffers[3].Get(), 0);
 
+	RenderStates::InitAll(m_pd3dDevice.Get());
+
 	// ******************
 	// 给渲染管线各个阶段绑定好所需资源
 	// 设置图元类型，设定输入布局
 	m_pd3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pd3dImmediateContext->IASetInputLayout(m_pVertexLayout3D.Get());
-	// 将着色器绑定到渲染管线
-	m_pd3dImmediateContext->VSSetShader(m_pVertexShader3D.Get(), nullptr, 0);
 	// VS常量缓冲区对应HLSL寄存于b0的常量缓冲区
 	m_pd3dImmediateContext->VSSetConstantBuffers(0, 1, m_pConstantBuffers[0].GetAddressOf());
 	m_pd3dImmediateContext->VSSetConstantBuffers(1, 1, m_pConstantBuffers[1].GetAddressOf());
 	m_pd3dImmediateContext->VSSetConstantBuffers(2, 1, m_pConstantBuffers[2].GetAddressOf());
+	// 将着色器绑定到渲染管线
+	m_pd3dImmediateContext->VSSetShader(m_pVertexShader3D.Get(), nullptr, 0);
+
+	m_pd3dImmediateContext->RSSetState(RenderStates::RSNoCull.Get());
+
 	// PS常量缓冲区对应HLSL寄存于b1的常量缓冲区
+	m_pd3dImmediateContext->PSSetConstantBuffers(0, 1, m_pConstantBuffers[0].GetAddressOf());
 	m_pd3dImmediateContext->PSSetConstantBuffers(1, 1, m_pConstantBuffers[1].GetAddressOf());
 	m_pd3dImmediateContext->PSSetConstantBuffers(3, 1, m_pConstantBuffers[3].GetAddressOf());
 	m_pd3dImmediateContext->PSSetShader(m_pPixelShader3D.Get(), nullptr, 0);
-	m_pd3dImmediateContext->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+	m_pd3dImmediateContext->PSSetSamplers(0, 1, RenderStates::SSLinearWrap.GetAddressOf());
+
+	m_pd3dImmediateContext->OMSetBlendState(RenderStates::BSTransparent.Get(), nullptr, 0xFFFFFFFF);
 
 	// ******************
 	// 设置调试对象名
@@ -370,9 +421,9 @@ bool GameApp::InitResource()
 	D3D11SetDebugObjectName(m_pVertexShader3D.Get(), "Basic_VS_3D");
 	D3D11SetDebugObjectName(m_pPixelShader2D.Get(), "Basic_PS_2D");
 	D3D11SetDebugObjectName(m_pPixelShader3D.Get(), "Basic_PS_3D");
-	D3D11SetDebugObjectName(m_pSamplerState.Get(), "SSLinearWrap");
 	m_Floor.SetDebugObjectName("Floor");
-	m_WoodCrate.SetDebugObjectName("WoodCrate");
+	m_WireFence.SetDebugObjectName("WireFence");
+	m_Water.SetDebugObjectName("Water");
 	m_Walls[0].SetDebugObjectName("Walls[0]");
 	m_Walls[1].SetDebugObjectName("Walls[1]");
 	m_Walls[2].SetDebugObjectName("Walls[2]");
@@ -406,6 +457,11 @@ void GameApp::GameObject::SetTexture(ID3D11ShaderResourceView* texture)
 	m_pTexture = texture;
 }
 
+void GameApp::GameObject::SetMaterial(const Material& material)
+{
+	m_Material = material;
+}
+
 void GameApp::GameObject::Draw(ID3D11DeviceContext* deviceContext)
 {
 	// 输入装配阶段的顶点缓冲区设置
@@ -422,7 +478,7 @@ void GameApp::GameObject::Draw(ID3D11DeviceContext* deviceContext)
 	XMMATRIX W = m_Transform.GetLocalToWorldMatrixXM();
 	cbDrawing.world = XMMatrixTranspose(W);
 	cbDrawing.worldInvTranspose = XMMatrixTranspose(InverseTranspose(W));
-
+    cbDrawing.material = m_Material;
 	// 更新常量缓冲区
 	D3D11_MAPPED_SUBRESOURCE mappedData;
 	HR(deviceContext->Map(cBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));

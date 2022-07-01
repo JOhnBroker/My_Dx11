@@ -384,19 +384,24 @@ bool D3DApp::InitMainWindow()
 		return false;
 	}
 
-	// Compute window rectangle dimensions based on requested client area dimensions.
-	RECT R = { 0, 0, m_ClientWidth, m_ClientHeight };
-	AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
-	int width = R.right - R.left;
-	int height = R.bottom - R.top;
+    // 将窗口调整到中心
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-	m_hMainWnd = CreateWindow(L"D3DWndClassName", m_MainWndCaption.c_str(),
-		WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_hAppInst, 0);
-	if (!m_hMainWnd)
-	{
-		MessageBox(0, L"CreateWindow Failed.", 0, 0);
-		return false;
-	}
+    // Compute window rectangle dimensions based on requested client area dimensions.
+    RECT R = { 0, 0, m_ClientWidth, m_ClientHeight };
+    AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
+    int width = R.right - R.left;
+    int height = R.bottom - R.top;
+
+    m_hMainWnd = CreateWindow(L"D3DWndClassName", m_MainWndCaption.c_str(),
+        WS_OVERLAPPEDWINDOW, (screenWidth - width) / 2, (screenHeight - height) / 2, width, height, 0, 0, m_hAppInst, 0);
+
+    if (!m_hMainWnd)
+    {
+        MessageBox(0, L"CreateWindow Failed.", 0, 0);
+        return false;
+    }
 
 	ShowWindow(m_hMainWnd, SW_SHOW);
 	UpdateWindow(m_hMainWnd);
@@ -467,7 +472,7 @@ bool D3DApp::InitDirect3D()
 
 	// 检测 MSAA支持的质量等级
 	m_pd3dDevice->CheckMultisampleQualityLevels(
-		DXGI_FORMAT_B8G8R8A8_UNORM, 4, &m_4xMsaaQuality);	// 注意此处DXGI_FORMAT_B8G8R8A8_UNORM
+        DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m_4xMsaaQuality);
 	assert(m_4xMsaaQuality > 0);
 
 
