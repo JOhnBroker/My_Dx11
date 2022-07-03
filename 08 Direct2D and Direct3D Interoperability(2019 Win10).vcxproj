@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BasicEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="d3dApp.cpp" />
     <ClCompile Include="d3dUtil.cpp" />
@@ -177,6 +178,8 @@
     <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="DXTrace.h" />
+    <ClInclude Include="EffectHelper.h" />
+    <ClInclude Include="Effects.h" />
     <ClInclude Include="GameApp.h" />
     <ClInclude Include="CpuTimer.h" />
     <ClInclude Include="Geometry.h" />
