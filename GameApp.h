@@ -29,6 +29,9 @@ private:
 	GameObject m_Floor;										    // 地板
 	std::vector<GameObject> m_Walls;							// 墙壁
 	GameObject m_Mirror;										// 镜面
+	GameObject m_BoltAnim;										// 闪电动画
+
+	std::vector<ComPtr<ID3D11ShaderResourceView>> m_BoltSRVs;	//闪电动画纹理
 
 	Material m_ShadowMat;									    // 阴影材质
 	Material m_WoodCrateMat;									// 木盒材质

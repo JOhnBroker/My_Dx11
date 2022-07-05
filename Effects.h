@@ -49,6 +49,14 @@ public:
 	void SetRenderDefaultWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
 	// 对指定模板值的区域进行绘制，采用Alpha混合
 	void SetRenderAlphaBlendWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
+	// 绘制闪电动画所需要的特效，关闭深度测试
+	void SetDrawBoltAnimNoDepthTest(ID3D11DeviceContext* deviceContext);
+	// 绘制闪电动画所需要的特效，关闭深度写入
+	void SetDrawBoltAnimNoDepthWrite(ID3D11DeviceContext* deviceContext);
+	// 绘制闪电动画所需要的特效，关闭深度测试，对指定模板值区域进行绘制
+	void SetDrawBoltAnimNoDepthTestWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
+	// 绘制闪电动画所需要的特效，关闭深度写入，对指定模板值区域进行绘制
+	void SetDrawBoltAnimNoDepthWriteWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
 	// 2D默认状态绘制
 	void Set2DRenderDefault(ID3D11DeviceContext* deviceContext);
 	// 2D混合绘制
@@ -68,11 +76,11 @@ public:
 	static const int maxLights = 5;
 
 	void SetDirLight(size_t pos, const DirectionalLight& dirLight);
-	void SetPointLight(size_t pos, const PointLight& dirLight);
-	void SetSpotLight(size_t pos, const SpotLight& dirLight);
+    void SetPointLight(size_t pos, const PointLight& pointLight);
+    void SetSpotLight(size_t pos, const SpotLight& spotLight);
 
 	void SetMaterial(const Material& material);
-	void SetTexture(ID3D11ShaderResourceView* textuer);
+    void SetTexture(ID3D11ShaderResourceView * texture);
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 
 	// 状态开关设置

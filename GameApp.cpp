@@ -51,10 +51,8 @@ void GameApp::UpdateScene(float dt)
 	auto cam3rd = std::dynamic_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto cam1st = std::dynamic_pointer_cast<FirstPersonCamera>(m_pCamera);
 
-	Transform& woodCrateTransform = m_WoodCrate.GetTransform();
-
 	ImGuiIO& io = ImGui::GetIO();
-	if (m_CameraMode == CameraMode::FirstPerson || m_CameraMode == CameraMode::Free)
+	if (m_CameraMode == CameraMode::Free)
 	{
 		// 第一人称/自由摄像机的操作
 		float d1 = 0.0f, d2 = 0.0f;
@@ -67,21 +65,8 @@ void GameApp::UpdateScene(float dt)
 		if (ImGui::IsKeyDown(ImGuiKey_D))
 			d2 += dt;
 
-		if (m_CameraMode == CameraMode::FirstPerson)
-			cam1st->Walk(d1 * 6.0f);
-		else
-			cam1st->MoveForward(d1 * 6.0f);
+		cam1st->MoveForward(d1 * 6.0f);
 		cam1st->Strafe(d2 * 6.0f);
-
-		// 将位置限制在[-8.9f, 8.9f]的区域内
-		// 不允许穿地
-		XMFLOAT3 adjustedPos;
-		XMStoreFloat3(&adjustedPos, XMVectorClamp(cam1st->GetPositionXM(), XMVectorSet(-8.9f, 0.0f, -8.9f, 0.0f), XMVectorReplicate(8.9f)));
-		cam1st->SetPosition(adjustedPos);
-
-		// 仅在第一人称模式移动箱子
-		if (m_CameraMode == CameraMode::FirstPerson)
-			woodCrateTransform.SetPosition(adjustedPos);
 
 		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
 		{
@@ -92,7 +77,8 @@ void GameApp::UpdateScene(float dt)
 	else if (m_CameraMode == CameraMode::ThirdPerson)
 	{
 		// 第三人称摄像机的操作
-		cam3rd->SetTarget(woodCrateTransform.GetPosition());
+		XMFLOAT3 target = m_BoltAnim.GetTransform().GetPosition();
+		cam3rd->SetTarget(target);
 
 		// 绕物体旋转
 		if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
@@ -103,40 +89,19 @@ void GameApp::UpdateScene(float dt)
 		cam3rd->Approach(-io.MouseWheel * 1.0f);
 	}
 
-	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewXM());
-	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
-
-
-	if (ImGui::Begin("Living without FX11"))
+	if (ImGui::Begin("Depth Test"))
 	{
 		ImGui::Text("W/S/A/D in FPS/Free camera");
 		ImGui::Text("Hold the right mouse button and drag the view");
-		ImGui::Text("The box moves only at First Person mode");
 
-		static int curr_item = 1;
+		static int curr_item = 0;
 		static const char* modes[] = {
-			"First Person",
 			"Third Person",
 			"Free Camera"
 		};
 		if (ImGui::Combo("Camera Mode", &curr_item, modes, ARRAYSIZE(modes)))
 		{
-			if (curr_item == 0 && m_CameraMode != CameraMode::FirstPerson)
-			{
-				if (!cam1st)
-				{
-					cam1st = std::make_shared<FirstPersonCamera>();
-					cam1st->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
-					m_pCamera = cam1st;
-				}
-
-				cam1st->LookTo(woodCrateTransform.GetPosition(),
-					XMFLOAT3(0.0f, 0.0f, 1.0f),
-					XMFLOAT3(0.0f, 1.0f, 0.0f));
-
-				m_CameraMode = CameraMode::FirstPerson;
-			}
-			else if (curr_item == 1 && m_CameraMode != CameraMode::ThirdPerson)
+			if (curr_item == 0 && m_CameraMode != CameraMode::ThirdPerson)
 			{
 				if (!cam3rd)
 				{
@@ -144,14 +109,15 @@ void GameApp::UpdateScene(float dt)
 					cam3rd->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
 					m_pCamera = cam3rd;
 				}
-				XMFLOAT3 target = woodCrateTransform.GetPosition();
+				XMFLOAT3 target = m_BoltAnim.GetTransform().GetPosition();
 				cam3rd->SetTarget(target);
 				cam3rd->SetDistance(5.0f);
 				cam3rd->SetDistanceMinMax(2.0f, 14.0f);
+				cam3rd->SetRotationX(XM_PIDIV4);
 
 				m_CameraMode = CameraMode::ThirdPerson;
 			}
-			else if (curr_item == 2 && m_CameraMode != CameraMode::Free)
+			else if (curr_item == 1 && m_CameraMode != CameraMode::Free)
 			{
 				if (!cam1st)
 				{
@@ -159,12 +125,12 @@ void GameApp::UpdateScene(float dt)
 					cam1st->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
 					m_pCamera = cam1st;
 				}
-				// 从箱子上方开始
-				XMFLOAT3 pos = woodCrateTransform.GetPosition();
-				XMFLOAT3 to = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
+				// 从闪电动画上方开始
+				XMFLOAT3 pos = m_BoltAnim.GetTransform().GetPosition();
+				XMFLOAT3 look{ 0.0f, 0.0f, 1.0f };
+				XMFLOAT3 up{ 0.0f, 1.0f, 0.0f };
 				pos.y += 3;
-				cam1st->LookTo(pos, to, up);
+				cam1st->LookTo(pos, look, up);
 
 				m_CameraMode = CameraMode::Free;
 			}
@@ -172,6 +138,18 @@ void GameApp::UpdateScene(float dt)
 	}
 	ImGui::End();
 	ImGui::Render();
+
+	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewXM());
+
+	static int currBoltFrame = 0;
+	static float frameTime = 0.0f;
+	m_BoltAnim.SetTexture(m_BoltSRVs[currBoltFrame].Get());
+	if (frameTime > 1.0f / 30)
+	{
+		currBoltFrame = (currBoltFrame + 1) % 60;
+		frameTime -= 1.0f / 30;
+	}
+	frameTime += dt;
 }
 
 void GameApp::DrawScene()
@@ -220,11 +198,12 @@ void GameApp::DrawScene()
 	// ******************
 	// 4. 绘制透明镜面
 	//
+	m_BasicEffect.SetDrawBoltAnimNoDepthWriteWithStencil(m_pd3dImmediateContext.Get(), 1);
+	m_BoltAnim.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 
 	// 关闭反射绘制
 	m_BasicEffect.SetReflectionState(false);
 	m_BasicEffect.SetRenderAlphaBlendWithStencil(m_pd3dImmediateContext.Get(), 1);
-
 	m_Mirror.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 
 	// ******************
@@ -249,6 +228,12 @@ void GameApp::DrawScene()
 	m_BasicEffect.SetShadowState(false);		// 阴影关闭
 	m_WoodCrate.SetMaterial(m_WoodCrateMat);
 
+	//
+	//m_BasicEffect.SetDrawBoltAnimNoDepthWrite(m_pd3dImmediateContext.Get());
+
+	m_BasicEffect.SetDrawBoltAnimNoDepthTest(m_pd3dImmediateContext.Get());
+	m_BoltAnim.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	HR(m_pSwapChain->Present(0, 0));
@@ -272,11 +257,23 @@ bool GameApp::InitResource()
 	m_ShadowMat.diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.5f);
 	m_ShadowMat.specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 16.0f);
 
+	m_BoltSRVs.assign(60, nullptr);
+	wchar_t wstr[50];
+	// 初始化闪电
+	for (int i = 1; i <= 60; ++i)
+	{
+		wsprintf(wstr, L".\\Texture\\BoltAnim\\Bolt%03d.bmp", i);
+		HR(CreateWICTextureFromFile(m_pd3dDevice.Get(), wstr, nullptr, m_BoltSRVs[static_cast<size_t>(i) - 1].GetAddressOf()));
+	}
+	m_BoltAnim.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateCylinderNoCap(4.0f, 4.0f));
+	m_BoltAnim.GetTransform().SetPosition(0.0f, 2.01f, 0.0f);
+	m_BoltAnim.SetMaterial(material);
+
 	// 初始化木盒
 	HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L".\\Texture\\WoodCrate.dds", nullptr, texture.GetAddressOf()));
 	m_WoodCrate.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateBox());
 	// 抬起高度避免深度缓冲区资源争夺
-	m_WoodCrate.GetTransform().SetPosition(0.0f, 0.01f, 5.0f);
+	m_WoodCrate.GetTransform().SetPosition(0.0f, 0.01f, 0.0f);
 	m_WoodCrate.SetTexture(texture.Get());
 	m_WoodCrate.SetMaterial(material);
 
@@ -340,6 +337,7 @@ bool GameApp::InitResource()
 	auto camera = std::make_shared<ThirdPersonCamera>();
 	m_pCamera = camera;
 	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
+	camera->SetTarget(m_BoltAnim.GetTransform().GetPosition());
 	camera->SetDistance(5.0f);
 	camera->SetDistanceMinMax(2.0f, 14.0f);
 	camera->SetRotationX(XM_PIDIV2);
@@ -388,6 +386,7 @@ bool GameApp::InitResource()
 	m_Walls[3].SetDebugObjectName("Walls[3]");
 	m_Walls[4].SetDebugObjectName("Walls[4]");
 	m_WoodCrate.SetDebugObjectName("WoodCrate");
+	m_BoltAnim.SetDebugObjectName("BoltAnim");
 
 	return true;
 }
