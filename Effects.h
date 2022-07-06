@@ -57,6 +57,12 @@ public:
 	void SetDrawBoltAnimNoDepthTestWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
 	// 绘制闪电动画所需要的特效，关闭深度写入，对指定模板值区域进行绘制
 	void SetDrawBoltAnimNoDepthWriteWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
+	// 几何着色器 绘制分割三角形
+	void SetRenderSplitedTriangle(ID3D11DeviceContext* deviceContext);
+	// 几何着色器 绘制圆柱面
+	void SetRenderCylindeNoCap(ID3D11DeviceContext* deviceContext);
+	// 几何着色器 绘制法线
+	void SetRenderNormal(ID3D11DeviceContext* deviceContext);
 	// 2D默认状态绘制
 	void Set2DRenderDefault(ID3D11DeviceContext* deviceContext);
 	// 2D混合绘制
@@ -76,16 +82,18 @@ public:
 	static const int maxLights = 5;
 
 	void SetDirLight(size_t pos, const DirectionalLight& dirLight);
-    void SetPointLight(size_t pos, const PointLight& pointLight);
-    void SetSpotLight(size_t pos, const SpotLight& spotLight);
+	void SetPointLight(size_t pos, const PointLight& pointLight);
+	void SetSpotLight(size_t pos, const SpotLight& spotLight);
 
 	void SetMaterial(const Material& material);
-    void SetTexture(ID3D11ShaderResourceView * texture);
+	void SetTexture(ID3D11ShaderResourceView* texture);
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 
 	// 状态开关设置
 	void SetReflectionState(bool isOn);
 	void SetShadowState(bool isOn);
+
+	void SetCylinderHeight(float height);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

@@ -5,9 +5,11 @@ using namespace DirectX;
 
 GameApp::GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight)
 	: D3DApp(hInstance, windowName, initWidth, initHeight),
-	m_CameraMode(CameraMode::ThirdPerson),
-	m_ShadowMat(),
-	m_WoodCrateMat()
+	m_ShowMode(Mode::SplitedTriangle),
+	m_VertexCount()
+	//m_CameraMode(CameraMode::ThirdPerson),
+	//m_ShadowMat(),
+	//m_WoodCrateMat()
 {
 }
 
@@ -36,17 +38,20 @@ void GameApp::OnResize()
 {
 	D3DApp::OnResize();
 
-	// 摄像机变更显示
-	if (m_pCamera != nullptr)
-	{
-		m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
-		m_pCamera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
-		m_BasicEffect.SetProjMatrix(m_pCamera->GetProjXM());
-	}
+	m_BasicEffect.SetProjMatrix(XMMatrixPerspectiveFovLH(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f));
+
+	//// 摄像机变更显示
+	//if (m_pCamera != nullptr)
+	//{
+	//	m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
+	//	m_pCamera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
+	//	m_BasicEffect.SetProjMatrix(m_pCamera->GetProjXM());
+	//}
 }
 
 void GameApp::UpdateScene(float dt)
 {
+	/*
 	// 获取子类
 	auto cam3rd = std::dynamic_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto cam1st = std::dynamic_pointer_cast<FirstPersonCamera>(m_pCamera);
@@ -150,6 +155,55 @@ void GameApp::UpdateScene(float dt)
 		frameTime -= 1.0f / 30;
 	}
 	frameTime += dt;
+	*/
+
+	if (m_ShowMode == Mode::SplitedTriangle)
+	{
+		m_BasicEffect.SetWorldMatrix(XMMatrixIdentity());
+	}
+	else
+	{
+		static float phi = 0.0f, theta = 0.0f;
+		phi += 0.2f * dt, theta += 0.3f * dt;
+		m_BasicEffect.SetWorldMatrix(XMMatrixRotationX(phi) * XMMatrixRotationY(theta));
+	}
+
+	if (ImGui::Begin("Geometry Shader Beginning"))
+	{
+		static int curr_item = 0;
+		static const char* modes[] =
+		{
+			"Splited Triangle",
+			"Cylinder w/o Cap"
+		};
+		if (ImGui::Combo("Mode", &curr_item, modes, ARRAYSIZE(modes)))
+		{
+			m_ShowMode = static_cast<Mode>(curr_item);
+			if (curr_item == 0)
+			{
+				ResetTriangle();
+				m_BasicEffect.SetRenderSplitedTriangle(m_pd3dImmediateContext.Get());
+			}
+			else
+			{
+				ResetRoundWire();
+				m_BasicEffect.SetRenderCylindeNoCap(m_pd3dImmediateContext.Get());
+			}
+			UINT stride = curr_item ? sizeof(VertexPosNormalColor) : sizeof(VertexPosColor);
+			UINT offset = 0;
+			m_pd3dImmediateContext->IASetVertexBuffers(0, 1, m_pVertexBuffer.GetAddressOf(), &stride, &offset);
+		}
+		if (curr_item == 1)
+		{
+			static bool show_normal = false;
+			if (ImGui::Checkbox("Show Normal", &show_normal))
+			{
+				m_ShowMode = show_normal ? Mode::CylinderNoCapWithNormal : Mode::CylinderNoCap;
+			}
+		}
+	}
+	ImGui::End();
+	ImGui::Render();
 }
 
 void GameApp::DrawScene()
@@ -160,9 +214,27 @@ void GameApp::DrawScene()
 	m_pd3dImmediateContext->ClearRenderTargetView(m_pRenderTargetView.Get(), reinterpret_cast<const float*>(&Colors::Black));
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+	m_BasicEffect.Apply(m_pd3dImmediateContext.Get());
+	m_pd3dImmediateContext->Draw(m_VertexCount, 0);
+
+	if (m_ShowMode == Mode::CylinderNoCapWithNormal)
+	{
+		m_BasicEffect.SetRenderNormal(m_pd3dImmediateContext.Get());
+		m_BasicEffect.Apply(m_pd3dImmediateContext.Get());
+
+		m_pd3dImmediateContext->Draw(m_VertexCount, 0);
+		m_BasicEffect.SetRenderCylindeNoCap(m_pd3dImmediateContext.Get());
+	}
+
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+	HR(m_pSwapChain->Present(0, 0));
+
+	/*
+
 	// ******************
 	// 1. 给镜面反射区域写入值1到模板缓冲区
-	// 
+	//
 
 	m_BasicEffect.SetWriteStencilOnly(m_pd3dImmediateContext.Get(), 1);
 	m_Mirror.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
@@ -186,7 +258,7 @@ void GameApp::DrawScene()
 	//
 
 	m_WoodCrate.SetMaterial(m_ShadowMat);
-	m_BasicEffect.SetShadowState(true);	// 反射开启，阴影开启			
+	m_BasicEffect.SetShadowState(true);	// 反射开启，阴影开启
 	m_BasicEffect.SetRenderNoDoubleBlend(m_pd3dImmediateContext.Get(), 1);
 
 	m_WoodCrate.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
@@ -237,12 +309,52 @@ void GameApp::DrawScene()
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	HR(m_pSwapChain->Present(0, 0));
+
+	*/
 }
 
 
 
 bool GameApp::InitResource()
 {
+	//默认绘制三角形
+	ResetTriangle();
+
+	// ******************
+	// 初始化不会变化的值
+	//
+
+	// 环境光
+	DirectionalLight dirLight;
+	dirLight.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	dirLight.diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	dirLight.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	dirLight.direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	m_BasicEffect.SetDirLight(0, dirLight);
+	// 
+	Material material{};
+	material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	material.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
+	m_BasicEffect.SetMaterial(material);
+
+	//
+	m_BasicEffect.SetEyePos(XMFLOAT3(0.0f, 0.0f, -0.5f));
+	//
+	m_BasicEffect.SetWorldMatrix(XMMatrixIdentity());
+	m_BasicEffect.SetViewMatrix(XMMatrixLookAtLH(
+		XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f),
+		XMVectorZero(),
+		XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+	m_BasicEffect.SetCylinderHeight(2.0f);
+
+	// 输入装配阶段的顶点缓冲区设置
+	UINT stride = sizeof(VertexPosColor);		// 跨越字节数
+	UINT offset = 0;							// 起始偏移量
+	m_pd3dImmediateContext->IASetVertexBuffers(0, 1, m_pVertexBuffer.GetAddressOf(), &stride, &offset);
+	m_BasicEffect.SetRenderSplitedTriangle(m_pd3dImmediateContext.Get());
+
+	/*
 
 	// ******************
 	// 初始化游戏对象
@@ -291,9 +403,9 @@ bool GameApp::InitResource()
 	// 这里控制墙体五个面的生成，0和1的中间位置用于放置镜面
 	//     ____     ____
 	//    /| 0 |   | 1 |\
-    //   /4|___|___|___|2\
-    //  /_/_ _ _ _ _ _ _\_\
-    // | /       3       \ |
+	//   /4|___|___|___|2\
+	//  /_/_ _ _ _ _ _ _\_\
+	// | /       3       \ |
 	// |/_________________\|
 	//
 	for (int i = 0; i < 5; ++i)
@@ -388,5 +500,68 @@ bool GameApp::InitResource()
 	m_WoodCrate.SetDebugObjectName("WoodCrate");
 	m_BoltAnim.SetDebugObjectName("BoltAnim");
 
+	*/
+
 	return true;
+}
+
+void GameApp::ResetTriangle()
+{
+	// 初始化三角形
+
+	// 设置三角形顶点
+	VertexPosColor vertices[] =
+	{
+		{ XMFLOAT3(-1.0f * 3, -0.866f * 3, 0.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(0.0f * 3, 0.866f * 3, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(1.0f * 3, -0.866f * 3, 0.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }
+	};
+	D3D11_BUFFER_DESC vbd;
+	ZeroMemory(&vbd, sizeof(vbd));
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(vertices);
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	InitData.pSysMem = vertices;
+	HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.GetAddressOf()));
+
+	m_VertexCount = 2;
+
+	D3D11SetDebugObjectName(m_pVertexBuffer.Get(), "TriangleVertexBuffer");
+}
+
+void GameApp::ResetRoundWire()
+{
+	// 初始化圆线
+	// 设置圆边上各顶点
+	// 必须要按顺时针设置
+	// 由于要形成闭环，起始点需要使用2次
+
+	VertexPosNormalColor vertices[41];
+	for (int i = 0; i < 40; ++i)
+	{
+		vertices[i].pos = XMFLOAT3(cosf(XM_PI / 20 * i), -1.0f, -sinf(XM_PI / 20 * i));
+		vertices[i].normal = XMFLOAT3(cosf(XM_PI / 20 * i), 0.0f, -sinf(XM_PI / 20 * i));
+		vertices[i].color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	vertices[40] = vertices[0];
+
+	D3D11_BUFFER_DESC vbd;
+	ZeroMemory(&vbd, sizeof(vbd));
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(vertices);
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	InitData.pSysMem = vertices;
+	HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.ReleaseAndGetAddressOf()));
+
+	m_VertexCount = 41;
+
+	D3D11SetDebugObjectName(m_pVertexBuffer.Get(), "CylinderVertexBuffer");
 }
