@@ -326,26 +326,27 @@ bool GameApp::InitResource()
 
 	// 环境光
 	DirectionalLight dirLight;
-	dirLight.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	dirLight.ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	dirLight.diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 	dirLight.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	dirLight.direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	dirLight.direction = XMFLOAT3(-0.577f, -0.577f, 0.577f);
 	m_BasicEffect.SetDirLight(0, dirLight);
 	// 
 	Material material{};
 	material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	material.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	material.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
+    material.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 5.0f);
 	m_BasicEffect.SetMaterial(material);
 
 	//
-	m_BasicEffect.SetEyePos(XMFLOAT3(0.0f, 0.0f, -0.5f));
+    m_BasicEffect.SetEyePos(XMFLOAT3(0.0f, 0.0f, -5.0f));
 	//
 	m_BasicEffect.SetWorldMatrix(XMMatrixIdentity());
 	m_BasicEffect.SetViewMatrix(XMMatrixLookAtLH(
 		XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f),
 		XMVectorZero(),
 		XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+    m_BasicEffect.SetProjMatrix(XMMatrixPerspectiveFovLH(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f));
 	m_BasicEffect.SetCylinderHeight(2.0f);
 
 	// 输入装配阶段的顶点缓冲区设置
@@ -526,9 +527,9 @@ void GameApp::ResetTriangle()
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory(&InitData, sizeof(InitData));
 	InitData.pSysMem = vertices;
-	HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.GetAddressOf()));
+	HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.ReleaseAndGetAddressOf()));
 
-	m_VertexCount = 2;
+	m_VertexCount = 3;
 
 	D3D11SetDebugObjectName(m_pVertexBuffer.Get(), "TriangleVertexBuffer");
 }

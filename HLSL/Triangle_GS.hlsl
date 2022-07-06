@@ -3,7 +3,7 @@
 [maxvertexcount(9)]
 void GS(triangle VertexPosHColor input[3], inout TriangleStream<VertexPosHColor> output)
 {
-    // 将一个三角形分裂成三个三角形，即没有v3v4v5的三角形
+    // 灏嗕竴涓笁瑙掑舰鍒嗚鎴愪笁涓笁瑙掑舰锛屽嵆娌℃湁v3v4v5鐨勪笁瑙掑舰
     //       v1
     //       /\
     //      /  \
@@ -21,6 +21,7 @@ void GS(triangle VertexPosHColor input[3], inout TriangleStream<VertexPosHColor>
         vertex[i + 3].Color = (input[i].Color + input[(i + 1) % 3].Color) / 2.0f;
         vertex[i + 3].PosH = (input[i].PosH + input[(i + 1) % 3].PosH) / 2.0f;
     }
+    [unroll]
     for (i = 0; i < 3; ++i)
     {
         output.Append(vertex[i]);
