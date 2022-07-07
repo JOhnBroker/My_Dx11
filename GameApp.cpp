@@ -263,6 +263,20 @@ void GameApp::DrawScene()
 		m_pd3dImmediateContext->DrawAuto();
 	}
 
+	if (m_ShowNormal) 
+	{
+		m_BasicEffect.SetRenderNormal(m_pd3dImmediateContext.Get());
+		m_BasicEffect.Apply(m_pd3dImmediateContext.Get());
+		//
+		if (m_CurrIndex == 0) 
+		{
+			m_pd3dImmediateContext->Draw(m_InitVertexCounts, 0);
+		}
+		else 
+		{
+			m_pd3dImmediateContext->DrawAuto();
+		}
+	}
 
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -356,14 +370,19 @@ void GameApp::DrawScene()
 bool GameApp::InitResource()
 {
 	//默认绘制三角形
-	ResetTriangle();
+	ResetSplitedTriangle();
+
+	// 输入装配阶段的顶点缓冲区设置
+	UINT stride = sizeof(VertexPosColor);
+	UINT offset = 0;
+	m_pd3dImmediateContext->IASetVertexBuffers(0, 1, m_pVertexBuffers[0].GetAddressOf(), &stride, &offset);
 
 	// ******************
 	// 初始化不会变化的值
 	//
 
 	// 环境光
-	DirectionalLight dirLight;
+	DirectionalLight dirLight{};
 	dirLight.ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	dirLight.diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 	dirLight.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -385,13 +404,8 @@ bool GameApp::InitResource()
 		XMVectorZero(),
 		XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 	m_BasicEffect.SetProjMatrix(XMMatrixPerspectiveFovLH(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f));
-	m_BasicEffect.SetCylinderHeight(2.0f);
-
-	// 输入装配阶段的顶点缓冲区设置
-	UINT stride = sizeof(VertexPosColor);		// 跨越字节数
-	UINT offset = 0;							// 起始偏移量
-	m_pd3dImmediateContext->IASetVertexBuffers(0, 1, m_pVertexBuffers[0].GetAddressOf(), &stride, &offset);
-	m_BasicEffect.SetRenderSplitedTriangle(m_pd3dImmediateContext.Get());
+	m_BasicEffect.SetSphereCenter(XMFLOAT3());
+	m_BasicEffect.SetSphereRadius(2.0f);
 
 	/*
 
@@ -665,7 +679,7 @@ void GameApp::ResetSplitedSnow()
 	//
 
 	// 设置三角形顶点
-	float sqrt3 = sqrt(3.0f);
+    float sqrt3 = sqrtf(3.0f);
 	VertexPosColor vertices[] =
 	{
 		{ XMFLOAT3(-3.0f / 4, -sqrt3 / 4, 0.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
@@ -744,7 +758,7 @@ void GameApp::ResetSplitedSphere()
 	D3D11_BUFFER_DESC vbd;
 	ZeroMemory(&vbd, sizeof(vbd));
 	vbd.Usage = D3D11_USAGE_DEFAULT;
-	vbd.ByteWidth = sizeof(vertices);
+    vbd.ByteWidth = (UINT)(vertices.size() * sizeof(VertexPosNormalColor));
 	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_STREAM_OUTPUT;
 	vbd.CPUAccessFlags = 0;
 
@@ -758,7 +772,7 @@ void GameApp::ResetSplitedSphere()
 	{
 		vbd.ByteWidth *= 4;
 		HR(m_pd3dDevice->CreateBuffer(&vbd, nullptr, m_pVertexBuffers[i].ReleaseAndGetAddressOf()));
-		m_BasicEffect.SetStreamOutputSplitedSnow(m_pd3dImmediateContext.Get(), m_pVertexBuffers[i - 1].Get(), m_pVertexBuffers[i].Get());
+        m_BasicEffect.SetStreamOutputSplitedSphere(m_pd3dImmediateContext.Get(), m_pVertexBuffers[i - 1].Get(), m_pVertexBuffers[i].Get());
 		if (i == 1)
 		{
 			m_pd3dImmediateContext->Draw(m_InitVertexCounts, 0);

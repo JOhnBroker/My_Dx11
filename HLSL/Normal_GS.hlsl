@@ -7,14 +7,14 @@ void GS(point VertexPosHWNormalColor input[1],inout LineStream<VertexPosHWNormal
     
     VertexPosHWNormalColor v;
     
-    v.posW = input[0].posW + input[0].normalW * 0.1f;
+    v.posW = input[0].posW + input[0].normalW * 0.01f;
     v.posH = mul(float4(v.posW, 1.0f), viewProj);
     v.normalW = input[0].normalW;
     v.color = input[0].color;
     
     output.Append(v);
     
-    v.posW = input[0].posW + input[0].normalW * 0.5f;
+    v.posW = v.posW + input[0].normalW * 0.5f;
     v.posH = mul(float4(v.posW, 1.0f), viewProj);
     
     output.Append(v);
