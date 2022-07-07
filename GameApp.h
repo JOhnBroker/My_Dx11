@@ -9,8 +9,8 @@ class GameApp : public D3DApp
 {
 public:
 	// 摄像机模式
-	enum class CameraMode { FirstPerson, ThirdPerson, Free };
-	enum class Mode { SplitedTriangle, CylinderNoCap, CylinderNoCapWithNormal };
+	//enum class CameraMode { FirstPerson, ThirdPerson, Free };
+	enum class Mode { SplitedTriangle, SplitedSnow, SplitedSphere };
 
 public:
 	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);
@@ -27,14 +27,23 @@ private:
 	void ResetTriangle();
 	void ResetRoundWire();
 
+	void ResetSplitedTriangle();
+	void ResetSplitedSnow();
+	void ResetSplitedSphere();
+
 private:
 	ComPtr<ID2D1SolidColorBrush> m_pColorBrush;		// 单色笔刷
 	ComPtr<IDWriteFont> m_pFont;					// 字体
 	ComPtr<IDWriteTextFormat> m_pTextFront;			// 文本格式
 
-	ComPtr<ID3D11Buffer> m_pVertexBuffer;			// 顶点集合
-	int m_VertexCount;								// 顶点数目
+	ComPtr<ID3D11Buffer> m_pVertexBuffers[7];		// 顶点缓冲区数组
+	//int m_VertexCount;								// 顶点数目
+	int m_InitVertexCounts;							// 初始顶点数目
+
 	Mode m_ShowMode;								// 当前显示模式
+	bool m_IsWireFrame;								// 是否为线框模式
+	bool m_ShowNormal;								// 是否显示法向量
+	int m_CurrIndex;								// 当前索引
 
 	BasicEffect m_BasicEffect;						// 对象渲染特效管理
 

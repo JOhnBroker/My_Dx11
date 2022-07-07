@@ -63,6 +63,16 @@ public:
 	void SetRenderCylindeNoCap(ID3D11DeviceContext* deviceContext);
 	// 几何着色器 绘制法线
 	void SetRenderNormal(ID3D11DeviceContext* deviceContext);
+	//  几何着色器 绘制雪花
+	void SetRenderSplitedSnow(ID3D11DeviceContext* deviceContext);
+	// 几何着色器 绘制球体
+	void SetRenderSplitedSphere(ID3D11DeviceContext* deviceContext);
+	// 通过流输出阶段获取三角形分裂的下一阶分形
+	void SetStreamOutputSplitedTriangle(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
+	// 通过流输出阶段获取雪花的下一阶分形
+	void SetStreamOutputSplitedSnow(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
+	// 通过流输出阶段获取球的下一阶分形
+	void SetStreamOutputSplitedSphere(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
 	// 2D默认状态绘制
 	void Set2DRenderDefault(ID3D11DeviceContext* deviceContext);
 	// 2D混合绘制
@@ -94,6 +104,9 @@ public:
 	void SetShadowState(bool isOn);
 
 	void SetCylinderHeight(float height);
+
+	void SetSphereCenter(const DirectX::XMFLOAT3& center);
+	void SetSphereRadius(float radius);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 
