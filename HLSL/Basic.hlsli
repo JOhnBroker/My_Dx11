@@ -1,6 +1,7 @@
 #include "LightHelper.hlsli"
 
 Texture2D g_Tex : register(t0);
+Texture2DArray g_TexArray : register(t1);
 SamplerState g_Sam : register(s0);
 
 
@@ -11,16 +12,20 @@ cbuffer CBChangesEveryDrawing : register(b0)
     Material g_Material;
 }
 
-cbuffer CBDrawingStates : register(b1)
-{
-    int g_IsReflection;
-    int g_IsShadow;
-}
-
-cbuffer CBChangesEveryFrame : register(b2)
+cbuffer CBChangesEveryFrame : register(b1)
 {
     matrix g_View;
     float3 g_EyePosW;
+    float g_Pad;
+}
+
+cbuffer CBDrawingStates : register(b2)
+{
+    float4 g_FogColor;
+    int g_FogEnabled;
+    float g_FogStart;
+    float g_FogRange;
+    float g_Pad2;
 }
 
 cbuffer CBChangesOnResize : register(b3)
@@ -30,9 +35,6 @@ cbuffer CBChangesOnResize : register(b3)
 
 cbuffer CBChangesRarely : register(b4)
 {
-    matrix g_Reflection;
-    matrix g_Shadow;
-    matrix g_RefShadow;
     DirectionalLight g_DirLight[5];
     PointLight g_PointLight[5];
     SpotLight g_SpotLight[5];
@@ -63,4 +65,19 @@ struct VertexPosHTex
 {
     float4 posH : SV_POSITION;
     float2 tex : TEXCOORD;
+};
+
+struct PointSprite
+{
+    float3 powW : POSITIONT;
+    float2 SizeW : SIZE;
+};
+
+struct BillboardVertex
+{
+    float4 posH : SV_Position;
+    float3 posW : POSITIONT;
+    float3 normalW : NORMAL;
+    float2 tex : TEXCOORD;
+    uint PrimID : SV_PrimitiveID;
 };
