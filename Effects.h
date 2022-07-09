@@ -39,53 +39,13 @@ public:
 	// 渲染模式的变更
 	// 默认状态来绘制
 	void SetRenderDefault(ID3D11DeviceContext* deviceContext);
-	// Alpha 混合绘制
-	void SetRenderAlphaBlend(ID3D11DeviceContext* deviceContext);
-	// 无二次混合
-	void SetRenderNoDoubleBlend(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 仅写入模板值
-	void SetWriteStencilOnly(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 对指定模板值的区域进行绘制，采用默认状态
-	void SetRenderDefaultWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 对指定模板值的区域进行绘制，采用Alpha混合
-	void SetRenderAlphaBlendWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 绘制闪电动画所需要的特效，关闭深度测试
-	void SetDrawBoltAnimNoDepthTest(ID3D11DeviceContext* deviceContext);
-	// 绘制闪电动画所需要的特效，关闭深度写入
-	void SetDrawBoltAnimNoDepthWrite(ID3D11DeviceContext* deviceContext);
-	// 绘制闪电动画所需要的特效，关闭深度测试，对指定模板值区域进行绘制
-	void SetDrawBoltAnimNoDepthTestWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 绘制闪电动画所需要的特效，关闭深度写入，对指定模板值区域进行绘制
-	void SetDrawBoltAnimNoDepthWriteWithStencil(ID3D11DeviceContext* deviceContext, UINT stencilRef);
-	// 几何着色器 绘制分割三角形
-	void SetRenderSplitedTriangle(ID3D11DeviceContext* deviceContext);
-	// 几何着色器 绘制圆柱面
-	void SetRenderCylindeNoCap(ID3D11DeviceContext* deviceContext);
-	// 几何着色器 绘制法线
-	void SetRenderNormal(ID3D11DeviceContext* deviceContext);
-	//  几何着色器 绘制雪花
-	void SetRenderSplitedSnow(ID3D11DeviceContext* deviceContext);
-	// 几何着色器 绘制球体
-	void SetRenderSplitedSphere(ID3D11DeviceContext* deviceContext);
-	// 通过流输出阶段获取三角形分裂的下一阶分形
-	void SetStreamOutputSplitedTriangle(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
-	// 通过流输出阶段获取雪花的下一阶分形
-	void SetStreamOutputSplitedSnow(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
-	// 通过流输出阶段获取球的下一阶分形
-	void SetStreamOutputSplitedSphere(ID3D11DeviceContext* deviceContext, ID3D11Buffer* vertexBufferIn, ID3D11Buffer* vertexBufferOut);
-	// 2D默认状态绘制
-	void Set2DRenderDefault(ID3D11DeviceContext* deviceContext);
-	// 2D混合绘制
-	void Set2DRenderAlphaBlend(ID3D11DeviceContext* deviceContext);
+	// 公告板绘制
+	void SetRenderBillboard(ID3D11DeviceContext* deviceContext, bool enableAlphaToCoverage);
 
 	// 矩阵设置
 	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W);
 	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V);
 	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P);
-
-	void XM_CALLCONV SetReflectionMatrix(DirectX::FXMMATRIX R);
-	void XM_CALLCONV SetShadowMatrix(DirectX::FXMMATRIX S);
-	void XM_CALLCONV SetRefShadowMatrix(DirectX::FXMMATRIX RefS);
 
 	// 光照、材质和纹理相关设置
 	// 各种类型灯光允许的最大数目
@@ -97,16 +57,14 @@ public:
 
 	void SetMaterial(const Material& material);
 	void SetTexture(ID3D11ShaderResourceView* texture);
+	void SetTextureArray(ID3D11ShaderResourceView* textures);
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 
 	// 状态开关设置
-	void SetReflectionState(bool isOn);
-	void SetShadowState(bool isOn);
-
-	void SetCylinderHeight(float height);
-
-	void SetSphereCenter(const DirectX::XMFLOAT3& center);
-	void SetSphereRadius(float radius);
+	void SetFogState(bool isOn);
+	void SetFogColor(DirectX::XMVECTOR fogColor);
+	void SetFogRange(float fogRange);
+	void SetFogStart(float fogStart);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

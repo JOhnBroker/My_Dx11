@@ -4,7 +4,7 @@ VertexPosHWNormalTex VS(VertexPosNormalTex vIn)
 {
     VertexPosHWNormalTex vOut;
     matrix ViewProj = mul(g_View, g_Proj);
-    float4 posW = mul(float4(vIn.posL, 1.0f), g_World);
+    vector posW = mul(float4(vIn.posL, 1.0f), g_World);
     
     vOut.posW = posW.xyz;
     vOut.posH = mul(posW, ViewProj);

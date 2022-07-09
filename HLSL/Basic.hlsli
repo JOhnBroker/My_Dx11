@@ -69,14 +69,14 @@ struct VertexPosHTex
 
 struct PointSprite
 {
-    float3 powW : POSITIONT;
+    float3 posW : POSITION;
     float2 SizeW : SIZE;
 };
 
 struct BillboardVertex
 {
-    float4 posH : SV_Position;
-    float3 posW : POSITIONT;
+    float4 posH : SV_POSITION;
+    float3 posW : POSITION;
     float3 normalW : NORMAL;
     float2 tex : TEXCOORD;
     uint PrimID : SV_PrimitiveID;
