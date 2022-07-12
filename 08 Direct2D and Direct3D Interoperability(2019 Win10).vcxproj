@@ -96,6 +96,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -110,6 +111,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)\ImGui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,6 +129,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -145,6 +148,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)\ImGui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -166,17 +170,19 @@
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="Keyboard.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Material.cpp" />
+    <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="RenderStates.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="WICTextureLoader11.cpp" />
     <ClCompile Include="WinMin.h" />
+    <ClCompile Include="XUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="d3dApp.h" />
-    <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="DDSTextureLoader11.h" />
     <ClInclude Include="DXTrace.h" />
     <ClInclude Include="EffectHelper.h" />
@@ -187,11 +193,17 @@
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="Keyboard.h" />
     <ClInclude Include="LightHelper.h" />
+    <ClInclude Include="Material.h" />
+    <ClInclude Include="MeshData.h" />
+    <ClInclude Include="ModelManager.h" />
     <ClInclude Include="Mouse.h" />
+    <ClInclude Include="Property.h" />
     <ClInclude Include="RenderStates.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="WICTextureLoader11.h" />
+    <ClInclude Include="XUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\Basic.hlsli">

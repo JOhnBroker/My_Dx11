@@ -72,6 +72,18 @@
     <ClCompile Include="GameObject.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="XUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CpuTimer.h">
@@ -84,12 +96,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="LightHelper.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="d3dApp.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="d3dUtil.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Mouse.h">
@@ -126,6 +132,24 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="GameObject.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshData.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="XUtil.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Property.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
