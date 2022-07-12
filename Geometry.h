@@ -15,6 +15,11 @@
 #include <functional>
 #include "Vertex.h"
 
+struct GeometryData
+{
+
+};
+
 namespace Geometry
 {
 	// 网格数据
@@ -70,7 +75,7 @@ namespace Geometry
 
 	// 创建一个平面
 	template<class VertexType = VertexPosNormalTex, class IndexType = DWORD>
-	MeshData<VertexType, IndexType> CreatePlane(const DirectX::XMFLOAT2& planeSize, 
+	MeshData<VertexType, IndexType> CreatePlane(const DirectX::XMFLOAT2& planeSize,
 		const DirectX::XMFLOAT2& maxTexCoord = { 1.0f, 1.0f }, const DirectX::XMFLOAT4& color = { 1.0f, 1.0f, 1.0f, 1.0f });
 	template<class VertexType = VertexPosNormalTex, class IndexType = DWORD>
 	MeshData<VertexType, IndexType> CreatePlane(float width = 10.0f, float depth = 10.0f, float texU = 1.0f, float texV = 1.0f,
@@ -79,7 +84,7 @@ namespace Geometry
 	// 创建一个地形
 	template<class VertexType = VertexPosNormalTex, class IndexType = DWORD>
 	MeshData<VertexType, IndexType> CreateTerrain(const DirectX::XMFLOAT2& terrainSize,
-		const DirectX::XMUINT2& slices = { 10, 10 }, const DirectX::XMFLOAT2 & maxTexCoord = { 1.0f, 1.0f },
+		const DirectX::XMUINT2& slices = { 10, 10 }, const DirectX::XMFLOAT2& maxTexCoord = { 1.0f, 1.0f },
 		const std::function<float(float, float)>& heightFunc = [](float x, float z) { return 0.0f; },
 		const std::function<DirectX::XMFLOAT3(float, float)>& normalFunc = [](float x, float z) { return XMFLOAT3(0.0f, 1.0f, 0.0f); },
 		const std::function<DirectX::XMFLOAT4(float, float)>& colorFunc = [](float x, float z) { return XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); });
@@ -136,13 +141,13 @@ namespace Geometry
 			}
 		}
 	}
-	
+
 	//
 	// 几何体方法的实现
 	//
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> CreateSphere(float radius, UINT levels, UINT slices, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> CreateSphere(float radius, UINT levels, UINT slices, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -231,7 +236,7 @@ namespace Geometry
 	}
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> CreateBox(float width, float height, float depth, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> CreateBox(float width, float height, float depth, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -328,7 +333,7 @@ namespace Geometry
 
 	template<class VertexType, class IndexType>
 	inline MeshData<VertexType, IndexType> CreateCylinder(float radius, float height, UINT slices, UINT stacks,
-		float texU, float texV, const DirectX::XMFLOAT4 & color)
+		float texU, float texV, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -358,7 +363,7 @@ namespace Geometry
 			float u = cosf(theta) * radius / height + 0.5f;
 			float v = sinf(theta) * radius / height + 0.5f;
 			vertexData = { XMFLOAT3(radius * cosf(theta), h2, radius * sinf(theta)), XMFLOAT3(0.0f, 1.0f, 0.0f),
-				XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f), color, XMFLOAT2(u, v)  };
+				XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f), color, XMFLOAT2(u, v) };
 			Internal::InsertVertexElement(meshData.vertexVec[vIndex++], vertexData);
 		}
 
@@ -378,7 +383,7 @@ namespace Geometry
 			Internal::InsertVertexElement(meshData.vertexVec[vIndex++], vertexData);
 		}
 
-		
+
 
 		// 放入顶部三角形索引
 		for (UINT i = 1; i <= slices; ++i)
@@ -402,7 +407,7 @@ namespace Geometry
 
 	template<class VertexType, class IndexType>
 	inline MeshData<VertexType, IndexType> CreateCylinderNoCap(float radius, float height, UINT slices, UINT stacks,
-		float texU, float texV, const DirectX::XMFLOAT4 & color)
+		float texU, float texV, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -451,7 +456,7 @@ namespace Geometry
 				meshData.indexVec[iIndex++] = i * (slices + 1) + j + 1;
 			}
 		}
-		
+
 
 
 		return meshData;
@@ -467,7 +472,7 @@ namespace Geometry
 		UINT indexCount = 6 * slices;
 		meshData.vertexVec.resize(vertexCount);
 		meshData.indexVec.resize(indexCount);
-		
+
 		float h2 = height / 2;
 		float theta = 0.0f;
 		float per_theta = XM_2PI / slices;
@@ -549,13 +554,13 @@ namespace Geometry
 	}
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> Create2DShow(const DirectX::XMFLOAT2& center, const DirectX::XMFLOAT2 & scale, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> Create2DShow(const DirectX::XMFLOAT2& center, const DirectX::XMFLOAT2& scale, const DirectX::XMFLOAT4& color)
 	{
 		return Create2DShow<VertexType, IndexType>(center.x, center.y, scale.x, scale.y, color);
 	}
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> Create2DShow(float centerX, float centerY, float scaleX, float scaleY, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> Create2DShow(float centerX, float centerY, float scaleX, float scaleY, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -586,14 +591,14 @@ namespace Geometry
 	}
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> CreatePlane(const DirectX::XMFLOAT2 & planeSize,
-		const DirectX::XMFLOAT2 & maxTexCoord, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> CreatePlane(const DirectX::XMFLOAT2& planeSize,
+		const DirectX::XMFLOAT2& maxTexCoord, const DirectX::XMFLOAT4& color)
 	{
 		return CreatePlane<VertexType, IndexType>(planeSize.x, planeSize.y, maxTexCoord.x, maxTexCoord.y, color);
 	}
 
 	template<class VertexType, class IndexType>
-	inline MeshData<VertexType, IndexType> CreatePlane(float width, float depth, float texU, float texV, const DirectX::XMFLOAT4 & color)
+	inline MeshData<VertexType, IndexType> CreatePlane(float width, float depth, float texU, float texV, const DirectX::XMFLOAT4& color)
 	{
 		using namespace DirectX;
 
@@ -625,7 +630,7 @@ namespace Geometry
 	template<class VertexType, class IndexType>
 	MeshData<VertexType, IndexType> CreateTerrain(const DirectX::XMFLOAT2& terrainSize, const DirectX::XMUINT2& slices,
 		const DirectX::XMFLOAT2& maxTexCoord, const std::function<float(float, float)>& heightFunc,
-		const std::function<DirectX::XMFLOAT3(float, float)>& normalFunc, 
+		const std::function<DirectX::XMFLOAT3(float, float)>& normalFunc,
 		const std::function<DirectX::XMFLOAT4(float, float)>& colorFunc)
 	{
 		return CreateTerrain<VertexType, IndexType>(terrainSize.x, terrainSize.y, slices.x, slices.y,

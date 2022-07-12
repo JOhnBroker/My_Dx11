@@ -1,16 +1,16 @@
-#include "d3dUtil.h"
+#include "XUtil.h"
 
 using namespace  DirectX;
 
-HRESULT CreateShaderFromFile(const WCHAR * csoFileNameInOut, const WCHAR * hlslFileName, LPCSTR entryPoint, LPCSTR shaderModel, ID3DBlob ** ppBlobOut)
+HRESULT CreateShaderFromFile(const WCHAR* csoFileNameInOut, const WCHAR* hlslFileName, LPCSTR entryPoint, LPCSTR shaderModel, ID3DBlob** ppBlobOut)
 {
 	HRESULT hr = S_OK;
 
-	if (csoFileNameInOut && D3DReadFileToBlob(csoFileNameInOut, ppBlobOut) == S_OK) 
+	if (csoFileNameInOut && D3DReadFileToBlob(csoFileNameInOut, ppBlobOut) == S_OK)
 	{
 		return hr;
 	}
-	else 
+	else
 	{
 		DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #ifdef _DEBUG
@@ -21,16 +21,16 @@ HRESULT CreateShaderFromFile(const WCHAR * csoFileNameInOut, const WCHAR * hlslF
 		ID3DBlob* errorBlob = nullptr;
 		hr = D3DCompileFromFile(hlslFileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, shaderModel,
 			dwShaderFlags, 0, ppBlobOut, &errorBlob);
-		if (FAILED(hr)) 
+		if (FAILED(hr))
 		{
-			if (errorBlob != nullptr) 
+			if (errorBlob != nullptr)
 			{
 				OutputDebugStringA(reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
 			}
 			SAFE_RELEASE(errorBlob);
 			return hr;
 		}
-		if (csoFileNameInOut) 
+		if (csoFileNameInOut)
 		{
 			return D3DWriteBlobToFile(*ppBlobOut, csoFileNameInOut, FALSE);
 		}
@@ -40,15 +40,15 @@ HRESULT CreateShaderFromFile(const WCHAR * csoFileNameInOut, const WCHAR * hlslF
 }
 
 HRESULT CreateTexture2DArrayFromFile(
-	ID3D11Device* d3dDevice, 
+	ID3D11Device* d3dDevice,
 	ID3D11DeviceContext* d3dDeviceContext,
-	const std::vector<std::wstring>& fileNames, 
-	ID3D11Texture2D** textureArray, 
-	ID3D11ShaderResourceView** textureArrayView, 
+	const std::vector<std::wstring>& fileNames,
+	ID3D11Texture2D** textureArray,
+	ID3D11ShaderResourceView** textureArrayView,
 	bool generateMips)
 {
 	// 检查设备、文件名数组是否非空
-	if(!d3dDevice || fileNames.empty())
+	if (!d3dDevice || fileNames.empty())
 		return E_INVALIDARG;
 
 	HRESULT hr;
@@ -63,8 +63,8 @@ HRESULT CreateTexture2DArrayFromFile(
 	hr = CreateDDSTextureFromFileEx(d3dDevice,
 		fileNames[0].c_str(), 0, D3D11_USAGE_STAGING, 0,
 		D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ,
-        0, false, reinterpret_cast<ID3D11Resource**>(&pTexture), nullptr);
-	if (FAILED(hr)) 
+		0, false, reinterpret_cast<ID3D11Resource**>(&pTexture), nullptr);
+	if (FAILED(hr))
 	{
 		hr = CreateWICTextureFromFileEx(d3dDevice,
 			fileNames[0].c_str(), 0, D3D11_USAGE_STAGING, 0,
@@ -90,7 +90,7 @@ HRESULT CreateTexture2DArrayFromFile(
 
 	ID3D11Texture2D* pTexArray = nullptr;
 	hr = d3dDevice->CreateTexture2D(&texArrayDesc, nullptr, &pTexArray);
-	if (FAILED(hr)) 
+	if (FAILED(hr))
 	{
 		SAFE_RELEASE(pTexture);
 		return hr;
@@ -101,12 +101,12 @@ HRESULT CreateTexture2DArrayFromFile(
 
 	// 写入到纹理数组第一个元素
 	D3D11_MAPPED_SUBRESOURCE mappedTex2D;
-	for (UINT i = 0; i < updateMipLevels; ++i) 
+	for (UINT i = 0; i < updateMipLevels; ++i)
 	{
 		d3dDeviceContext->Map(pTexture, i, D3D11_MAP_READ, 0, &mappedTex2D);
 		d3dDeviceContext->UpdateSubresource(pTexArray, i, nullptr,
 			mappedTex2D.pData, mappedTex2D.RowPitch, mappedTex2D.DepthPitch);
-        d3dDeviceContext->Unmap(pTexture, i);
+		d3dDeviceContext->Unmap(pTexture, i);
 	}
 	SAFE_RELEASE(pTexture);
 
@@ -114,20 +114,20 @@ HRESULT CreateTexture2DArrayFromFile(
 	// 读取剩余的纹理并加载入纹理数组
 	//
 	D3D11_TEXTURE2D_DESC currTexDesc;
-	for (UINT i = 1; i < texArrayDesc.ArraySize; ++i) 
+	for (UINT i = 1; i < texArrayDesc.ArraySize; ++i)
 	{
 		hr = CreateDDSTextureFromFileEx(d3dDevice,
 			fileNames[i].c_str(), 0, D3D11_USAGE_STAGING, 0,
 			D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,
 			0, false, reinterpret_cast<ID3D11Resource**>(&pTexture), nullptr);
-		if (FAILED(hr)) 
+		if (FAILED(hr))
 		{
 			hr = CreateWICTextureFromFileEx(d3dDevice,
-				fileNames[i].c_str(),0,D3D11_USAGE_STAGING,0,
-				D3D11_CPU_ACCESS_READ| D3D11_CPU_ACCESS_WRITE,
-                0, WIC_LOADER_DEFAULT, reinterpret_cast<ID3D11Resource**>(&pTexture), nullptr);
+				fileNames[i].c_str(), 0, D3D11_USAGE_STAGING, 0,
+				D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,
+				0, WIC_LOADER_DEFAULT, reinterpret_cast<ID3D11Resource**>(&pTexture), nullptr);
 		}
-		if (FAILED(hr)) 
+		if (FAILED(hr))
 		{
 			SAFE_RELEASE(pTexArray);
 			return hr;
@@ -137,27 +137,27 @@ HRESULT CreateTexture2DArrayFromFile(
 	   // 若存在数据格式不一致的情况，请使用dxtex.exe(DirectX Texture Tool)
 	   // 将所有的图片转成一致的数据格式
 		if (currTexDesc.MipLevels != texDesc.MipLevels || currTexDesc.Width != texDesc.Width
-			|| currTexDesc.Height != texDesc.Height || currTexDesc.Format != texDesc.Format) 
+			|| currTexDesc.Height != texDesc.Height || currTexDesc.Format != texDesc.Format)
 		{
 			SAFE_RELEASE(pTexture);
 			SAFE_RELEASE(pTexArray);
 			return E_FAIL;
 		}
 		//写入纹理数组的对应元素
-		for (UINT j = 0; j < updateMipLevels; ++j) 
+		for (UINT j = 0; j < updateMipLevels; ++j)
 		{
 			d3dDeviceContext->Map(pTexture, j, D3D11_MAP_READ, 0, &mappedTex2D);
-            d3dDeviceContext->UpdateSubresource(pTexArray,
+			d3dDeviceContext->UpdateSubresource(pTexArray,
 				D3D11CalcSubresource(j, i, texArrayDesc.MipLevels),
 				nullptr, mappedTex2D.pData, mappedTex2D.RowPitch, mappedTex2D.DepthPitch);
 			d3dDeviceContext->Unmap(pTexture, j);
 		}
-        SAFE_RELEASE(pTexture);
+		SAFE_RELEASE(pTexture);
 	}
 	// ******************
 	// 必要时创建纹理数组的SRV
 	//
-	if (generateMips || textureArrayView) 
+	if (generateMips || textureArrayView)
 	{
 		D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
 		viewDesc.Format = texArrayDesc.Format;
@@ -169,17 +169,17 @@ HRESULT CreateTexture2DArrayFromFile(
 
 		ID3D11ShaderResourceView* pTexArraySRV;
 		hr = d3dDevice->CreateShaderResourceView(pTexArray, &viewDesc, &pTexArraySRV);
-		if (FAILED(hr)) 
+		if (FAILED(hr))
 		{
 			SAFE_RELEASE(pTexArray);
 			return hr;
 		}
 		// 生成mipmaps
-		if (generateMips) 
+		if (generateMips)
 		{
 			d3dDeviceContext->GenerateMips(pTexArraySRV);
 		}
-		if (textureArrayView) 
+		if (textureArrayView)
 		{
 			*textureArrayView = pTexArraySRV;
 		}
@@ -189,7 +189,7 @@ HRESULT CreateTexture2DArrayFromFile(
 		}
 	}
 
-	if (textureArray) 
+	if (textureArray)
 	{
 		*textureArray = pTexArray;
 	}
@@ -201,16 +201,16 @@ HRESULT CreateTexture2DArrayFromFile(
 }
 
 HRESULT CreateWICTexture2DCubeFromFile(
-	ID3D11Device* d3dDevice, 
-	ID3D11DeviceContext* d3dDeviceContext, 
-	const std::wstring& cubeMapFileName, 
-	ID3D11Texture2D** textureArray, 
-	ID3D11ShaderResourceView** textureCubeView, 
+	ID3D11Device* d3dDevice,
+	ID3D11DeviceContext* d3dDeviceContext,
+	const std::wstring& cubeMapFileName,
+	ID3D11Texture2D** textureArray,
+	ID3D11ShaderResourceView** textureCubeView,
 	bool generateMips)
 {
 	// 检查设备、设备上下文是否非空
 	// 纹理数组和纹理立方体视图只要有其中一个非空即可
-	if(!d3dDevice || !d3dDeviceContext|| !(textureArray || textureCubeView))
+	if (!d3dDevice || !d3dDeviceContext || !(textureArray || textureCubeView))
 		return E_INVALIDARG;
 
 	// ******************
@@ -227,7 +227,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 		(ID3D11Resource**)&srcTex,
 		(generateMips ? &srcTexSRV : nullptr));
 	// 文件未打开
-	if (FAILED(hResult)) 
+	if (FAILED(hResult))
 	{
 		return hResult;
 	}
@@ -235,7 +235,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	D3D11_TEXTURE2D_DESC texDesc, texArrayDesc;
 	srcTex->GetDesc(&texDesc);
 	// 要求宽高比4:3
-	if (texDesc.Width * 3 != texDesc.Height * 4) 
+	if (texDesc.Width * 3 != texDesc.Height * 4)
 	{
 		SAFE_RELEASE(srcTex);
 		SAFE_RELEASE(srcTexSRV);
@@ -244,7 +244,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	// ******************
 	// 创建包含6个纹理的数组
 	//
-	
+
 	UINT squareLength = texDesc.Width / 4;
 	texArrayDesc.Width = squareLength;
 	texArrayDesc.Height = squareLength;
@@ -260,7 +260,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 
 	ID3D11Texture2D* texArray = nullptr;
 	hResult = d3dDevice->CreateTexture2D(&texArrayDesc, nullptr, &texArray);
-	if (FAILED(hResult)) 
+	if (FAILED(hResult))
 	{
 		SAFE_RELEASE(srcTex);
 		SAFE_RELEASE(srcTexSRV);
@@ -281,7 +281,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	//  bottom
 	box.front = 0;
 	box.back = 1;
-	for (UINT i = 0; i < texArrayDesc.MipLevels; ++i) 
+	for (UINT i = 0; i < texArrayDesc.MipLevels; ++i)
 	{
 		// +X 面拷贝
 		box.left = squareLength * 2;
@@ -302,7 +302,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 		box.bottom = squareLength * 2;
 		d3dDeviceContext->CopySubresourceRegion(
 			texArray,
-            D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_X, texArrayDesc.MipLevels),
+			D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_X, texArrayDesc.MipLevels),
 			0, 0, 0,
 			srcTex,
 			i,
@@ -314,19 +314,19 @@ HRESULT CreateWICTexture2DCubeFromFile(
 		box.bottom = squareLength;
 		d3dDeviceContext->CopySubresourceRegion(
 			texArray,
-            D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_POSITIVE_Y, texArrayDesc.MipLevels),
+			D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_POSITIVE_Y, texArrayDesc.MipLevels),
 			0, 0, 0,
 			srcTex,
 			i,
 			&box);
 		// -Y 面拷贝
 		box.left = squareLength;
-		box.top = squareLength *2;
+		box.top = squareLength * 2;
 		box.right = squareLength * 2;
 		box.bottom = squareLength * 3;
 		d3dDeviceContext->CopySubresourceRegion(
 			texArray,
-            D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_Y, texArrayDesc.MipLevels),
+			D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_Y, texArrayDesc.MipLevels),
 			0, 0, 0,
 			srcTex,
 			i,
@@ -338,7 +338,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 		box.bottom = squareLength * 2;
 		d3dDeviceContext->CopySubresourceRegion(
 			texArray,
-            D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_POSITIVE_Z, texArrayDesc.MipLevels),
+			D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_POSITIVE_Z, texArrayDesc.MipLevels),
 			0, 0, 0,
 			srcTex,
 			i,
@@ -350,7 +350,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 		box.bottom = squareLength * 2;
 		d3dDeviceContext->CopySubresourceRegion(
 			texArray,
-            D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_Z, texArrayDesc.MipLevels),
+			D3D11CalcSubresource(i, D3D11_TEXTURECUBE_FACE_NEGATIVE_Z, texArrayDesc.MipLevels),
 			0, 0, 0,
 			srcTex,
 			i,
@@ -364,7 +364,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	// 创建立方体纹理的SRV
 	//
 
-	if (textureCubeView) 
+	if (textureCubeView)
 	{
 		D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
 		viewDesc.Format = texArrayDesc.Format;
@@ -376,7 +376,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	}
 
 	// 检查是否需要纹理数组
-	if(textureArray)
+	if (textureArray)
 	{
 		*textureArray = texArray;
 	}
@@ -386,14 +386,14 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	}
 	SAFE_RELEASE(srcTex);
 	SAFE_RELEASE(srcTexSRV);
-    return hResult;
+	return hResult;
 }
 
 HRESULT CreateWICTexture2DCubeFromFile(
-	ID3D11Device* d3dDevice, 
-	ID3D11DeviceContext* d3dDeviceContext, 
-	const std::vector<std::wstring>& cubeMapFileNames, 
-	ID3D11Texture2D** textureArray, 
+	ID3D11Device* d3dDevice,
+	ID3D11DeviceContext* d3dDeviceContext,
+	const std::vector<std::wstring>& cubeMapFileNames,
+	ID3D11Texture2D** textureArray,
 	ID3D11ShaderResourceView** textureCubeView,
 	bool generateMips)
 {
@@ -412,7 +412,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	std::vector<ID3D11ShaderResourceView* > srcTexSRVVec(arraySize, nullptr);
 	std::vector<D3D11_TEXTURE2D_DESC> texDescVec(arraySize);
 
-	for (UINT i = 0; i < arraySize; ++i) 
+	for (UINT i = 0; i < arraySize; ++i)
 	{
 		hResult = CreateWICTextureFromFile(d3dDevice,
 			(generateMips ? d3dDeviceContext : nullptr),
@@ -475,9 +475,9 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	// 将原纹理的所有子资源拷贝到该数组中
 	//
 	texArray->GetDesc(&texArrayDesc);
-	for (UINT i = 0; i < arraySize; ++i) 
+	for (UINT i = 0; i < arraySize; ++i)
 	{
-		for (UINT j = 0; j < texArrayDesc.MipLevels; ++j) 
+		for (UINT j = 0; j < texArrayDesc.MipLevels; ++j)
 		{
 			d3dDeviceContext->CopySubresourceRegion(
 				texArray,
@@ -493,7 +493,7 @@ HRESULT CreateWICTexture2DCubeFromFile(
 	// 创建立方体纹理的SRV
 	//
 
-	if (textureCubeView) 
+	if (textureCubeView)
 	{
 		D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
 		viewDesc.Format = texArrayDesc.Format;
@@ -503,11 +503,11 @@ HRESULT CreateWICTexture2DCubeFromFile(
 
 		hResult = d3dDevice->CreateShaderResourceView(texArray, &viewDesc, textureCubeView);
 	}
-	if (textureArray) 
+	if (textureArray)
 	{
 		*textureArray = texArray;
 	}
-	else 
+	else
 	{
 		SAFE_RELEASE(texArray);
 	}

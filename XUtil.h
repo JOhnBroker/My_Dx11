@@ -17,18 +17,73 @@
 #include <d3dcompiler.h>
 #include <vector>
 #include <string>
+#include <string_view>
+#include <algorithm>
 #include "DDSTextureLoader11.h"	
 #include "WICTextureLoader11.h"
 
 //
-// 宏相关
+// 宏定义
 //
 
-// 默认开启图形调试器具名化
-// 如果不需要该项功能，可通过全局文本替换将其值设置为0
-#ifndef GRAPHICS_DEBUGGER_OBJECT_NAME
-#define GRAPHICS_DEBUGGER_OBJECT_NAME (1)
+#define LEN_AND_STR(STR) ((UINT)(sizeof(STR) - 1)), (STR)
+
+// 是否开启图形调试对象名称
+#if (defined(DEBUG) || defined(_DEBUG)) && !defined(GRAPHICS_DEBUGGER_OBJECT_NAME)
+#define GRAPHICS_DEBUGGER_OBJECT_NAME 1
 #endif
+
+//
+// 设置调试对象名称
+//
+
+template<class IObject>
+inline void SetDebugObjectName(IObject* pObject, std::string_view name)
+{
+	pObject->SetPrivateData(WKPDID_D3DDebugObjectName, (uint32_t)name.size(), name.data());
+}
+
+//
+// 文本转换函数
+//
+
+// 以下不可删除
+#pragma warning(push)
+#pragma warning(disable: 28251)
+extern "C" __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char* str, int cbmb, wchar_t* widestr, int cchwide);
+extern "C" __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t* widestr, int cchwide, char* str, int cbmb, const char* defchar, int* used_default);
+#pragma warning(pop)
+
+inline std::wstring UTF8ToWString(std::string_view utf8str)
+{
+	if (utf8str.empty()) return std::wstring();
+	int cbMultiByte = static_cast<int>(utf8str.size());
+	int req = MultiByteToWideChar(65001, 0, utf8str.data(), cbMultiByte, nullptr, 0);
+	std::wstring res(req, 0);
+	MultiByteToWideChar(65001, 0, utf8str.data(), cbMultiByte, &res[0], req);
+	return res;
+}
+
+inline std::string WStringToUTF8(std::wstring_view wstr)
+{
+	if (wstr.empty()) return std::string();
+	int cbMultiByte = static_cast<int>(wstr.size());
+	int req = WideCharToMultiByte(65001, 0, wstr.data(), cbMultiByte, nullptr, 0, nullptr, nullptr);
+	std::string res(req, 0);
+	WideCharToMultiByte(65001, 0, wstr.data(), cbMultiByte, &res[0], req, nullptr, nullptr);
+	return res;
+}
+
+//
+// 字符串转hash ID
+//
+
+using XID = size_t;
+inline XID StringToID(std::string_view str)
+{
+	static std::hash<std::string_view> hash;
+	return hash(str);
+}
 
 // 安全COM组件释放宏
 #define SAFE_RELEASE(p) { if ((p)) { (p)->Release(); (p) = nullptr; } }
@@ -47,10 +102,10 @@ template<UINT TNameLength>
 inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ const char(&name)[TNameLength])
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    resource->SetPrivateData(WKPDID_D3DDebugObjectName, TNameLength - 1, name);
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, TNameLength - 1, name);
 #else
-    UNREFERENCED_PARAMETER(resource);
-    UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(resource);
+	UNREFERENCED_PARAMETER(name);
 #endif
 }
 
@@ -64,11 +119,11 @@ inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ const
 inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ LPCSTR name, _In_ UINT length)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    resource->SetPrivateData(WKPDID_D3DDebugObjectName, length, name);
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, length, name);
 #else
-    UNREFERENCED_PARAMETER(resource);
-    UNREFERENCED_PARAMETER(name);
-    UNREFERENCED_PARAMETER(length);
+	UNREFERENCED_PARAMETER(resource);
+	UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(length);
 #endif
 }
 
@@ -81,10 +136,10 @@ inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ LPCST
 inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ const std::string& name)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
 #else
-    UNREFERENCED_PARAMETER(resource);
-    UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(resource);
+	UNREFERENCED_PARAMETER(name);
 #endif
 }
 
@@ -96,9 +151,9 @@ inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ const
 inline void D3D11SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ std::nullptr_t)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    resource->SetPrivateData(WKPDID_D3DDebugObjectName, 0, nullptr);
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, 0, nullptr);
 #else
-    UNREFERENCED_PARAMETER(resource);
+	UNREFERENCED_PARAMETER(resource);
 #endif
 }
 
@@ -112,10 +167,10 @@ template<UINT TNameLength>
 inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ const char(&name)[TNameLength])
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, TNameLength - 1, name);
+	object->SetPrivateData(WKPDID_D3DDebugObjectName, TNameLength - 1, name);
 #else
-    UNREFERENCED_PARAMETER(object);
-    UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(object);
+	UNREFERENCED_PARAMETER(name);
 #endif
 }
 
@@ -129,11 +184,11 @@ inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ const char(&na
 inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ LPCSTR name, _In_ UINT length)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, length, name);
+	object->SetPrivateData(WKPDID_D3DDebugObjectName, length, name);
 #else
-    UNREFERENCED_PARAMETER(object);
-    UNREFERENCED_PARAMETER(name);
-    UNREFERENCED_PARAMETER(length);
+	UNREFERENCED_PARAMETER(object);
+	UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(length);
 #endif
 }
 
@@ -146,10 +201,10 @@ inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ LPCSTR name, _
 inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ const std::string& name)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
+	object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
 #else
-    UNREFERENCED_PARAMETER(object);
-    UNREFERENCED_PARAMETER(name);
+	UNREFERENCED_PARAMETER(object);
+	UNREFERENCED_PARAMETER(name);
 #endif
 }
 
@@ -161,9 +216,9 @@ inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ const std::str
 inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ std::nullptr_t)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, 0, nullptr);
+	object->SetPrivateData(WKPDID_D3DDebugObjectName, 0, nullptr);
 #else
-    UNREFERENCED_PARAMETER(object);
+	UNREFERENCED_PARAMETER(object);
 #endif
 }
 
@@ -180,11 +235,11 @@ inline void DXGISetDebugObjectName(_In_ IDXGIObject* object, _In_ std::nullptr_t
 // [In]shaderModel      着色器模型，格式为"*s_5_0"，*可以为c,d,g,h,p,v之一
 // [Out]ppBlobOut       输出着色器二进制信息
 HRESULT CreateShaderFromFile(
-    const WCHAR* csoFileNameInOut,
-    const WCHAR* hlslFileName,
-    LPCSTR entryPoint,
-    LPCSTR shaderModel,
-    ID3DBlob** ppBlobOut);
+	const WCHAR* csoFileNameInOut,
+	const WCHAR* hlslFileName,
+	LPCSTR entryPoint,
+	LPCSTR shaderModel,
+	ID3DBlob** ppBlobOut);
 
 //
 // 纹理数组相关函数
@@ -201,12 +256,12 @@ HRESULT CreateShaderFromFile(
 // [OutOpt]textureArrayView 输出的纹理数组资源视图
 // [In]generateMips			是否生成mipmaps
 HRESULT CreateTexture2DArrayFromFile(
-    ID3D11Device* d3dDevice,
-    ID3D11DeviceContext* d3dDeviceContext,
-    const std::vector<std::wstring>& fileNames,
-    ID3D11Texture2D** textureArray,
-    ID3D11ShaderResourceView** textureArrayView,
-    bool generateMips = false);
+	ID3D11Device* d3dDevice,
+	ID3D11DeviceContext* d3dDeviceContext,
+	const std::vector<std::wstring>& fileNames,
+	ID3D11Texture2D** textureArray,
+	ID3D11ShaderResourceView** textureArrayView,
+	bool generateMips = false);
 
 //
 // 纹理立方体相关函数
@@ -227,12 +282,12 @@ HRESULT CreateTexture2DArrayFromFile(
 // [OutOpt]textureCubeView	输出的纹理立方体资源视图
 // [In]generateMips			是否生成mipmaps
 HRESULT CreateWICTexture2DCubeFromFile(
-    ID3D11Device* d3dDevice,
-    ID3D11DeviceContext* d3dDeviceContext,
-    const std::wstring& cubeMapFileName,
-    ID3D11Texture2D** textureArray,
-    ID3D11ShaderResourceView** textureCubeView,
-    bool generateMips = false);
+	ID3D11Device* d3dDevice,
+	ID3D11DeviceContext* d3dDeviceContext,
+	const std::wstring& cubeMapFileName,
+	ID3D11Texture2D** textureArray,
+	ID3D11ShaderResourceView** textureCubeView,
+	bool generateMips = false);
 
 // ------------------------------
 // CreateWICTexture2DCubeFromFile函数
@@ -247,12 +302,12 @@ HRESULT CreateWICTexture2DCubeFromFile(
 // [OutOpt]textureCubeView	输出的纹理立方体资源视图
 // [In]generateMips			是否生成mipmaps
 HRESULT CreateWICTexture2DCubeFromFile(
-    ID3D11Device* d3dDevice,
-    ID3D11DeviceContext* d3dDeviceContext,
-    const std::vector<std::wstring>& cubeMapFileNames,
-    ID3D11Texture2D** textureArray,
-    ID3D11ShaderResourceView** textureCubeView,
-    bool generateMips = false);
+	ID3D11Device* d3dDevice,
+	ID3D11DeviceContext* d3dDeviceContext,
+	const std::vector<std::wstring>& cubeMapFileNames,
+	ID3D11Texture2D** textureArray,
+	ID3D11ShaderResourceView** textureCubeView,
+	bool generateMips = false);
 
 //
 // 数学相关函数
@@ -263,14 +318,14 @@ HRESULT CreateWICTexture2DCubeFromFile(
 // ------------------------------
 inline DirectX::XMMATRIX XM_CALLCONV InverseTranspose(DirectX::FXMMATRIX M)
 {
-    using namespace DirectX;
+	using namespace DirectX;
 
-    // 世界矩阵的逆的转置仅针对法向量，我们也不需要世界矩阵的平移分量
-    // 而且不去掉的话，后续再乘上观察矩阵之类的就会产生错误的变换结果
-    XMMATRIX A = M;
-    A.r[3] = g_XMIdentityR3;
+	// 世界矩阵的逆的转置仅针对法向量，我们也不需要世界矩阵的平移分量
+	// 而且不去掉的话，后续再乘上观察矩阵之类的就会产生错误的变换结果
+	XMMATRIX A = M;
+	A.r[3] = g_XMIdentityR3;
 
-    return XMMatrixTranspose(XMMatrixInverse(nullptr, A));
+	return XMMatrixTranspose(XMMatrixInverse(nullptr, A));
 }
 
 #endif
