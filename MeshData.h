@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifndef MESH_DATA_H
 #define MESH_DATA_H
@@ -9,7 +9,7 @@
 
 struct  ID3D11Buffer;
 
-class MeshData
+struct MeshData
 {
 	template<class T>
 	using ComPtr = Microsoft::WRL::ComPtr<T>;
