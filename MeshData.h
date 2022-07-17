@@ -9,7 +9,7 @@
 
 struct  ID3D11Buffer;
 
-class MeshData
+struct MeshData
 {
 	template<class T>
 	using ComPtr = Microsoft::WRL::ComPtr<T>;
@@ -18,7 +18,7 @@ class MeshData
 	ComPtr<ID3D11Buffer> m_pNormals;
 	std::vector<ComPtr<ID3D11Buffer>> m_pTexcoordArrays;
 	ComPtr<ID3D11Buffer> m_pTangents;
-	ComPtr<ID3D11Buffer> m_pBittangents;
+	ComPtr<ID3D11Buffer> m_pBitangents;
 	ComPtr<ID3D11Buffer> m_pColors;
 
 	ComPtr<ID3D11Buffer> m_pIndices;

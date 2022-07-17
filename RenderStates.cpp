@@ -1,28 +1,35 @@
 #include "RenderStates.h"
-#include "d3dUtil.h"
+#include "XUtil.h"
 #include "DXTrace.h"
 using namespace Microsoft::WRL;
 
 ComPtr<ID3D11RasterizerState> RenderStates::RSNoCull = nullptr;
 ComPtr<ID3D11RasterizerState> RenderStates::RSWireframe = nullptr;
 ComPtr<ID3D11RasterizerState> RenderStates::RSCullClockWise = nullptr;
+ComPtr<ID3D11RasterizerState> RenderStates::RSShadow = nullptr;
 
-ComPtr<ID3D11SamplerState> RenderStates::SSAnisotropicWrap = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSPointClamp = nullptr;
 ComPtr<ID3D11SamplerState> RenderStates::SSLinearWrap = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSLinearClamp = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSAnistropicWrap16x = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSAnistropicClamp2x = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSAnistropicClamp4x = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSAnistropicClamp8x = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSAnistropicClamp16x = nullptr;
+ComPtr<ID3D11SamplerState> RenderStates::SSShadowPCF = nullptr;
 
 ComPtr<ID3D11BlendState> RenderStates::BSAlphaToCoverage = nullptr;
 ComPtr<ID3D11BlendState> RenderStates::BSTransparent = nullptr;
-ComPtr<ID3D11BlendState> RenderStates::BSNoColorWrite = nullptr;
 ComPtr<ID3D11BlendState> RenderStates::BSAdditive = nullptr;
+ComPtr<ID3D11BlendState> RenderStates::BSAlphaWeightedAdditive = nullptr;
 
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSWriteStencil = nullptr;
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSDrawWithStencil = nullptr;
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDoubleBlend = nullptr;
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDepthTest = nullptr;
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSEqual = nullptr;
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSLessEqual = nullptr;
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSGreaterEqual = nullptr;
 ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDepthWrite = nullptr;
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDepthTestWithStencil = nullptr;
-ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDepthWriteWithStencil = nullptr;
-
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSNoDepthTest = nullptr;
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSWriteStencil = nullptr;
+ComPtr<ID3D11DepthStencilState> RenderStates::DSSEqualStencil = nullptr;
 bool RenderStates::IsInit()
 {
 	// 一般来说初始化操作会把所有的状态都创建出来
@@ -277,20 +284,4 @@ void RenderStates::InitAll(ID3D11Device* device)
 	D3D11SetDebugObjectName(RSCullClockWise.Get(), "RSCullClockWise");
 	D3D11SetDebugObjectName(RSNoCull.Get(), "RSNoCull");
 	D3D11SetDebugObjectName(RSWireframe.Get(), "RSWireframe");
-
-	D3D11SetDebugObjectName(SSAnisotropicWrap.Get(), "SSAnisotropicWrap");
-	D3D11SetDebugObjectName(SSLinearWrap.Get(), "SSLinearWrap");
-
-	D3D11SetDebugObjectName(BSAlphaToCoverage.Get(), "BSAlphaToCoverage");
-	D3D11SetDebugObjectName(BSNoColorWrite.Get(), "BSNoColorWrite");
-	D3D11SetDebugObjectName(BSTransparent.Get(), "BSTransparent");
-	D3D11SetDebugObjectName(BSAdditive.Get(), "BSAdditive");
-
-	D3D11SetDebugObjectName(DSSWriteStencil.Get(), "DSSWriteStencil");
-	D3D11SetDebugObjectName(DSSDrawWithStencil.Get(), "DSSDrawWithStencil");
-	D3D11SetDebugObjectName(DSSNoDoubleBlend.Get(), "DSSNoDoubleBlend");
-	D3D11SetDebugObjectName(DSSNoDepthTest.Get(), "DSSNoDepthTest");
-	D3D11SetDebugObjectName(DSSNoDepthWrite.Get(), "DSSNoDepthWrite");
-	D3D11SetDebugObjectName(DSSNoDepthTestWithStencil.Get(), "DSSNoDepthTestWithStencil");
-	D3D11SetDebugObjectName(DSSNoDepthWriteWithStencil.Get(), "DSSNoDepthWriteWithStencil");
 }

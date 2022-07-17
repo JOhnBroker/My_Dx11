@@ -33,9 +33,6 @@
     <ClCompile Include="d3dApp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="d3dUtil.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Keyboard.cpp">
       <Filter>通用文件</Filter>
     </ClCompile>
@@ -82,6 +79,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="XUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Geometry.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -150,6 +150,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Property.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
-﻿#include "GameObject.h"
-#include "d3dUtil.h"
+#include "GameObject.h"
+#include "XUtil.h"
 
 GameObject::GameObject()
     : m_IndexCount(),

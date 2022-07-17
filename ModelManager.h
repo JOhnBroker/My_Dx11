@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //  FileName    : ModelManager.h
 //  Creator     : XJun ？
@@ -11,13 +11,12 @@
 #ifndef MODEL_MANAGER_H
 #define MODEL_MANAGER_H
 
-#include <d3d11_1.h>
-#include <vector>
-#include <wrl/client.h>
 #include "WinMin.h"
 #include "Geometry.h"
 #include "Material.h"
 #include "MeshData.h"
+#include <d3d11_1.h>
+#include <wrl/client.h>
 
 struct Model
 {
