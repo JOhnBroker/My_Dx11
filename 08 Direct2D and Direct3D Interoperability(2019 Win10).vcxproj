@@ -164,6 +164,7 @@
     <ClCompile Include="d3dApp.cpp" />
     <ClCompile Include="DDSTextureLoader11.cpp" />
     <ClCompile Include="DXTrace.cpp" />
+    <ClCompile Include="EffectHelper.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="CpuTimer.cpp" />
     <ClCompile Include="GameObject.cpp" />
