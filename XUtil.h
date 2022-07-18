@@ -6,8 +6,8 @@
 // Direct3D utility tools.
 //***************************************************************************************
 
-#ifndef D3DUTIL_H
-#define D3DUTIL_H
+#ifndef XUTIL_H
+#define XUTIL_H
 
 #include <WinMin.h>
 #include <d3d11_1.h>			// 已包含Windows.h
@@ -313,19 +313,27 @@ HRESULT CreateWICTexture2DCubeFromFile(
 // 数学相关函数
 //
 
-// ------------------------------
-// InverseTranspose函数
-// ------------------------------
-inline DirectX::XMMATRIX XM_CALLCONV InverseTranspose(DirectX::FXMMATRIX M)
+namespace XMath
 {
-	using namespace DirectX;
+	// ------------------------------
+	// InverseTranspose函数
+	// ------------------------------
+	inline DirectX::XMMATRIX XM_CALLCONV InverseTranspose(DirectX::FXMMATRIX M)
+	{
+		using namespace DirectX;
 
-	// 世界矩阵的逆的转置仅针对法向量，我们也不需要世界矩阵的平移分量
-	// 而且不去掉的话，后续再乘上观察矩阵之类的就会产生错误的变换结果
-	XMMATRIX A = M;
-	A.r[3] = g_XMIdentityR3;
+		// 世界矩阵的逆的转置仅针对法向量，我们也不需要世界矩阵的平移分量
+		// 而且不去掉的话，后续再乘上观察矩阵之类的就会产生错误的变换结果
+		XMMATRIX A = M;
+		A.r[3] = g_XMIdentityR3;
 
-	return XMMatrixTranspose(XMMatrixInverse(nullptr, A));
+		return XMMatrixTranspose(XMMatrixInverse(nullptr, A));
+	}
+
+	inline float Lerp(float a, float b, float t)
+	{
+		return (1.0f - t) * a + t * b;
+	}
 }
 
 #endif

@@ -27,7 +27,7 @@ public:
 
 	std::unique_ptr<EffectHelper> m_pEffectHelper;
 
-	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayot;
+	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 
 	std::shared_ptr<IEffectPass> m_pCurrEffectPass;
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
@@ -85,14 +85,31 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	if (!RenderStates::IsInit())
 		throw std::exception("RenderStates need to be initialized first!");
 
-
+	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
+	
+	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+	// 创建顶点着色器
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"Shaders/Basic_VS.cso", device, nullptr, nullptr, nullptr, blob.GetAddressOf());
 	// 创建顶点输入布局
+	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
+		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
+	// 创建像素着色器
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"Shaders/Basic_PS.cso", device);
 
-	// 创建常量缓冲区
+	// 创建通道
+	EffectPassDesc passDesc;
+	passDesc.nameVS = "BasicVS";
+	passDesc.namePS = "BasicPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
 
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
 	// 设置调试对象名
+#if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
+	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "BasicEffect.VertexPosNormalTexLayout");
+#endif
+	pImpl->m_pEffectHelper->SetDebugObjectName("BasicEffect");
 
 	return true;
 }
@@ -176,5 +193,23 @@ void BasicEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
 
 void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)
 {
+	XMMATRIX W = XMLoadFloat4x4(&pImpl->m_World);
+	XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
+	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
 
+	XMMATRIX VP = V * P;
+	XMMATRIX WInvT = XMath::InverseTranspose(W);
+
+	W = XMMatrixTranspose(W);
+	VP = XMMatrixTranspose(VP);
+	WInvT = XMMatrixTranspose(WInvT);
+
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (FLOAT*)&W);
+
+	if (pImpl->m_pCurrEffectPass) 
+	{
+		pImpl->m_pCurrEffectPass->Apply(deviceContext);
+	}
 }

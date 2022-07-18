@@ -1,10 +1,16 @@
 #ifndef GAMEAPP_H
 #define GAMEAPP_H
 
-#include <ctime>
-#include <d3dApp.h>
+#include <WinMin.h>
+#include "d3dApp.h"
+#include "Effects.h"
 #include <Camera.h>
-#include "GameObject.h"
+#include <RenderStates.h>
+#include <GameObject.h>
+#include <Texture2D.h>
+#include <Buffer.h>
+#include <ModelManager.h>
+#include <TextureManager.h>
 
 class GameApp : public D3DApp
 {
@@ -23,9 +29,15 @@ public:
 
 private:
 	bool InitResource();
-	void InitPointSpritesBuffer();
 
 private:
+	TextureManager m_TextureManager;
+	ModelManager m_ModelManager;
+
+	BasicEffect m_BasicEffect;
+
+	//std::unique_ptr<Depth2D>
+
 	ComPtr<ID3D11Buffer> mPointSpritesBuffer;					// 点精灵顶点缓冲区
 	ComPtr<ID3D11ShaderResourceView> mTreeTexArray;				// 树的纹理数组
 	Material m_TreeMat;											// 树的材质
