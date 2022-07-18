@@ -29,10 +29,10 @@ struct ID3D11BlendState;
 
 // 渲染通道描述
 // 通过指定添加着色器时提供的名字来设置着色器
-struct EffectPassDesc 
+struct EffectPassDesc
 {
 	std::string_view nameVS;
-	std::string_view namePS;
+	std::string_view nameDS;
 	std::string_view nameHS;
 	std::string_view nameGS;
 	std::string_view namePS;
@@ -45,13 +45,13 @@ struct IEffectConstantBufferVariable
 {
 	// 设置无符号整数，也可以为bool设置
 	virtual void SetUInt(uint32_t val) = 0;
-	
+
 	// 设置有符号整数
 	virtual void SetSInt(int val) = 0;
-	
+
 	// 设置浮点数
 	virtual void SetFloat(float val) = 0;
-	
+
 	// 设置无符号整数向量，允许设置1个到4个分量
 	// 着色器变量类型为bool也可以使用
 	// 根据要设置的分量数来读取data的前几个分量
@@ -92,7 +92,7 @@ struct IEffectConstantBufferVariable
 // 渲染通道
 // 非COM组件
 class EffectHelper;
-struct IEffectPass 
+struct IEffectPass
 {
 	// 设置光栅化状态
 	virtual void SetRasterizerState(ID3D11RasterizerState* pRS) = 0;
@@ -139,10 +139,10 @@ struct IEffectPass
 
 // 特效助理
 // 负责管理着色器、采样器、着色器资源、常量缓冲区、着色器形参、可读写资源、渲染状态
-class EffectHelper 
+class EffectHelper
 {
 public:
-	
+
 	EffectHelper();
 	~EffectHelper();
 	// 不允许拷贝，允许移动
@@ -196,7 +196,7 @@ public:
 	HRESULT AddEffectPass(std::string_view effectPassName, ID3D11Device* device, const EffectPassDesc* pDesc);
 	// 获取特定渲染通道
 	std::shared_ptr<IEffectPass>GetEffectPass(std::string_view effecPassName);
-	
+
 	// 获取常量缓冲区的变量用于设置值
 	std::shared_ptr<IEffectConstantBufferVariable> GetConstantBufferVariable(std::string_view name);
 
