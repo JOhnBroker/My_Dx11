@@ -8,7 +8,7 @@
 #include <RenderStates.h>
 #include <GameObject.h>
 #include <Texture2D.h>
-#include <Buffer.h>
+//#include <Buffer.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
 
@@ -36,24 +36,13 @@ private:
 
 	BasicEffect m_BasicEffect;
 
-	//std::unique_ptr<Depth2D>
+	std::unique_ptr<Depth2D> m_pDepthTexture;					// 深度缓冲贴图
 
-	ComPtr<ID3D11Buffer> mPointSpritesBuffer;					// 点精灵顶点缓冲区
-	ComPtr<ID3D11ShaderResourceView> mTreeTexArray;				// 树的纹理数组
-	Material m_TreeMat;											// 树的材质
-
-	BasicEffect m_BasicEffect;									// 对象渲染特效管理
-
+	GameObject m_House;											// 房子
 	GameObject m_Floor;										    // 地板
 
-	std::shared_ptr<Camera> m_pCamera;						    // 摄像机
-	CameraMode m_CameraMode;									// 摄像机模式
+	std::shared_ptr<ThirdPersonCamera> m_pCamera;				// 摄像机
 
-	bool m_FogEnabled;										    // 是否开启雾效
-	bool m_IsNight;											    // 是否黑夜
-	bool m_EnableAlphaToCoverage;							    // 是否开启Alpha-To-Coverage
-
-	float m_FogRange;										    // 雾效范围
 };
 
 #endif

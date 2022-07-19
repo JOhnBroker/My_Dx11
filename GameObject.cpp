@@ -1,12 +1,15 @@
-#include "GameObject.h"
 #include "XUtil.h"
+#include "GameObject.h"
+#include "DXTrace.h"
+#include "ModelManager.h"
 
-GameObject::GameObject()
-    : m_IndexCount(),
-    m_Material(),
-    m_VertexStride()
+using namespace DirectX;
+
+struct InstancedData
 {
-}
+	XMMATRIX world;
+	XMMATRIX worldInvTranspose;
+};
 
 Transform& GameObject::GetTransform()
 {
@@ -18,39 +21,154 @@ const Transform& GameObject::GetTransform() const
 	return m_Transform;
 }
 
-void GameObject::SetTexture(ID3D11ShaderResourceView* texture)
+void GameObject::FrustumCulling(const DirectX::BoundingFrustum& frustumInWorld)
 {
-	m_pTexture = texture;
+	size_t sz = m_pModel->meshdatas.size();
+	m_InFrustum = false;
+	m_SubModelInFrustum.resize(sz);
+	for (uint32_t i = 0; i < sz; ++i)
+	{
+		BoundingOrientedBox box;
+		BoundingOrientedBox::CreateFromBoundingBox(box, m_pModel->meshdatas[i].m_BoundingBox);
+		box.Transform(box, m_Transform.GetLocalToWorldMatrixXM());
+		m_SubModelInFrustum[i] = frustumInWorld.Intersects(box);
+		m_InFrustum = m_InFrustum || m_SubModelInFrustum[i];
+	}
 }
 
-void GameObject::SetMaterial(const Material& material)
+void GameObject::CubeCulling(const DirectX::BoundingOrientedBox& obbInWorld)
 {
-	m_Material = material;
+	size_t sz = m_pModel->meshdatas.size();
+	m_InFrustum = false;
+	m_SubModelInFrustum.resize(sz);
+	for (uint32_t i = 0; i < sz; ++i)
+	{
+		BoundingOrientedBox box;
+		BoundingOrientedBox::CreateFromBoundingBox(box, m_pModel->meshdatas[i].m_BoundingBox);
+		box.Transform(box, m_Transform.GetLocalToWorldMatrixXM());
+		m_SubModelInFrustum[i] = obbInWorld.Intersects(box);
+		m_InFrustum = m_InFrustum || m_SubModelInFrustum[i];
+	}
 }
 
-void GameObject::Draw(ID3D11DeviceContext* deviceContext, BasicEffect& effect)
+void GameObject::CubeCulling(const DirectX::BoundingBox& aabbInWorld)
 {
-	// 输入装配阶段的顶点缓冲区设置
-	UINT strides = m_VertexStride;
-	UINT offsets = 0;
-	deviceContext->IASetVertexBuffers(0, 1, m_pVertexBuffer.GetAddressOf(), &strides, &offsets);
-	deviceContext->IASetIndexBuffer(m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-
-	// 更新数据并应用
-	effect.SetWorldMatrix(m_Transform.GetLocalToWorldMatrixXM());
-	effect.SetTexture(m_pTexture.Get());
-	effect.SetMaterial(m_Material);
-	effect.Apply(deviceContext);
-
-	deviceContext->DrawIndexed(m_IndexCount, 0, 0);
+	size_t sz = m_pModel->meshdatas.size();
+	m_InFrustum = false;
+	m_SubModelInFrustum.resize(sz);
+	for (size_t i = 0; i < sz; ++i)
+	{
+		BoundingBox box;
+		m_pModel->meshdatas[i].m_BoundingBox.Transform(box, m_Transform.GetLocalToWorldMatrixXM());
+		m_SubModelInFrustum[i] = aabbInWorld.Intersects(box);
+		m_InFrustum = m_InFrustum || m_SubModelInFrustum[i];
+	}
 }
 
-void GameObject::SetDebugObjectName(const std::string& name)
+void GameObject::SetModel(const Model* pModel)
 {
-#if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-	D3D11SetDebugObjectName(m_pVertexBuffer.Get(), name + ".VertexBuffer");
-	D3D11SetDebugObjectName(m_pIndexBuffer.Get(), name + ".IndexBuffer");
-#else
-	UNREFERENCED_PARAMETER(name);
-#endif
+	m_pModel = pModel;
 }
+
+const Model* GameObject::GetModel() const
+{
+	return m_pModel;
+}
+
+DirectX::BoundingBox GameObject::GetLocalBoundingBox() const
+{
+	return m_pModel ? m_pModel->boundingbox : DirectX::BoundingBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3());
+}
+
+DirectX::BoundingBox GameObject::GetLocalBoundingBox(size_t idx) const
+{
+	if (!m_pModel || m_pModel->meshdatas.size() >= idx)
+	{
+		return DirectX::BoundingBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3());
+	}
+	return  m_pModel->meshdatas[idx].m_BoundingBox;
+}
+
+DirectX::BoundingBox GameObject::GetBoundingBox() const
+{
+	if (!m_pModel)
+	{
+		return DirectX::BoundingBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3());
+	}
+	BoundingBox box = m_pModel->boundingbox;
+	box.Transform(box, m_Transform.GetLocalToWorldMatrixXM());
+	return box;
+}
+
+DirectX::BoundingBox GameObject::GetBoundingBox(size_t idx) const
+{
+	if (!m_pModel || m_pModel->meshdatas.size() >= idx)
+	{
+		return DirectX::BoundingBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3());
+	}
+	BoundingBox box = m_pModel->meshdatas[idx].m_BoundingBox;
+	box.Transform(box, m_Transform.GetLocalToWorldMatrixXM());
+	return box;
+}
+
+DirectX::BoundingOrientedBox GameObject::GetBoundingOrientedBox() const
+{
+	if (!m_pModel)
+	{
+		return DirectX::BoundingOrientedBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3(), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	}
+	BoundingOrientedBox obb;
+	BoundingOrientedBox::CreateFromBoundingBox(obb, m_pModel->boundingbox);
+	obb.Transform(obb, m_Transform.GetLocalToWorldMatrixXM());
+	return obb;
+}
+
+DirectX::BoundingOrientedBox GameObject::GetBoundingOrientedBox(size_t idx) const
+{
+	if (!m_pModel)
+	{
+		return DirectX::BoundingOrientedBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3(), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	}
+	BoundingOrientedBox obb;
+	BoundingOrientedBox::CreateFromBoundingBox(obb, m_pModel->meshdatas[idx].m_BoundingBox);
+	obb.Transform(obb, m_Transform.GetLocalToWorldMatrixXM());
+	return obb;
+}
+
+void GameObject::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)
+{
+	if (!m_InFrustum || !deviceContext)
+		return;
+	size_t sz = m_pModel->meshdatas.size();
+	size_t fsz = m_SubModelInFrustum.size();
+	for (size_t i = 0; i < sz; ++i)
+	{
+		if (i < fsz && !m_SubModelInFrustum[i])
+		{
+			continue;
+		}
+		IEffectMeshData* pEffectMeshData = dynamic_cast<IEffectMeshData*>(&effect);
+		if (!pEffectMeshData) continue;
+		IEffectMaterial* pEffectMaterial = dynamic_cast<IEffectMaterial*>(&effect);
+		if (pEffectMaterial)
+		{
+			pEffectMaterial->SetMaterial(m_pModel->materials[m_pModel->meshdatas[i].m_MaterialIndex]);
+		}
+		IEffectTransform* pEffectTransform = dynamic_cast<IEffectTransform*>(&effect);
+		if (pEffectTransform)
+		{
+			pEffectTransform->SetWorldMatrix(m_Transform.GetLocalToWorldMatrixXM());
+		}
+		effect.Apply(deviceContext);
+		MeshDataInput input = pEffectMeshData->GetInputData(m_pModel->meshdatas[i]);
+		{
+			deviceContext->IASetInputLayout(input.pInputLayout);
+			deviceContext->IASetPrimitiveTopology(input.topology);
+			deviceContext->IASetVertexBuffers(0, (uint32_t)input.pVertexBuffers.size(),
+				input.pVertexBuffers.data(), input.strides.data(), input.offsets.data());
+			deviceContext->IASetIndexBuffer(input.pIndexBuffer, input.indexCount > 65535 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
+			deviceContext->DrawIndexed(input.indexCount, 0, 0);
+		}
+	}
+}
+

@@ -41,8 +41,13 @@ protected:
 	bool InitImGui();           // ImGui初始化
 
 	void CalculateFrameStats(); // 计算每秒帧数并在窗口显示
+	ID3D11RenderTargetView* GetBackBufferRTV() { return m_pRenderTargetViews[m_FrameCount % m_BackBufferCount].Get(); }
 
 protected:
+
+	// 使用模板别名(C++11)简化类型名
+	template <class T>
+	using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 	HINSTANCE m_hAppInst;        // 应用实例句柄
 	HWND      m_hMainWnd;        // 主窗口句柄
@@ -50,15 +55,13 @@ protected:
 	bool      m_Minimized;       // 应用是否最小化
 	bool      m_Maximized;       // 应用是否最大化
 	bool      m_Resizing;        // 窗口大小是否变化
-	bool	  m_Enable4xMsaa;	 // 是否开启4倍多重采样
-	UINT      m_4xMsaaQuality;   // MSAA支持的质量等级
+
+	bool	  m_IsDxgiFlipModel;		// 是否使用DXGI翻转模型
+	UINT	  m_FrameCount = 0;			// 当前帧
+	UINT	  m_BackBufferCount = 0;	// 后备缓冲区数目
+	ComPtr<ID3D11RenderTargetView> m_pRenderTargetViews[2];		// 所有后备缓冲区对应的渲染目标视图
 
 	CpuTimer m_Timer;           // 计时器
-
-
-	// 使用模板别名(C++11)简化类型名
-	template <class T>
-	using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 	// Direct3D 11
 	ComPtr<ID3D11Device> m_pd3dDevice;							// D3D11设备
@@ -68,17 +71,7 @@ protected:
 	ComPtr<ID3D11Device1> m_pd3dDevice1;						// D3D11.1设备
 	ComPtr<ID3D11DeviceContext1> m_pd3dImmediateContext1;		// D3D11.1设备上下文
 	ComPtr<IDXGISwapChain1> m_pSwapChain1;						// D3D11.1交换链
-	// 常用资源
-	ComPtr<ID3D11Texture2D> m_pDepthStencilBuffer;				// 深度模板缓冲区
-	ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;			// 渲染目标视图
-	ComPtr<ID3D11DepthStencilView> m_pDepthStencilView;			// 深度模板视图
-	D3D11_VIEWPORT m_ScreenViewport;                            // 视口
-	// 键鼠输入
-	std::unique_ptr<DirectX::Mouse> m_pMouse;					// 鼠标
-	DirectX::Mouse::ButtonStateTracker m_MouseTracker;			// 鼠标状态追踪器
-	std::unique_ptr<DirectX::Keyboard> m_pKeyboard;				// 键盘
-	DirectX::Keyboard::KeyboardStateTracker m_KeyboardTracker;	// 键盘状态追踪器
-	// 派生类应该在构造函数设置好这些自定义的初始参数
+
 	std::wstring m_MainWndCaption;                               // 主窗口标题
 	int m_ClientWidth;                                           // 视口宽度
 	int m_ClientHeight;                                          // 视口高度

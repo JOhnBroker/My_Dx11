@@ -31,12 +31,18 @@ public:
 	DirectX::XMFLOAT3 GetLookAxis()const;
 
 	//获取矩阵
-	DirectX::XMMATRIX GetViewXM() const;
-	DirectX::XMMATRIX GetProjXM() const;
-	DirectX::XMMATRIX GetViewProjXM() const;
+	DirectX::XMMATRIX GetLocalToWorldMatrixXM() const;
+	DirectX::XMMATRIX GetViewMatrixXM() const;
+	DirectX::XMMATRIX GetProjMatrixXM(bool reversedZ = false) const;
+	DirectX::XMMATRIX GetViewProjMatrixXM(bool reversedZ = false) const;
 
 	//获取视口
 	D3D11_VIEWPORT GetViewPort() const;
+
+	float GetNearZ() const;
+	float GetFarZ() const;
+	float GetFovY() const;
+	float GetAspectRatio() const;
 
 	//设置视锥体
 	void SetFrustum(float fovY, float aspect, float nearZ, float farZ);
@@ -89,7 +95,7 @@ public:
 class ThirdPersonCamera :public Camera {
 public:
 	ThirdPersonCamera() = default;
-    ~ThirdPersonCamera() override;
+	~ThirdPersonCamera() override;
 
 	//获取当前跟踪物体的位置
 	DirectX::XMFLOAT3 GetTargetPosition() const;

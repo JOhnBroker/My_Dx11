@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifndef MATERIAL_H
 #define MATERIAL_H
@@ -39,7 +39,7 @@ public:
 	}
 
 	template<class T>
-	bool Has(std::string_view) const
+	bool Has(std::string_view name) const
 	{
 		auto it = m_Properties.find(StringToID(name));
 		if (it == m_Properties.end() || !std::holds_alternative<T>(it->second))

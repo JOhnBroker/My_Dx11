@@ -86,7 +86,7 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 		throw std::exception("RenderStates need to be initialized first!");
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
-	
+
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 	// 创建顶点着色器
 	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"Shaders/Basic_VS.cso", device, nullptr, nullptr, nullptr, blob.GetAddressOf());
@@ -116,7 +116,9 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 void BasicEffect::SetRenderDefault()
 {
-
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -208,7 +210,7 @@ void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (FLOAT*)&W);
 
-	if (pImpl->m_pCurrEffectPass) 
+	if (pImpl->m_pCurrEffectPass)
 	{
 		pImpl->m_pCurrEffectPass->Apply(deviceContext);
 	}

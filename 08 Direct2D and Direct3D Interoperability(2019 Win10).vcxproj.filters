@@ -19,18 +19,15 @@
     <Filter Include="通用文件">
       <UniqueIdentifier>{d9656ee3-8e19-486b-a5f7-4f09a0f61394}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{f0941caa-fd4c-4b3d-87f8-97e213417117}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CpuTimer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="GameApp.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="d3dApp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Keyboard.cpp">
@@ -39,94 +36,76 @@
     <ClCompile Include="Mouse.cpp">
       <Filter>通用文件</Filter>
     </ClCompile>
-    <ClCompile Include="Vertex.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="DXTrace.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Transform.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="DDSTextureLoader11.cpp">
       <Filter>通用文件</Filter>
     </ClCompile>
     <ClCompile Include="WICTextureLoader11.cpp">
       <Filter>通用文件</Filter>
     </ClCompile>
-    <ClCompile Include="WinMin.h">
-      <Filter>头文件</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderStates.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="BasicEffect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="GameObject.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="WinMin.h">
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="ModelManager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureManager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="XUtil.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Geometry.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="CpuTimer.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="EffectHelper.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTrace.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Geometry.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="d3dApp.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelManager.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderStates.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Transform.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="XUtil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="GpuTimer.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture2D.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CpuTimer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="GameApp.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Geometry.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="LightHelper.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Mouse.h">
       <Filter>通用文件</Filter>
     </ClInclude>
     <ClInclude Include="Keyboard.h">
       <Filter>通用文件</Filter>
     </ClInclude>
-    <ClInclude Include="Vertex.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="DXTrace.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Camera.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Transform.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="DDSTextureLoader11.h">
       <Filter>通用文件</Filter>
     </ClInclude>
     <ClInclude Include="WICTextureLoader11.h">
       <Filter>通用文件</Filter>
-    </ClInclude>
-    <ClInclude Include="RenderStates.h">
-      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Effects.h">
       <Filter>头文件</Filter>
@@ -135,28 +114,67 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="GameObject.h">
-      <Filter>头文件</Filter>
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Geometry.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="LightHelper.h">
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Material.h">
-      <Filter>头文件</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="MeshData.h">
-      <Filter>头文件</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="ModelManager.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManager.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="XUtil.h">
-      <Filter>头文件</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Property.h">
-      <Filter>头文件</Filter>
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStates.h">
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="stb_image.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Vertex.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="XUtil.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CpuTimer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTrace.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="GpuTimer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="IEffect.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture2D.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="GameApp.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dApp.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
