@@ -30,11 +30,11 @@ HRESULT GpuTimer::Start()
 	CD3D11_QUERY_DESC queryDesc(D3D11_QUERY_TIMESTAMP);
 	m_pDevice->CreateQuery(&queryDesc, info.startQuery.GetAddressOf());
 	m_pDevice->CreateQuery(&queryDesc, info.stopQuery.GetAddressOf());
-	queryDesc.MiscFlags = D3D11_QUERY_TIMESTAMP_DISJOINT;
+    queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
 	m_pDevice->CreateQuery(&queryDesc, info.disjointQuery.GetAddressOf());
 
 	m_pImmediateContext->Begin(info.disjointQuery.Get());
-	m_pImmediateContext->End(info.disjointQuery.Get());
+    m_pImmediateContext->End(info.startQuery.Get());
 	return S_OK;
 }
 
@@ -56,13 +56,13 @@ bool GpuTimer::TryGetTime(double* pOut)
 		return false;
 	info.disjointQuery.Reset();
 
-	if (info.disjointQuery && !GetQueryDataHelper(m_pImmediateContext.Get(), false, info.startQuery.Get(), &info.startData, sizeof(info.startData)))
-		return false;
-	info.startQuery.Reset();
+    if (info.startQuery && !GetQueryDataHelper(m_pImmediateContext.Get(), false, info.startQuery.Get(), &info.startData, sizeof(info.startData)))
+        return false;
+    info.startQuery.Reset();
 
-	if (info.disjointQuery && !GetQueryDataHelper(m_pImmediateContext.Get(), false, info.stopQuery.Get(), &info.stopData, sizeof(info.stopData)))
-		return false;
-	info.stopQuery.Reset();
+    if (info.stopQuery && !GetQueryDataHelper(m_pImmediateContext.Get(), false, info.stopQuery.Get(), &info.stopData, sizeof(info.stopData)))
+        return false;
+    info.stopQuery.Reset();
 
 	if (!info.disjointData.Disjoint)
 	{
@@ -75,7 +75,7 @@ bool GpuTimer::TryGetTime(double* pOut)
 		m_AccumCount++;
 		if (m_DeltaTimes.size() > m_RecentCount)
 		{
-			m_AccumCount -= m_DeltaTimes.front();
+            m_AccumTime -= m_DeltaTimes.front();
 			m_DeltaTimes.pop_front();
 		}
 		if (pOut) *pOut = deltaTime;

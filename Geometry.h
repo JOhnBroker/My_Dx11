@@ -22,7 +22,7 @@ struct GeometryData
 	std::vector<DirectX::XMFLOAT2> texcoords;
 	std::vector<DirectX::XMFLOAT4> tangents;
 	std::vector<uint32_t> indices32;
-	std::vector<uint32_t> indices16;
+    std::vector<uint16_t> indices16;
 };
 
 namespace Geometry

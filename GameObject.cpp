@@ -26,7 +26,7 @@ void GameObject::FrustumCulling(const DirectX::BoundingFrustum& frustumInWorld)
 	size_t sz = m_pModel->meshdatas.size();
 	m_InFrustum = false;
 	m_SubModelInFrustum.resize(sz);
-	for (uint32_t i = 0; i < sz; ++i)
+    for (size_t i = 0; i < sz; ++i)
 	{
 		BoundingOrientedBox box;
 		BoundingOrientedBox::CreateFromBoundingBox(box, m_pModel->meshdatas[i].m_BoundingBox);
@@ -41,7 +41,7 @@ void GameObject::CubeCulling(const DirectX::BoundingOrientedBox& obbInWorld)
 	size_t sz = m_pModel->meshdatas.size();
 	m_InFrustum = false;
 	m_SubModelInFrustum.resize(sz);
-	for (uint32_t i = 0; i < sz; ++i)
+    for (size_t i = 0; i < sz; ++i)
 	{
 		BoundingOrientedBox box;
 		BoundingOrientedBox::CreateFromBoundingBox(box, m_pModel->meshdatas[i].m_BoundingBox);
@@ -125,14 +125,12 @@ DirectX::BoundingOrientedBox GameObject::GetBoundingOrientedBox() const
 
 DirectX::BoundingOrientedBox GameObject::GetBoundingOrientedBox(size_t idx) const
 {
-	if (!m_pModel)
-	{
-		return DirectX::BoundingOrientedBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3(), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
-	}
-	BoundingOrientedBox obb;
-	BoundingOrientedBox::CreateFromBoundingBox(obb, m_pModel->meshdatas[idx].m_BoundingBox);
-	obb.Transform(obb, m_Transform.GetLocalToWorldMatrixXM());
-	return obb;
+    if (!m_pModel || m_pModel->meshdatas.size() >= idx)
+        return DirectX::BoundingOrientedBox(DirectX::XMFLOAT3(), DirectX::XMFLOAT3(), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+    BoundingOrientedBox obb;
+    BoundingOrientedBox::CreateFromBoundingBox(obb, m_pModel->meshdatas[idx].m_BoundingBox);
+    obb.Transform(obb, m_Transform.GetLocalToWorldMatrixXM());
+    return obb;
 }
 
 void GameObject::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)

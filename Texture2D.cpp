@@ -1,8 +1,14 @@
 #include "Texture2D.h"
+#include "XUtil.h"
+#include <cassert>
 
-Texture2DBase::Texture2DBase(ID3D11Device* device,
-	const CD3D11_TEXTURE2D_DESC& texDesc, const CD3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc)
-	:m_Width(texDesc.Width), m_Height(texDesc.Height)
+#pragma warning(disable: 26812)
+
+using namespace Microsoft::WRL;
+
+Texture2DBase::Texture2DBase(ID3D11Device* device, 
+    const CD3D11_TEXTURE2D_DESC& texDesc, const CD3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc)
+    : m_Width(texDesc.Width), m_Height(texDesc.Height)
 {
 	m_pTexture.Reset();
 	m_pTextureSRV.Reset();
@@ -20,7 +26,7 @@ Texture2DBase::Texture2DBase(ID3D11Device* device,
 
 }
 
-void SetDebugObjectName(std::string_view name)
+void Texture2DBase::SetDebugObjectName(std::string_view name)
 {
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	::SetDebugObjectName(m_pTexture.Get(), name);
@@ -44,6 +50,7 @@ Texture2D::Texture2D(ID3D11Device* device, uint32_t width, uint32_t height,
 	}
 	if (bindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
+        CD3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc(D3D11_UAV_DIMENSION_TEXTURE2D, format);
 		device->CreateUnorderedAccessView(m_pTexture.Get(), nullptr, m_pTextureUAV.GetAddressOf());
 	}
 }
@@ -350,10 +357,9 @@ Depth2DMS::Depth2DMS(ID3D11Device* device, uint32_t width, uint32_t height,
 {
 	if (bindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
-		CD3D11_DEPTH_STENCIL_VIEW_DESC dsrvDesc(D3D11_DSV_DIMENSION_TEXTURE2DMS, GetDepthDSVFormat(depthStencilBitsFlag));
-		device->CreateDepthStencilView(m_pTexture.Get(), &dsrvDesc, m_pTextureDSV.GetAddressOf());
-	}
-
+        CD3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc(D3D11_DSV_DIMENSION_TEXTURE2DMS, GetDepthDSVFormat(depthStencilBitsFlag));
+        device->CreateDepthStencilView(m_pTexture.Get(), &dsvDesc, m_pTextureDSV.GetAddressOf());
+    }
 }
 
 void Depth2DMS::SetDebugObjectName(std::string_view name)

@@ -44,8 +44,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// ******************
 	// 初始化光栅化器状态
 	//
-	D3D11_RASTERIZER_DESC rasterizerDesc;
-	ZeroMemory(&rasterizerDesc, sizeof(rasterizerDesc));
+	CD3D11_RASTERIZER_DESC rasterizerDesc(CD3D11_DEFAULT{});
 
 	// 线框模式
 	rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
@@ -73,8 +72,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// ******************
 	// 初始化采样器状态
 	//
-	D3D11_SAMPLER_DESC sampDesc;
-	ZeroMemory(&sampDesc, sizeof(sampDesc));
+	CD3D11_SAMPLER_DESC sampDesc(CD3D11_DEFAULT{});
 
 	// 点过滤与Clamp模式
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -106,9 +104,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	sampDesc.MinLOD = 0;
-	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	sampDesc.MaxAnisotropy = 0;
 	HR(device->CreateSamplerState(&sampDesc, SSLinearWrap.GetAddressOf()));
 
 	// 各向异性过滤模式
@@ -121,8 +117,8 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// ******************
 	// 初始化混合状态
 	//
-	D3D11_BLEND_DESC blendDesc;
-	ZeroMemory(&blendDesc, sizeof(blendDesc));
+	CD3D11_BLEND_DESC blendDesc(CD3D11_DEFAULT{});
+	
 	auto& rtDesc = blendDesc.RenderTarget[0];
 
 	// Alpha-To-Coverage 模式
@@ -153,7 +149,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	rtDesc.DestBlend = D3D11_BLEND_ONE;
 	rtDesc.BlendOp = D3D11_BLEND_OP_ADD;
 	rtDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
-	rtDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
+    rtDesc.DestBlendAlpha = D3D11_BLEND_ONE;
 	rtDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	HR(device->CreateBlendState(&blendDesc, BSAdditive.GetAddressOf()));
 
@@ -173,7 +169,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// ******************
 	// 初始化深度/模板状态
 	//
-	D3D11_DEPTH_STENCIL_DESC dsDesc;
+    CD3D11_DEPTH_STENCIL_DESC dsDesc(CD3D11_DEFAULT{});
 
 	// 仅允许深度值一致的像素进行写入的深度/模板状态
 	// 没必要写入深度
@@ -231,7 +227,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// 对于背面的几何体我们是不进行渲染的，所以这里的设置无关紧要
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
-	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	HR(device->CreateDepthStencilState(&dsDesc, DSSWriteStencil.GetAddressOf()));
@@ -243,7 +239,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	SetDebugObjectName(RSCullClockWise.Get(), "RSCullClockWise");
 	SetDebugObjectName(RSNoCull.Get(), "RSNoCull");
 	SetDebugObjectName(RSWireframe.Get(), "RSWireframe");
-	SetDebugObjectName(RSShadow.Get(), "RSShadow");
+	//SetDebugObjectName(RSShadow.Get(), "RSShadow");
 
 	SetDebugObjectName(SSPointClamp.Get(), "SSPointClamp");
 	SetDebugObjectName(SSLinearWrap.Get(), "SSLinearWrap");
@@ -253,7 +249,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	SetDebugObjectName(SSAnistropicClamp4x.Get(), "SSAnistropicClamp4x");
 	SetDebugObjectName(SSAnistropicClamp8x.Get(), "SSAnistropicClamp8x");
 	SetDebugObjectName(SSAnistropicClamp16x.Get(), "SSAnistropicClamp16x");
-	SetDebugObjectName(SSShadowPCF.Get(), "SSShadowPCF");
+	//SetDebugObjectName(SSShadowPCF.Get(), "SSShadowPCF");
 
 	SetDebugObjectName(BSAlphaToCoverage.Get(), "BSAlphaToCoverage");
 	SetDebugObjectName(BSTransparent.Get(), "BSTransparent");

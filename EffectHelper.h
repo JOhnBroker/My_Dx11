@@ -86,7 +86,7 @@ struct IEffectConstantBufferVariable
 	// 获取最近一次设置的值，允许指定读取范围
 	virtual HRESULT GetRaw(void* pOutput, uint32_t byteOffset = 0, uint32_t byteCount = 0xFFFFFFFF) = 0;
 
-	virtual ~IEffectConstantBufferVariable() {};
+    virtual ~IEffectConstantBufferVariable() {}
 };
 
 // 渲染通道

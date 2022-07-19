@@ -96,55 +96,62 @@ void Model::CreateFromFile(Model& model, ID3D11Device* device, std::string_view 
 					std::vector<XMFLOAT2> uvs(numVertices);
 					for (uint32_t j = 0; j < numVertices; ++j) 
 					{
-						memcpy_s(&uvs[j], sizeof(XMFLOAT2), pAiMesh->mTextureCoords[i] + j, sizeof(XMFLOAT2));
-					}
-					initData.pSysMem = uvs.data();
-					bufferDesc.ByteWidth = numVertices * sizeof(XMFLOAT2);
-					device->CreateBuffer(&bufferDesc, &initData, mesh.m_pTexcoordArrays[i].GetAddressOf());
-				}
-			}
-			// 索引
-			uint32_t numFaces = pAiMesh->mNumFaces;
-			uint32_t numIndices = numFaces * 3;
-			if (numFaces > 0) 
-			{
-				mesh.m_IndexCount = numIndices;
-				if (numIndices < 65535) 
-				{
-					std::vector<uint16_t> indices(numIndices);
-					for (size_t i = 0; i < numFaces; ++i) 
-					{
-						indices[i * 3] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[0]);
-						indices[i * 3 + 1] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[1]);
-						indices[i * 3 + 2] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[2]);
-					}
-					bufferDesc = CD3D11_BUFFER_DESC(numIndices * sizeof(uint16_t), D3D11_BIND_INDEX_BUFFER);
-					initData.pSysMem = indices.data();
-					device->CreateBuffer(&bufferDesc, &initData, mesh.m_pIndices.GetAddressOf());
-				}
-				else 
-				{
-					std::vector<uint32_t> indices(numIndices);
-					for (size_t i = 0; i < numFaces; ++i)
-					{
-						memcpy_s(indices.data() + i * 3, sizeof(uint32_t) * 3, pAiMesh->mFaces[i].mIndices, sizeof(uint32_t) * 3);
-					}
-					bufferDesc = CD3D11_BUFFER_DESC(numIndices * sizeof(uint32_t), D3D11_BIND_INDEX_BUFFER);
-					initData.pSysMem = indices.data();
-					device->CreateBuffer(&bufferDesc, &initData, mesh.m_pIndices.GetAddressOf());
-				}
-			}
-			// 材质索引
-			mesh.m_MaterialIndex = pAiMesh->mMaterialIndex;
-		}
-		for (uint32_t i = 0; i < pAssimpScene->mNumMaterials; ++i) 
-		{
-			auto& material = model.materials[i];
-			auto pAiMaterial = pAssimpScene->mMaterials[i];
-			XMFLOAT4 vec{};
-			float value{};
-			uint32_t boolean{};
-			uint32_t num = 3;
+                        memcpy_s(&uvs[j], sizeof(XMFLOAT2),
+                            pAiMesh->mTextureCoords[i] + j, sizeof(XMFLOAT2));
+                    }
+                    initData.pSysMem = uvs.data();
+                    bufferDesc.ByteWidth = numVertices * sizeof(XMFLOAT2);
+                    device->CreateBuffer(&bufferDesc, &initData, mesh.m_pTexcoordArrays[i].GetAddressOf());
+                }
+            }
+
+            // 索引
+            uint32_t numFaces = pAiMesh->mNumFaces;
+            uint32_t numIndices = numFaces * 3;
+            if (numFaces > 0)
+            {
+                mesh.m_IndexCount = numIndices;
+                if (numIndices < 65535)
+                {
+                    std::vector<uint16_t> indices(numIndices);
+                    for (size_t i = 0; i < numFaces; ++i)
+                    {
+                        indices[i * 3] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[0]);
+                        indices[i * 3 + 1] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[1]);
+                        indices[i * 3 + 2] = static_cast<uint16_t>(pAiMesh->mFaces[i].mIndices[2]);
+                    }
+                    bufferDesc = CD3D11_BUFFER_DESC(numIndices * sizeof(uint16_t), D3D11_BIND_INDEX_BUFFER);
+                    initData.pSysMem = indices.data();
+                    device->CreateBuffer(&bufferDesc, &initData, mesh.m_pIndices.GetAddressOf());
+                }
+                else
+                {
+                    std::vector<uint32_t> indices(numIndices);
+                    for (size_t i = 0; i < numFaces; ++i)
+                    {
+                        memcpy_s(indices.data() + i * 3, sizeof(uint32_t) * 3,
+                            pAiMesh->mFaces[i].mIndices, sizeof(uint32_t) * 3);
+                    }
+                    bufferDesc = CD3D11_BUFFER_DESC(numIndices * sizeof(uint32_t), D3D11_BIND_INDEX_BUFFER);
+                    initData.pSysMem = indices.data();
+                    device->CreateBuffer(&bufferDesc, &initData, mesh.m_pIndices.GetAddressOf());
+                }
+            }
+
+            // 材质索引
+            mesh.m_MaterialIndex = pAiMesh->mMaterialIndex;
+        }
+
+
+        for (uint32_t i = 0; i < pAssimpScene->mNumMaterials; ++i)
+        {
+            auto& material = model.materials[i];
+
+            auto pAiMaterial = pAssimpScene->mMaterials[i];
+            XMFLOAT4 vec{};
+            float value{};
+            uint32_t boolean{};
+            uint32_t num = 3;
 
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_COLOR_AMBIENT, (float*)&vec, &num))
 				material.Set("$AmbientColor", vec);
@@ -157,7 +164,7 @@ void Model::CreateFromFile(Model& model, ID3D11Device* device, std::string_view 
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_COLOR_EMISSIVE, (float*)&vec, &num))
 				material.Set("$EmissiveColor", vec);
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_OPACITY, value))
-				material.Set("Opacity", value);
+                material.Set("$Opacity", value);
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_COLOR_TRANSPARENT, (float*)&vec, &num))
 				material.Set("$TransparentColor", vec);
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_COLOR_REFLECTIVE, (float*)&vec, &num))
@@ -237,7 +244,7 @@ void Model::CreateFromGeometry(Model& model, ID3D11Device* device, const Geometr
 		bufferDesc = CD3D11_BUFFER_DESC((uint16_t)data.indices16.size() * sizeof(uint16_t), D3D11_BIND_INDEX_BUFFER);
 		device->CreateBuffer(&bufferDesc, &initData, model.meshdatas[0].m_pIndices.GetAddressOf());
 	}
-	if (!data.indices32.empty())
+    else
 	{
 		initData.pSysMem = data.indices32.data();
 		bufferDesc = CD3D11_BUFFER_DESC((uint32_t)data.indices32.size() * sizeof(uint32_t), D3D11_BIND_INDEX_BUFFER);

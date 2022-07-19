@@ -7,8 +7,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef RENDERSTATES_H
-#define RENDERSTATES_H
+#ifndef RENDER_STATES_H
+#define RENDER_STATES_H
 
 #include "WinMin.h"
 #include <wrl/client.h>

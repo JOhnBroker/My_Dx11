@@ -89,18 +89,18 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 	// 创建顶点着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"Shaders/Basic_VS.cso", device, nullptr, nullptr, nullptr, blob.GetAddressOf());
+	pImpl->m_pEffectHelper->CreateShaderFromFile("Basic_VS", L"HLSL/Basic_VS.cso", device, nullptr, nullptr, nullptr, blob.GetAddressOf());
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"Shaders/Basic_PS.cso", device);
+	pImpl->m_pEffectHelper->CreateShaderFromFile("Basic_PS", L"HLSL/Basic_PS.cso", device);
 
 	// 创建通道
 	EffectPassDesc passDesc;
-	passDesc.nameVS = "BasicVS";
-	passDesc.namePS = "BasicPS";
+	passDesc.nameVS = "Basic_VS";
+	passDesc.namePS = "Basic_PS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());

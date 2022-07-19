@@ -3,14 +3,14 @@
 
 #include <wrl/client.h>
 #include <string>
-#include <d2d1.h>
-#include <dwrite.h>
+#include <string_view>
+#include "WinMin.h"
 #include <d3d11_1.h>
 #include <DirectXMath.h>
 #include "Mouse.h"
 #include "Keyboard.h"
-#include "CPUTimer.h"
-#include "DXTrace.h"
+#include "CpuTimer.h"
+#include "GpuTimer.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -56,10 +56,10 @@ protected:
 	bool      m_Maximized;       // 应用是否最大化
 	bool      m_Resizing;        // 窗口大小是否变化
 
-	bool	  m_IsDxgiFlipModel;		// 是否使用DXGI翻转模型
-	UINT	  m_FrameCount = 0;			// 当前帧
-	UINT	  m_BackBufferCount = 0;	// 后备缓冲区数目
-	ComPtr<ID3D11RenderTargetView> m_pRenderTargetViews[2];		// 所有后备缓冲区对应的渲染目标视图
+    bool m_IsDxgiFlipModel = false; // 是否使用DXGI翻转模型
+    UINT m_BackBufferCount = 0;		// 后备缓冲区数目
+    UINT m_FrameCount = 0;          // 当前帧
+    ComPtr<ID3D11RenderTargetView> m_pRenderTargetViews[2];     // 所有后备缓冲区对应的渲染目标视图
 
 	CpuTimer m_Timer;           // 计时器
 

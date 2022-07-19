@@ -17,6 +17,9 @@ bool GameApp::Init()
 	if (!D3DApp::Init())
 		return false;
 
+	m_TextureManager.Init(m_pd3dDevice.Get());
+	m_ModelManager.Init(m_pd3dDevice.Get());
+
 	// 务必先初始化所有渲染状态，以供下面的特效使用
 	RenderStates::InitAll(m_pd3dDevice.Get());
 
@@ -82,14 +85,14 @@ void GameApp::DrawScene()
 		ComPtr<ID3D11Texture2D> pBackBuffer;
 		m_pSwapChain->GetBuffer(0, IID_PPV_ARGS(pBackBuffer.GetAddressOf()));
 		CD3D11_RENDER_TARGET_VIEW_DESC rtvDesc(D3D11_RTV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
-		m_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_pRenderTargetViews[m_FrameCount].GetAddressOf());
+		m_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_pRenderTargetViews[m_FrameCount].ReleaseAndGetAddressOf());
 	}
 
 	float black[4] = { 0.0f,0.0f,0.0f,1.0f };
 	m_pd3dImmediateContext->ClearRenderTargetView(GetBackBufferRTV(), black);
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	ID3D11RenderTargetView* pRTV[1] = { GetBackBufferRTV() };
-	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTV, m_pDepthTexture->GetDepthStencil());
+	ID3D11RenderTargetView* pRTVs[1] = { GetBackBufferRTV() };
+	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
 	D3D11_VIEWPORT viewport = m_pCamera->GetViewPort();
 	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
 
@@ -109,12 +112,12 @@ bool GameApp::InitResource()
 	// 初始化游戏对象
 
 	// 初始化地板
-	Model* pModel = m_ModelManager.CreateFromFile("..\\Model\\ground_19.obj");
+	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\ground_19.obj");
 	m_Floor.SetModel(pModel);
 	pModel->SetDebugObjectName("ground_19");
 
 	// 初始化房屋
-	pModel = m_ModelManager.CreateFromFile("..\\Model\\house.obj");
+	pModel = m_ModelManager.CreateFromFile(".\\Model\\house.obj");
 	m_House.SetModel(pModel);
 	pModel->SetDebugObjectName("house");
 

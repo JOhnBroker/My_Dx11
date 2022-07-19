@@ -1,29 +1,34 @@
 #include "Basic.hlsli"
 
-// 像素着色器
+// 鍍忕礌鐫�鑹插櫒
 float4 PS(VertexPosHWNormalTex pIn) : SV_Target
 {
-    // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
-    float4 texColor = g_Tex.Sample(g_Sam, pIn.tex);
-    clip(texColor.a - 0.05f);
+    uint texWidth, texHeight;
+    g_DiffuseMap.GetDimensions(texWidth, texHeight);
+    float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    if (texWidth > 0 && texHeight > 0)
+    {
+        // 鎻愬墠杩涜Alpha瑁佸壀锛屽涓嶇鍚堣姹傜殑鍍忕礌鍙互閬垮厤鍚庣画杩愮畻
+        texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
+    }
 
-    // 标准化法向量
+    // 鏍囧噯鍖栨硶鍚戦噺
     pIn.normalW = normalize(pIn.normalW);
 
-    // 求出顶点指向眼睛的向量，以及顶点与眼睛的距离
+    // 姹傚嚭椤剁偣鎸囧悜鐪肩潧鐨勫悜閲忥紝浠ュ強椤剁偣涓庣溂鐫涚殑璺濈
     float3 toEyeW = normalize(g_EyePosW - pIn.posW);
-    float distToEye = distance(g_EyePosW, pIn.posW);
-
-    // 初始化为0 
+    
+    // 鍒濆鍖栦负0 
     float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 A = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 D = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 S = float4(0.0f, 0.0f, 0.0f, 0.0f);
-
+    int i = 0;
+    
     [unroll]
-    for (int i = 0; i < 4; ++i)
+    for (i = 0; i < 5; ++i)
     {
         ComputeDirectionalLight(g_Material, g_DirLight[i], pIn.normalW, toEyeW, A, D, S);
         ambient += A;
@@ -31,18 +36,25 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
         spec += S;
     }
     
-    float4 litColor = texColor * (ambient + diffuse) + spec;
-
-    // 雾效部分
-    [flatten]
-    if (g_FogEnabled)
+    [unroll]
+    for (i = 0; i < 5; ++i)
     {
-        // 限定在0.0f到1.0f范围
-        float fogLerp = saturate((distToEye - g_FogStart) / g_FogRange);
-        // 根据雾色和光照颜色进行线性插值
-        litColor = lerp(litColor, g_FogColor, fogLerp);
+        ComputePointLight(g_Material, g_PointLight[i], pIn.posW, pIn.normalW, toEyeW, A, D, S);
+        ambient += A;
+        diffuse += D;
+        spec += S;
+    }
+
+    [unroll]
+    for (i = 0; i < 5; ++i)
+    {
+        ComputeSpotLight(g_Material, g_SpotLight[i], pIn.posW, pIn.normalW, toEyeW, A, D, S);
+        ambient += A;
+        diffuse += D;
+        spec += S;
     }
     
+    float4 litColor = texColor * (ambient + diffuse) + spec;
     litColor.a = texColor.a * g_Material.diffuse.a;
     return litColor;
 }

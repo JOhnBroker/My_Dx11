@@ -20,10 +20,10 @@
 
 struct Model
 {
-	Model();
-	~Model();
+	Model() = default;
+	~Model() = default;
 	Model(Model&) = delete;
-	Model& operator=(Model&) = delete;
+    Model& operator=(const Model&) = delete;
 	Model(Model&&) = default;
 	Model& operator=(Model&&) = default;
 

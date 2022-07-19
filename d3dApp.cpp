@@ -145,7 +145,7 @@ void D3DApp::OnResize()
 	{
 		m_pRenderTargetViews[i].Reset();
 	}
-	HR(m_pSwapChain->ResizeBuffers(1, m_ClientWidth, m_ClientHeight, DXGI_FORMAT_B8G8R8A8_UNORM,
+	HR(m_pSwapChain->ResizeBuffers(m_BackBufferCount, m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM,
 		m_IsDxgiFlipModel ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0));	// 注意此处DXGI_FORMAT_B8G8R8A8_UNORM
 
 	m_FrameCount = 0;
