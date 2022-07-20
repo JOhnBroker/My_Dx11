@@ -19,8 +19,8 @@ public:
 	GameObject() = default;
 	~GameObject() = default;
 
-	GameObject(const GameObject&) = delete;
-	GameObject& operator=(const GameObject&) = delete;
+	GameObject(const GameObject&) = default;
+	GameObject& operator=(const GameObject&) = default;
 
 	GameObject(GameObject&&) = default;
 	GameObject& operator=(GameObject&&) = default;
@@ -55,11 +55,11 @@ public:
 	}
 	void Draw(ID3D11DeviceContext* deviceContext, IEffect& effect);
 
-private:
+protected:
 	const Model* m_pModel = nullptr;
 	std::vector<bool> m_SubModelInFrustum;
-	Transform m_Transform = {};						//世界矩阵
-	bool m_InFrustum;
+	Transform m_Transform = {};
+	bool m_InFrustum = true;
 };
 
 

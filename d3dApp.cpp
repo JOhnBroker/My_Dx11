@@ -351,9 +351,6 @@ bool D3DApp::InitDirect3D()
 
 	// 创建D3D设备 和 D3D设备上下文
 	UINT createDeviceFlags = 0;
-#ifndef USE_IMGUI
-	createDeviceFlags |= D3D11_CREATE_DEVICE_BGRA_SUPPORT;	// Direct2D需要支持BGRA格式
-#endif
 #if defined(DEBUG) || defined(_DEBUG)  
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -435,11 +432,7 @@ bool D3DApp::InitDirect3D()
 		ZeroMemory(&sd, sizeof(sd));
 		sd.Width = m_ClientWidth;
 		sd.Height = m_ClientHeight;
-#ifdef USE_IMGUI
 		sd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-#else
-		sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;		// 注意此处DXGI_FORMAT_B8G8R8A8_UNORM
-#endif
 		sd.SampleDesc.Count = 1;
 		sd.SampleDesc.Quality = 0;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -474,11 +467,7 @@ bool D3DApp::InitDirect3D()
 		sd.BufferDesc.Height = m_ClientHeight;
 		sd.BufferDesc.RefreshRate.Numerator = 60;
 		sd.BufferDesc.RefreshRate.Denominator = 1;
-#ifdef USE_IMGUI
 		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-#else
-		sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;	// 注意此处DXGI_FORMAT_B8G8R8A8_UNORM
-#endif
 		sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 		sd.SampleDesc.Count = 1;
