@@ -93,6 +93,9 @@
     <ClCompile Include="Texture2D.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Buffer.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -176,6 +179,12 @@
     <ClInclude Include="d3dApp.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="D3DFormat.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Buffer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli">
@@ -189,7 +198,10 @@
     <FxCompile Include="HLSL\Basic_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\Basic_VS.hlsl">
+    <FxCompile Include="HLSL\BasicInstance_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\BasicObject_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

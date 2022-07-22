@@ -15,10 +15,23 @@
 #include <Material.h>
 #include <MeshData.h>
 #include <LightHelper.h>
+#include <RenderStates.h>
+
+#include <Buffer.h>
+
+#include <GameObject.h>
 
 class BasicEffect : public IEffect, public IEffectTransform,
 	public IEffectMaterial, public IEffectMeshData
 {
+public:
+	struct InstancedData
+	{
+		DirectX::XMFLOAT4X4 world;
+		DirectX::XMFLOAT4X4 worldInvTranspose;
+		DirectX::XMFLOAT4 color;
+	};
+
 public:
 	BasicEffect();
 	virtual ~BasicEffect() override;
@@ -45,6 +58,9 @@ public:
 
 	void SetRenderDefault();
 
+	// 绘制实例
+	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
+
 	// 光照、材质和纹理相关设置
 	// 各种类型灯光允许的最大数目
 	static const int maxLights = 5;
@@ -54,6 +70,7 @@ public:
 	void SetSpotLight(size_t pos, const SpotLight& spotLight);
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
+	void SetDiffuseColor(const DirectX::XMFLOAT4& color);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

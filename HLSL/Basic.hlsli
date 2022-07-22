@@ -8,16 +8,22 @@ cbuffer CBChangesEveryDrawing : register(b0)
 {
     matrix g_World;
     matrix g_WorldInvTranspose;
+    float4 g_DiffuseColor;
+}
+
+cbuffer CBChangesEveryObjectDrawing : register(b1)
+{
     Material g_Material;
 }
 
-cbuffer CBChangesEveryFrame : register(b1)
+cbuffer CBChangesEveryFrame : register(b2)
 {
     matrix g_ViewProj;
     float3 g_EyePosW;
+    float g_Pad;
 }
 
-cbuffer CBChangesRarely : register(b2)
+cbuffer CBChangesRarely : register(b3)
 {
     DirectionalLight g_DirLight[5];
     PointLight g_PointLight[5];
@@ -31,12 +37,6 @@ struct VertexPosNormalTex
     float2 tex : TEXCOORD;
 };
 
-struct VertexPosTex
-{
-    float3 posL : POSITION;
-    float2 tex : TEXCOORD;
-};
-
 struct VertexPosHWNormalTex
 {
     float4 posH : SV_POSITION;
@@ -45,23 +45,21 @@ struct VertexPosHWNormalTex
     float2 tex : TEXCOORD;
 };
 
-struct VertexPosHTex
+struct VertexPosHWNormalColorTex
 {
     float4 posH : SV_POSITION;
+    float3 posW : POSITION; // 在世界中的位置
+    float3 normalW : NORMAL; // 法向量在世界中的方向
+    float4 color : COLOR;
     float2 tex : TEXCOORD;
 };
 
-struct PointSprite
+struct InstancePosNormalTex
 {
-    float3 posW : POSITION;
-    float2 SizeW : SIZE;
-};
-
-struct BillboardVertex
-{
-    float4 posH : SV_POSITION;
-    float3 posW : POSITION;
-    float3 normalW : NORMAL;
+    float3 posL : POSITION;
+    float3 normalL : NORMAL;
     float2 tex : TEXCOORD;
-    uint PrimID : SV_PrimitiveID;
+    matrix world : World;
+    matrix worldInvTranspose : WorldInvTranspose;
+    float4 color : COLOR;
 };
