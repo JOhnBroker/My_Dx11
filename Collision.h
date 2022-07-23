@@ -1,12 +1,12 @@
-//***************************************************************************************
-// Collision.h by X_Jun(MKXJun) (C) 2018-2022 All Rights Reserved.
-// Licensed under the MIT License.
+////////////////////////////////////////////////////////////////////////////////
 //
-// 提供一些封装好的对象和碰撞检测方法
-// 注意：WireFrameData目前仍未经过稳定测试，未来有可能会移植到Geometry.h中
-// Provide encapsulated collision classes and detection method.
-//***************************************************************************************
-
+//  FileName    : ModelManager.h
+//  Creator     : XJun ？
+//  Create Date : 2022
+//  Purpose     : 提供一些封装好的对象和碰撞检测方法
+//				  注意：WireFrameData目前仍未经过稳定测试，未来有可能会移植到Geometry.h中
+//
+////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
 #ifndef COLLISION_H
@@ -17,23 +17,21 @@
 #include "Vertex.h"
 #include "Camera.h"
 
-
-struct Ray
+struct Ray 
 {
 	Ray();
 	Ray(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction);
-
-	static Ray ScreenToRay(const Camera& camera, float screenX, float screenY);
+	
+	static Ray ScreenToRay(const Camera& camera, float screenX, float screanY);
 
 	bool Hit(const DirectX::BoundingBox& box, float* pOutDist = nullptr, float maxDist = FLT_MAX);
 	bool Hit(const DirectX::BoundingOrientedBox& box, float* pOutDist = nullptr, float maxDist = FLT_MAX);
-	bool Hit(const DirectX::BoundingSphere& sphere, float* pOutDist = nullptr, float maxDist = FLT_MAX);
+	bool Hit(const DirectX::BoundingSphere& box, float* pOutDist = nullptr, float maxDist = FLT_MAX);
 	bool XM_CALLCONV Hit(DirectX::FXMVECTOR V0, DirectX::FXMVECTOR V1, DirectX::FXMVECTOR V2, float* pOutDist = nullptr, float maxDist = FLT_MAX);
 
-	DirectX::XMFLOAT3 origin;		// 射线原点
-	DirectX::XMFLOAT3 direction;	// 单位方向向量
+	DirectX::XMFLOAT3 origin;			// 射线原点
+	DirectX::XMFLOAT3 direction;		// 单位方向向量
 };
-
 
 class Collision
 {

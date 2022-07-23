@@ -96,6 +96,9 @@
     <ClCompile Include="Buffer.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Collision.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -185,6 +188,9 @@
     <ClInclude Include="Buffer.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Collision.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli">
@@ -198,10 +204,7 @@
     <FxCompile Include="HLSL\Basic_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\BasicInstance_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\BasicObject_VS.hlsl">
+    <FxCompile Include="HLSL\Basic_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

@@ -32,8 +32,6 @@ public:
 
 private:
 	bool InitResource();
-	void CreateRandomTrees();
-	void CreateRandomCubes();
 
 private:
 	TextureManager m_TextureManager;
@@ -41,26 +39,18 @@ private:
 
 	BasicEffect m_BasicEffect;
 
-	GpuTimer m_GpuTimer_Instancing;
-
 	std::unique_ptr<Depth2D> m_pDepthTexture;						// 深度缓冲贴图
 
 	int m_SceneMode = 0;
 
-	GameObject m_Trees;												// 树
+	GameObject m_House;												// 树
 	GameObject m_Cubes;												// 立方体
-	GameObject m_Ground;											// 地面
-	std::vector<Transform> m_TreeTransforms;
-	std::vector<Transform> m_CubeTransforms;
-	std::vector<BasicEffect::InstancedData> m_TreeInstancedData;	// 树的实例数据
-	std::vector<BasicEffect::InstancedData> m_CubeInstancedData;	// 立方体的实例数据
-
-	std::vector<size_t> m_AcceptedIndices;							// 通过视锥体裁剪的实例索引
-	std::vector<BasicEffect::InstancedData> m_AcceptedData;			// 上传到实例缓冲区的数据
-	std::unique_ptr<Buffer> m_pInstancedBuffer;						// 实例缓冲区
-
-	bool m_EnableFrustumCulling = true;								// 视锥体裁剪开启
-	bool m_EnableInstancing = true;									// 硬件实例化开启
+	GameObject m_Sphere;
+	GameObject m_Cylinder;
+	GameObject m_Triangle;
+	DirectX::BoundingSphere m_BoundingSphere;
+	
+	GeometryData m_TriangleMesh;
 
 	std::shared_ptr<FirstPersonCamera> m_pCamera;				// 摄像机
 

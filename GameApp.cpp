@@ -20,8 +20,6 @@ bool GameApp::Init()
 	m_TextureManager.Init(m_pd3dDevice.Get());
 	m_ModelManager.Init(m_pd3dDevice.Get());
 
-	m_GpuTimer_Instancing.Init(m_pd3dDevice.Get(), m_pd3dImmediateContext.Get());
-
 	// 务必先初始化所有渲染状态，以供下面的特效使用
 	RenderStates::InitAll(m_pd3dDevice.Get());
 
@@ -51,60 +49,81 @@ void GameApp::OnResize()
 
 void GameApp::UpdateScene(float dt)
 {
-	// 获取子类
-	auto cam1st = std::dynamic_pointer_cast<FirstPersonCamera>(m_pCamera);
+	// 记录并更新物体位置和旋转弧度
+	static float theta = 0.0f, phi = 0.0f;
+	static XMMATRIX Left = XMMatrixTranslation(-5.0f, 0.0f, 0.0f);
+	static XMMATRIX Top = XMMatrixTranslation(0.0f, 4.0f, 0.0f);
+	static XMMATRIX Right = XMMatrixTranslation(5.0f, 0.0f, 0.0f);
+	static XMMATRIX Bottom = XMMatrixTranslation(0.0f, -4.0f, 0.0f);
+
+	theta += dt * 0.3f;
+	phi += dt * 0.5f;
+	// 更新物体运动
+	m_Sphere.GetTransform().SetPosition(-5.0f, 0.0f, 0.0f);
+	m_Sphere.GetTransform().SetRotation(-phi, theta, 0.0f);
+	m_Cubes.GetTransform().SetPosition(0.0f, 4.0f, 0.0f);
+	m_Cubes.GetTransform().SetRotation(-phi, theta, 0.0f);
+	m_Cylinder.GetTransform().SetPosition(5.0f, 0.0f, 0.0f);
+	m_House.GetTransform().SetPosition(0.0f, -4.0f, 0.0f);
+	m_House.GetTransform().SetRotation(0.0f, theta, 0.0f);
+	m_House.GetTransform().SetScale(0.005f, 0.005f, 0.005f);
+	m_Cylinder.GetTransform().SetRotation(phi, theta, 0.0f);
+	m_Triangle.GetTransform().SetRotation(0.0f, theta, 0.0f);
 
 	ImGuiIO& io = ImGui::GetIO();
-	// ******************
-	// 自由摄像机的操作
-	//
-	float d1 = 0.0f, d2 = 0.0f;
-	if (ImGui::IsKeyDown(ImGuiKey_W))
-		d1 += dt;
-	if (ImGui::IsKeyDown(ImGuiKey_S))
-		d1 -= dt;
-	if (ImGui::IsKeyDown(ImGuiKey_A))
-		d2 -= dt;
-	if (ImGui::IsKeyDown(ImGuiKey_D))
-		d2 += dt;
-
-	cam1st->MoveForward(d1 * 6.0f);
-	cam1st->Strafe(d2 * 6.0f);
-
-	// 将位置限制在[-119.9f, 119.9f]的区域内
-	// 不允许穿地
-	XMFLOAT3 adjustedPad;
-	XMStoreFloat3(&adjustedPad, XMVectorClamp(cam1st->GetPositionXM(),
-		XMVectorSet(-119.9f, 0.0f, -119.9f, 0.0f), XMVectorSet(119.9f, 99.9f, 119.9f, 0.0f)));
-	cam1st->SetPosition(adjustedPad);
-
-	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
-	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
-
-	if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+	// 拾取检测
+	ImVec2 mousePos = ImGui::GetMousePos();
+	mousePos.x = std::clamp(mousePos.x, 0.0f, m_ClientWidth - 1.0f);
+	mousePos.y = std::clamp(mousePos.y, 0.0f, m_ClientHeight - 1.0f);
+	Ray ray = Ray::ScreenToRay(*m_pCamera, mousePos.x, mousePos.y);
+	// 三角形顶点变换
+	static XMVECTOR V[3];
+	for (int i = 0; i < 3; ++i) 
 	{
-		cam1st->Pitch(io.MouseDelta.y * 0.01f);
-		cam1st->RotateY(io.MouseDelta.x * 0.01f);
+		V[i] = XMVector3TransformCoord(XMLoadFloat3(&m_TriangleMesh.vertices[i]), 
+			XMMatrixRotationY(theta));
+	}
+	bool hitObject = false;
+	std::string pickedObjStr = "None";
+	if (ray.Hit(m_BoundingSphere))
+	{
+		pickedObjStr = "Sphere";
+		hitObject = true;
+	}
+	else if (ray.Hit(m_Cubes.GetBoundingOrientedBox()))
+	{
+		pickedObjStr = "Cube";
+		hitObject = true;
+	}
+	else if (ray.Hit(m_Cylinder.GetBoundingOrientedBox()))
+	{
+		pickedObjStr = "Cylinder";
+		hitObject = true;
+	}
+	else if (ray.Hit(m_House.GetBoundingOrientedBox()))
+	{
+		pickedObjStr = "House";
+		hitObject = true;
+	}
+	else if (ray.Hit(V[0], V[1], V[2]))
+	{
+		pickedObjStr = "Triangle";
+		hitObject = true;
 	}
 
-	if (ImGui::Begin("Instancing and Frustum Culling"))
+	if (hitObject == true && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		static const char* draw_strs[] = { "Trees", "Cubes" };
-		if (ImGui::Combo("Scene", &m_SceneMode, draw_strs, ARRAYSIZE(draw_strs)))
-		{
-			m_GpuTimer_Instancing.Reset(m_pd3dImmediateContext.Get());
-		}
-		if (ImGui::Checkbox("Enable Instancing", &m_EnableInstancing))
-		{
-			m_GpuTimer_Instancing.Reset(m_pd3dImmediateContext.Get());
-		}
-		if (ImGui::Checkbox("Enable Frustum Culling", &m_EnableFrustumCulling))
-		{
-			m_GpuTimer_Instancing.Reset(m_pd3dImmediateContext.Get());
-		}
+		std::wstring wstr = L"You clicked ";
+		wstr += UTF8ToWString(pickedObjStr) + L"!";
+		MessageBox(nullptr, wstr.c_str(), L"Message", 0);
+	}
+
+	if (ImGui::Begin("Picking"))
+	{
+		ImGui::Text("Current Object: %s", pickedObjStr.c_str());
 	}
 	ImGui::End();
-
+	ImGui::Render();
 }
 
 void GameApp::DrawScene()
@@ -118,131 +137,66 @@ void GameApp::DrawScene()
 		m_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_pRenderTargetViews[m_FrameCount].ReleaseAndGetAddressOf());
 	}
 
-	float gray[4] = { 0.6f,0.6f,0.6f,1.0f };
-	m_pd3dImmediateContext->ClearRenderTargetView(GetBackBufferRTV(), gray);
+	float black[4] = { 0.0f,0.0f,0.0f,1.0f };
+	m_pd3dImmediateContext->ClearRenderTargetView(GetBackBufferRTV(), black);
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	ID3D11RenderTargetView* pRTVs[1] = { GetBackBufferRTV() };
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
 	D3D11_VIEWPORT viewport = m_pCamera->GetViewPort();
 	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
 
-	// 统计实际绘制的物体数目
-	// 是否开启视锥体裁剪
-	auto& instancedData = (m_SceneMode == 0 ? m_TreeInstancedData : m_CubeInstancedData);
-	auto& boundingBox = (m_SceneMode == 0 ? m_Trees.GetModel()->boundingbox : m_Cubes.GetModel()->boundingbox);
-	const auto& refTransforms = (m_SceneMode == 0 ? m_TreeTransforms : m_CubeTransforms);
-	auto& refObject = (m_SceneMode == 0 ? m_Trees : m_Cubes);
+	m_BasicEffect.SetRenderDefault();
 
-	if (m_EnableFrustumCulling)
-	{
-		m_AcceptedData.clear();
-		m_AcceptedIndices.clear();
-
-		BoundingFrustum frustum;
-		BoundingFrustum::CreateFromMatrix(frustum, m_pCamera->GetProjMatrixXM());
-		XMMATRIX V = m_pCamera->GetViewMatrixXM();
-
-		BoundingOrientedBox localOrientedBox, orientedBox;
-		BoundingOrientedBox::CreateFromBoundingBox(localOrientedBox, boundingBox);
-
-		size_t sz = instancedData.size();
-		for (size_t i = 0; i < sz; ++i) 
-		{
-			localOrientedBox.Transform(orientedBox, refTransforms[i].GetLocalToWorldMatrixXM() * V);
-			if (frustum.Intersects(orientedBox)) 
-			{
-				m_AcceptedIndices.push_back(i);
-				m_AcceptedData.push_back(instancedData[i]);
-			}
-		}
+	// 绘制不需要纹理的模型
+	m_Sphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	m_Cubes.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	m_Cylinder.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	m_Triangle.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	m_House.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	
-	}
-
-	m_GpuTimer_Instancing.Start();
-	uint32_t objectCount = (uint32_t)instancedData.size();
-	uint32_t drawCount = m_EnableFrustumCulling ? (uint32_t)m_AcceptedData.size() : (uint32_t)instancedData.size();
-
-	//TODO: 转摄像机时，没有更新绘制信息？
-
-	// 是否开启硬件实例化
-	if(m_EnableInstancing)
-	{
-		const auto& refData = m_EnableFrustumCulling ? m_AcceptedData : instancedData;
-		memcpy_s(m_pInstancedBuffer->MapDiscard(m_pd3dImmediateContext.Get()),
-			m_pInstancedBuffer->GetByteWidth(), refData.data(),
-			refData.size() * sizeof(BasicEffect::InstancedData));
-		m_pInstancedBuffer->Unmap(m_pd3dImmediateContext.Get());
-		m_BasicEffect.DrawInstanced(m_pd3dImmediateContext.Get(), *m_pInstancedBuffer, refObject, (uint32_t)refData.size());
-	}
-	else 
-	{
-		m_BasicEffect.SetRenderDefault();
-		if (m_EnableFrustumCulling) 
-		{
-			size_t sz = m_AcceptedIndices.size();
-			for (size_t i = 0; i < sz; ++i) 
-			{
-				refObject.GetTransform() = refTransforms[m_AcceptedIndices[i]];
-				m_BasicEffect.SetDiffuseColor(m_AcceptedData[i].color);
-				refObject.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-			}
-		}
-		else 
-		{
-			size_t sz = refTransforms.size();
-			for (size_t i = 0; i < sz; ++i) 
-			{
-				refObject.GetTransform() = refTransforms[i];
-				m_BasicEffect.SetDiffuseColor(instancedData[i].color);
-				refObject.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-			}
-		}
-	}
-
-	m_GpuTimer_Instancing.Stop();
-
-	if (m_SceneMode == 0) 
-	{
-		m_BasicEffect.SetRenderDefault();
-		m_Ground.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	}
-
-	if (ImGui::Begin("Instancing and Frustum Culling"))
-	{
-		ImGui::Text("Objects: %u/%u", drawCount, objectCount);
-
-		m_GpuTimer_Instancing.TryGetTime(nullptr);
-		double avgTime = m_GpuTimer_Instancing.AverageTime();
-
-		ImGui::Text("Instance Pass: %.3fms", avgTime * 1000.0);
-	}
-	ImGui::End();
-	ImGui::Render();
-
+	// 绘制需要纹理的模型
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	HR(m_pSwapChain->Present(0, m_IsDxgiFlipModel ? DXGI_PRESENT_ALLOW_TEARING : 0));
 }
 
-
-
 bool GameApp::InitResource()
 {
 	// 初始化游戏对象
 
-	m_AcceptedData.reserve(2048);
-	m_AcceptedIndices.reserve(2048);
-	m_pInstancedBuffer = std::make_unique<Buffer>(m_pd3dDevice.Get(),
-		CD3D11_BUFFER_DESC(sizeof(BasicEffect::InstancedData) * 2048, D3D11_BIND_VERTEX_BUFFER,
-			D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE));
+	// 初始化
+	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\house.obj");
+	m_House.SetModel(pModel);
+	pModel->SetDebugObjectName("House");
 
-	CreateRandomTrees();
-	CreateRandomCubes();
+	pModel = m_ModelManager.CreateFromGeometry("Cube", Geometry::CreateBox());
+	m_Cubes.SetModel(pModel);
+	pModel->SetDebugObjectName("Cube");
 
-	// 初始化地板
-	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\ground_20.obj");
-	m_Ground.SetModel(pModel);
-	pModel->SetDebugObjectName("ground_20");
+	pModel = m_ModelManager.CreateFromGeometry("Sphere", Geometry::CreateSphere());
+	m_Sphere.SetModel(pModel);
+	pModel->SetDebugObjectName("Sphere");
+	m_BoundingSphere.Center = XMFLOAT3(-5.0f, 0.0f, 0.0f);
+	m_BoundingSphere.Radius = 1.0f;
+
+	pModel = m_ModelManager.CreateFromGeometry("Cylinder", Geometry::CreateCylinder());
+	m_Cylinder.SetModel(pModel);
+	pModel->SetDebugObjectName("Cylinder");
+
+	// 三角形(带反面)
+	m_TriangleMesh.vertices.assign({
+		XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(1.0f, -1.0f, 0.0f),
+		XMFLOAT3(1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(-1.0f, -1.0f, 0.0f)
+		});
+	m_TriangleMesh.normals.assign({
+		XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f),
+		XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f)
+		});
+	m_TriangleMesh.texcoords.assign(6, XMFLOAT2());
+	m_TriangleMesh.indices16.assign({ 0,1,2,3,4,5 });
+	pModel = m_ModelManager.CreateFromGeometry("Triangle", m_TriangleMesh);
+	m_Triangle.SetModel(pModel);
+	pModel->SetDebugObjectName("Triangle");
 
 	// ******************
 	// 初始化摄像机
@@ -261,7 +215,7 @@ bool GameApp::InitResource()
 	m_pCamera = camera;
 	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
 	camera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);
-	camera->LookTo(XMFLOAT3(), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	camera->LookTo(XMFLOAT3(0.0f,0.0f,-10.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 	m_BasicEffect.SetViewMatrix(camera->GetViewMatrixXM());
 	m_BasicEffect.SetProjMatrix(camera->GetProjMatrixXM());
@@ -285,105 +239,7 @@ bool GameApp::InitResource()
 	for (int i = 0; i < 4; ++i)
 		m_BasicEffect.SetDirLight(i, dirLight[i]);
 
-	m_pInstancedBuffer->SetDebugObjectName("InstancedBuffer");
+	m_BasicEffect.SetRenderDefault();
 
 	return true;
-}
-
-void GameApp::CreateRandomTrees()
-{
-	// 初始化树
-	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\tree.obj");
-	m_Trees.SetModel(pModel);
-	pModel->SetDebugObjectName("Trees");
-	XMMATRIX S = XMMatrixScaling(0.015f, 0.015f, 0.015f);
-
-	BoundingBox treeBox = m_Trees.GetModel()->boundingbox;
-
-	// 让树木底部紧贴地面位于 y = -2 的平面
-	treeBox.Transform(treeBox, S);
-	float Ty = -(treeBox.Center.y - treeBox.Extents.y + 2.0f);
-	// 随机生成256颗随机朝向的树
-	m_TreeInstancedData.resize(256);
-	m_TreeTransforms.resize(256);
-
-	std::mt19937 rng;
-	rng.seed(std::random_device()());
-	std::uniform_real<float> radiusNorDist(0.0f, 30.0f);
-	std::uniform_real<float> normDist;
-	float theta = 0.0f;
-	int pos = 0;
-	Transform transform;
-	transform.SetScale(0.015f, 0.015f, 0.015f);
-	for (int i = 0; i < 16; ++i)
-	{
-		// 取5-125的半径放置随机的树
-		for (int j = 0; j < 4; ++j)
-		{
-			// 距离越远，树越多
-			for (int k = 0; k < 2 * j + 1; ++k, ++pos)
-			{
-				float radius = (float)(radiusNorDist(rng) + 30 * j + 5);
-				float randomRad = normDist(rng) * XM_2PI / 16;
-				transform.SetRotation(0.0f, normDist(rng) * XM_2PI, 0.0f);
-				transform.SetPosition(radius * cosf(theta + randomRad), Ty, radius * sinf(theta + randomRad));
-
-				m_TreeTransforms[pos] = transform;
-
-				XMMATRIX W = transform.GetLocalToWorldMatrixXM();
-				XMMATRIX WInvT = XMath::InverseTranspose(W);
-				XMStoreFloat4x4(&m_TreeInstancedData[pos].world, XMMatrixTranspose(W));
-				XMStoreFloat4x4(&m_TreeInstancedData[pos].worldInvTranspose, XMMatrixTranspose(WInvT));
-			}
-		}
-		theta += XM_2PI / 16;
-	}
-}
-
-void GameApp::CreateRandomCubes()
-{
-	// 初始化立方体
-	Model* pModel = m_ModelManager.CreateFromGeometry("Cubes", Geometry::CreateBox());
-	m_Cubes.SetModel(pModel);
-	pModel->SetDebugObjectName("Cubes");
-
-	// 随机生成2048个立方体
-	m_CubeInstancedData.resize(2048);
-	m_CubeTransforms.resize(2048);
-
-	std::mt19937 rng;
-	rng.seed(std::random_device()());
-	std::uniform_real<float> radiusNormDist(0.0f, 40.0f);
-	std::uniform_real<float> scaleNormDist(0.25f, 3.0f);
-	std::uniform_real<float> heightNormDist(-30.0f, 70.0f);
-	std::uniform_real<float> normDist;
-	float theta = 0.0f;
-	int pos = 0;
-	Transform transform;
-	for (int i = 0; i < 16; ++i)
-	{
-		// 取5-165的半径放置随机的立方体
-		for (int j = 0; j < 4; ++j)
-		{
-			// 距离越远，立方体越多
-			for (int k = 0; k < 16 * j + 8; ++k, ++pos)
-			{
-				float radius = (float)(radiusNormDist(rng) + 40 * j + 5);
-				float randomRad = normDist(rng) * XM_2PI / 16;
-				float scale = scaleNormDist(rng);
-				transform.SetScale(scale, scale, scale);
-				transform.SetRotation(normDist(rng) * XM_2PI, normDist(rng) * XM_2PI, normDist(rng) * XM_2PI);
-				transform.SetPosition(radius * cosf(theta + randomRad), heightNormDist(rng), radius * sinf(theta + randomRad));
-
-				m_CubeTransforms[pos] = transform;
-
-				XMMATRIX W = transform.GetLocalToWorldMatrixXM();
-				XMMATRIX WInvT = XMath::InverseTranspose(W);
-				XMStoreFloat4x4(&m_CubeInstancedData[pos].world, XMMatrixTranspose(W));
-				XMStoreFloat4x4(&m_CubeInstancedData[pos].worldInvTranspose, XMMatrixTranspose(WInvT));
-				m_CubeInstancedData[pos].color = XMFLOAT4(normDist(rng), normDist(rng), normDist(rng), 1.0f);
-			}
-		}
-		theta += XM_2PI / 16;
-	}
 }

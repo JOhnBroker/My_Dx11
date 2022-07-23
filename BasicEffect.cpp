@@ -88,52 +88,28 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
-	D3D11_INPUT_ELEMENT_DESC basicInstLayout[] =
-	{
-		{"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
-		{"NORMAL",0,DXGI_FORMAT_R32G32B32_FLOAT,1,0,D3D11_INPUT_PER_VERTEX_DATA,0},
-		{"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,2,0,D3D11_INPUT_PER_VERTEX_DATA,0},
-		{"World",0,DXGI_FORMAT_R32G32B32A32_FLOAT,3,0,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"World",1,DXGI_FORMAT_R32G32B32A32_FLOAT,3,16,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"World",2,DXGI_FORMAT_R32G32B32A32_FLOAT,3,32,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"World",3,DXGI_FORMAT_R32G32B32A32_FLOAT,3,48,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"WorldInvTranspose",0,DXGI_FORMAT_R32G32B32A32_FLOAT,3,64,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"WorldInvTranspose",1,DXGI_FORMAT_R32G32B32A32_FLOAT,3,80,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"WorldInvTranspose",2,DXGI_FORMAT_R32G32B32A32_FLOAT,3,96,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"WorldInvTranspose",3,DXGI_FORMAT_R32G32B32A32_FLOAT,3,112,D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"COLOR",0,DXGI_FORMAT_R32G32B32A32_FLOAT,3,128,D3D11_INPUT_PER_INSTANCE_DATA,1}
-	};
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 	// 创建顶点着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicInstanceVS", L"HLSL/BasicInstance_VS.cso", device, "VS", "vs_5_0", nullptr, blob.GetAddressOf());
-	// 创建顶点输入布局
-	HR(device->CreateInputLayout(basicInstLayout, ARRAYSIZE(basicInstLayout),
-		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pInstancePosNormalTexLayout.GetAddressOf()));
-
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicObjectVS", L"HLSL/BasicObject_VS.cso", device, "VS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL/Basic_VS.cso", device, "VS", "vs_5_0", nullptr, blob.GetAddressOf());
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("Basic_PS", L"HLSL/Basic_PS.cso", device);
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device);
 
 	// 创建通道
 	EffectPassDesc passDesc;
-	passDesc.nameVS = "BasicInstanceVS";
-	passDesc.namePS = "Basic_PS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicInstance", device, &passDesc));
-
-	passDesc.nameVS = "BasicObjectVS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicObject", device, &passDesc));
+	passDesc.nameVS = "BasicVS";
+	passDesc.namePS = "BasicPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "BasicEffect.VertexPosNormalTexLayout");
-	SetDebugObjectName(pImpl->m_pInstancePosNormalTexLayout.Get(), "BasicEffect.InstancePosNormalTexLayout");
 #endif
 	pImpl->m_pEffectHelper->SetDebugObjectName("BasicEffect");
 
@@ -142,7 +118,7 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 void BasicEffect::SetRenderDefault()
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("BasicObject");
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
