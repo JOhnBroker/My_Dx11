@@ -1,4 +1,4 @@
-﻿
+
 #pragma once
 
 #ifndef D3D_FORMAT_H

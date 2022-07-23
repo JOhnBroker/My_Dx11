@@ -135,12 +135,77 @@ void GameApp::DrawScene()
 
 	if (m_EnableFrustumCulling)
 	{
-		//TODO:
+		m_AcceptedData.clear();
+		m_AcceptedIndices.clear();
+
+		BoundingFrustum frustum;
+		BoundingFrustum::CreateFromMatrix(frustum, m_pCamera->GetProjMatrixXM());
+		XMMATRIX V = m_pCamera->GetViewMatrixXM();
+
+		BoundingOrientedBox localOrientedBox, orientedBox;
+		BoundingOrientedBox::CreateFromBoundingBox(localOrientedBox, boundingBox);
+
+		size_t sz = instancedData.size();
+		for (size_t i = 0; i < sz; ++i) 
+		{
+			localOrientedBox.Transform(orientedBox, refTransforms[i].GetLocalToWorldMatrixXM() * V);
+			if (frustum.Intersects(orientedBox)) 
+			{
+				m_AcceptedIndices.push_back(i);
+				m_AcceptedData.push_back(instancedData[i]);
+			}
+		}
+	
 	}
 
-	uint32_t drawCount;
-	uint32_t objectCount;
+	m_GpuTimer_Instancing.Start();
+	uint32_t objectCount = (uint32_t)instancedData.size();
+	uint32_t drawCount = m_EnableFrustumCulling ? (uint32_t)m_AcceptedData.size() : (uint32_t)instancedData.size();
 
+	//TODO: 转摄像机时，没有更新绘制信息？
+
+	// 是否开启硬件实例化
+	if(m_EnableInstancing)
+	{
+		const auto& refData = m_EnableFrustumCulling ? m_AcceptedData : instancedData;
+		memcpy_s(m_pInstancedBuffer->MapDiscard(m_pd3dImmediateContext.Get()),
+			m_pInstancedBuffer->GetByteWidth(), refData.data(),
+			refData.size() * sizeof(BasicEffect::InstancedData));
+		m_pInstancedBuffer->Unmap(m_pd3dImmediateContext.Get());
+		m_BasicEffect.DrawInstanced(m_pd3dImmediateContext.Get(), *m_pInstancedBuffer, refObject, (uint32_t)refData.size());
+	}
+	else 
+	{
+		m_BasicEffect.SetRenderDefault();
+		if (m_EnableFrustumCulling) 
+		{
+			size_t sz = m_AcceptedIndices.size();
+			for (size_t i = 0; i < sz; ++i) 
+			{
+				refObject.GetTransform() = refTransforms[m_AcceptedIndices[i]];
+				m_BasicEffect.SetDiffuseColor(m_AcceptedData[i].color);
+				refObject.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+			}
+		}
+		else 
+		{
+			size_t sz = refTransforms.size();
+			for (size_t i = 0; i < sz; ++i) 
+			{
+				refObject.GetTransform() = refTransforms[i];
+				m_BasicEffect.SetDiffuseColor(instancedData[i].color);
+				refObject.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+			}
+		}
+	}
+
+	m_GpuTimer_Instancing.Stop();
+
+	if (m_SceneMode == 0) 
+	{
+		m_BasicEffect.SetRenderDefault();
+		m_Ground.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	}
 
 	if (ImGui::Begin("Instancing and Frustum Culling"))
 	{
@@ -166,7 +231,7 @@ bool GameApp::InitResource()
 	// 初始化游戏对象
 
 	m_AcceptedData.reserve(2048);
-	m_AcceptedIndicse.reserve(2048);
+	m_AcceptedIndices.reserve(2048);
 	m_pInstancedBuffer = std::make_unique<Buffer>(m_pd3dDevice.Get(),
 		CD3D11_BUFFER_DESC(sizeof(BasicEffect::InstancedData) * 2048, D3D11_BIND_VERTEX_BUFFER,
 			D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE));
@@ -175,9 +240,9 @@ bool GameApp::InitResource()
 	CreateRandomCubes();
 
 	// 初始化地板
-	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\ground_19.obj");
+	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\ground_20.obj");
 	m_Ground.SetModel(pModel);
-	pModel->SetDebugObjectName("ground_19");
+	pModel->SetDebugObjectName("ground_20");
 
 	// ******************
 	// 初始化摄像机
@@ -288,14 +353,13 @@ void GameApp::CreateRandomCubes()
 
 	std::mt19937 rng;
 	rng.seed(std::random_device()());
-	std::uniform_real<float> radiusNorDist(0.0f, 40.0f);
-	std::uniform_real<float> scaleNorDist(0.25f, 3.0f);
-	std::uniform_real<float> heightNorDist(-30.0f, 70.0f);
+	std::uniform_real<float> radiusNormDist(0.0f, 40.0f);
+	std::uniform_real<float> scaleNormDist(0.25f, 3.0f);
+	std::uniform_real<float> heightNormDist(-30.0f, 70.0f);
 	std::uniform_real<float> normDist;
 	float theta = 0.0f;
 	int pos = 0;
 	Transform transform;
-	transform.SetScale(0.015f, 0.015f, 0.015f);
 	for (int i = 0; i < 16; ++i)
 	{
 		// 取5-165的半径放置随机的立方体
@@ -304,12 +368,12 @@ void GameApp::CreateRandomCubes()
 			// 距离越远，立方体越多
 			for (int k = 0; k < 16 * j + 8; ++k, ++pos)
 			{
-				float radius = (float)(radiusNorDist(rng) + 40 * j + 5);
+				float radius = (float)(radiusNormDist(rng) + 40 * j + 5);
 				float randomRad = normDist(rng) * XM_2PI / 16;
-				float scale = scaleNorDist(rng);
+				float scale = scaleNormDist(rng);
 				transform.SetScale(scale, scale, scale);
 				transform.SetRotation(normDist(rng) * XM_2PI, normDist(rng) * XM_2PI, normDist(rng) * XM_2PI);
-				transform.SetPosition(radius * cosf(theta + randomRad), heightNorDist(rng), radius * sinf(theta + randomRad));
+				transform.SetPosition(radius * cosf(theta + randomRad), heightNormDist(rng), radius * sinf(theta + randomRad));
 
 				m_CubeTransforms[pos] = transform;
 
@@ -317,7 +381,7 @@ void GameApp::CreateRandomCubes()
 				XMMATRIX WInvT = XMath::InverseTranspose(W);
 				XMStoreFloat4x4(&m_CubeInstancedData[pos].world, XMMatrixTranspose(W));
 				XMStoreFloat4x4(&m_CubeInstancedData[pos].worldInvTranspose, XMMatrixTranspose(WInvT));
-				m_CubeInstancedData[pos].color = XMFLOAT4(normDist(rng), normDist(rng), normDist(rng), normDist(rng));
+				m_CubeInstancedData[pos].color = XMFLOAT4(normDist(rng), normDist(rng), normDist(rng), 1.0f);
 			}
 		}
 		theta += XM_2PI / 16;

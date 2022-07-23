@@ -55,14 +55,14 @@ private:
 	std::vector<BasicEffect::InstancedData> m_TreeInstancedData;	// 树的实例数据
 	std::vector<BasicEffect::InstancedData> m_CubeInstancedData;	// 立方体的实例数据
 
-	std::vector<size_t> m_AcceptedIndicse;							// 通过视锥体裁剪的实例索引
+	std::vector<size_t> m_AcceptedIndices;							// 通过视锥体裁剪的实例索引
 	std::vector<BasicEffect::InstancedData> m_AcceptedData;			// 上传到实例缓冲区的数据
 	std::unique_ptr<Buffer> m_pInstancedBuffer;						// 实例缓冲区
 
 	bool m_EnableFrustumCulling = true;								// 视锥体裁剪开启
 	bool m_EnableInstancing = true;									// 硬件实例化开启
 
-	std::shared_ptr<ThirdPersonCamera> m_pCamera;				// 摄像机
+	std::shared_ptr<FirstPersonCamera> m_pCamera;				// 摄像机
 
 };
 

@@ -1,4 +1,5 @@
-﻿#include "Buffer.h"
+#include "Buffer.h"
+#include "XUtil.h"
 
 Buffer::Buffer(ID3D11Device* d3dDevice, const CD3D11_BUFFER_DESC& bufferDesc)
 	:m_ByteWidth(bufferDesc.ByteWidth)
