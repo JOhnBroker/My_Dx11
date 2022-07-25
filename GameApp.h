@@ -38,7 +38,7 @@ private:
 	ModelManager m_ModelManager;
 
 	BasicEffect m_BasicEffect;
-	BasicEffect m_SkyboxEffect;
+	SkyBoxEffect m_SkyboxEffect;
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;						// 深度缓冲贴图
 

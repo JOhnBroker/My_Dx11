@@ -57,7 +57,7 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
     
     float4 litColor = texColor * (ambient + diffuse) + spec;
     
-    if (g_ReflectionEnable)
+    if (g_ReflectionEnabled)
     {
         float3 incident = -toEyeW;
         float3 reflectionVertor = reflect(incident, pIn.normalW);

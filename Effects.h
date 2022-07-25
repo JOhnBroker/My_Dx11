@@ -73,7 +73,7 @@ public:
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 	void SetDiffuseColor(const DirectX::XMFLOAT4& color);
-	void SetReflectionEnable(bool enabled);
+	void SetReflectionEnabled(bool enabled);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

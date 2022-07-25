@@ -96,7 +96,7 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device);
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device, "PS", "ps_5_0");
 
 	// 创建通道
 	EffectPassDesc passDesc;
@@ -124,7 +124,7 @@ void BasicEffect::SetRenderDefault()
 
 void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
 {
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureCube", textureCube);
 }
 
 void BasicEffect::DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& instancedBuffer, const GameObject& object, uint32_t numObject)
@@ -196,6 +196,7 @@ void BasicEffect::SetMaterial(const Material& material)
 	phongMat.diffuse.w = material.Get<float>("$Opacity");
 	phongMat.specular = material.Get<XMFLOAT4>("$SpecularColor");
 	phongMat.specular.w = material.Has<float>("$SpecularFactor") ? material.Get<float>("$SpecularFactor") : 1.0f;
+	phongMat.reflect = material.Get<XMFLOAT4>("$ReflectColor");
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
@@ -215,8 +216,8 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 		meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
 		nullptr
 	};
-	input.strides = { 12,12,8,144 };
-	input.offsets = { 0,0,0,0 };
+	input.strides = { 12,12,8 };
+	input.offsets = { 0,0,0 };
 
 	input.pIndexBuffer = meshData.m_pIndices.Get();
 	input.indexCount = meshData.m_IndexCount;
@@ -233,7 +234,7 @@ void BasicEffect::SetDiffuseColor(const DirectX::XMFLOAT4& color)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DiffuseColor")->SetFloatVector(4, reinterpret_cast<const float*>(&color));
 }
 
-void BasicEffect::SetReflectionEnable(bool enabled)
+void BasicEffect::SetReflectionEnabled(bool enabled)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ReflectionEnabled")->SetSInt(enabled);
 }

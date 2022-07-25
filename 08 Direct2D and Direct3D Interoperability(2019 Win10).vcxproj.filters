@@ -99,6 +99,9 @@
     <ClCompile Include="Collision.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="CameraController.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
     <ClCompile Include="SkyBoxEffect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -194,6 +197,9 @@
     <ClInclude Include="Collision.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="CameraController.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli">
@@ -213,10 +219,10 @@
     <FxCompile Include="HLSL\Basic_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
+    <FxCompile Include="HLSL\SkyBox_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_PS.hlsl">
+    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>
