@@ -31,7 +31,6 @@ public:
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
 	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	ComPtr<ID3D11InputLayout> m_pInstancePosNormalTexLayout;
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 
 	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
@@ -123,33 +122,38 @@ void BasicEffect::SetRenderDefault()
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
+void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
+}
+
 void BasicEffect::DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& instancedBuffer, const GameObject& object, uint32_t numObject)
 {
-	deviceContext->IASetInputLayout(pImpl->m_pInstancePosNormalTexLayout.Get());
-	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	auto pPass = pImpl->m_pEffectHelper->GetEffectPass("BasicInstance");
-
-	XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
-	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
-	XMMATRIX VP = V * P;
-	VP = XMMatrixTranspose(VP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
-
-	const Model* pModel = object.GetModel();
-	size_t sz = pModel->meshdatas.size();
-	for (size_t i = 0; i < sz; ++i)
-	{
-		SetMaterial(pModel->materials[pModel->meshdatas[i].m_MaterialIndex]);
-		pPass->Apply(deviceContext);
-
-		MeshDataInput input = GetInputData(pModel->meshdatas[i]);
-		input.pVertexBuffers.back() = instancedBuffer.GetBuffer();
-		deviceContext->IASetVertexBuffers(0, (uint32_t)input.pVertexBuffers.size(),
-			input.pVertexBuffers.data(), input.strides.data(), input.offsets.data());
-		deviceContext->IASetIndexBuffer(input.pIndexBuffer, input.indexCount > 65535 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
-
-		deviceContext->DrawIndexedInstanced(input.indexCount, numObject, 0, 0, 0);
-	}
+	//deviceContext->IASetInputLayout(pImpl->m_pInstancePosNormalTexLayout.Get());
+	//deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//auto pPass = pImpl->m_pEffectHelper->GetEffectPass("BasicInstance");
+	//
+	//XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
+	//XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
+	//XMMATRIX VP = V * P;
+	//VP = XMMatrixTranspose(VP);
+	//pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
+	//
+	//const Model* pModel = object.GetModel();
+	//size_t sz = pModel->meshdatas.size();
+	//for (size_t i = 0; i < sz; ++i)
+	//{
+	//	SetMaterial(pModel->materials[pModel->meshdatas[i].m_MaterialIndex]);
+	//	pPass->Apply(deviceContext);
+	//
+	//	MeshDataInput input = GetInputData(pModel->meshdatas[i]);
+	//	input.pVertexBuffers.back() = instancedBuffer.GetBuffer();
+	//	deviceContext->IASetVertexBuffers(0, (uint32_t)input.pVertexBuffers.size(),
+	//		input.pVertexBuffers.data(), input.strides.data(), input.offsets.data());
+	//	deviceContext->IASetIndexBuffer(input.pIndexBuffer, input.indexCount > 65535 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
+	//
+	//	deviceContext->DrawIndexedInstanced(input.indexCount, numObject, 0, 0, 0);
+	//}
 }
 
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -227,6 +231,11 @@ void BasicEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
 void BasicEffect::SetDiffuseColor(const DirectX::XMFLOAT4& color)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DiffuseColor")->SetFloatVector(4, reinterpret_cast<const float*>(&color));
+}
+
+void BasicEffect::SetReflectionEnable(bool enabled)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ReflectionEnabled")->SetSInt(enabled);
 }
 
 void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)

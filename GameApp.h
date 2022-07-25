@@ -6,7 +6,7 @@
 #include <WinMin.h>
 #include "d3dApp.h"
 #include "Effects.h"
-#include <Camera.h>
+#include <CameraController.h>
 #include <RenderStates.h>
 #include <GameObject.h>
 #include <Texture2D.h>
@@ -38,21 +38,22 @@ private:
 	ModelManager m_ModelManager;
 
 	BasicEffect m_BasicEffect;
+	BasicEffect m_SkyboxEffect;
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;						// 深度缓冲贴图
 
 	int m_SceneMode = 0;
 
-	GameObject m_House;												// 树
-	GameObject m_Cubes;												// 立方体
 	GameObject m_Sphere;
 	GameObject m_Cylinder;
-	GameObject m_Triangle;
+	GameObject m_Ground;												// 立方体
+	GameObject m_Skybox;
 	DirectX::BoundingSphere m_BoundingSphere;
-	
+
 	GeometryData m_TriangleMesh;
 
 	std::shared_ptr<FirstPersonCamera> m_pCamera;				// 摄像机
+	FirstPersonCameraController m_CameraController;
 
 };
 

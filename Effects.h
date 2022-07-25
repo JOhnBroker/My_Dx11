@@ -58,6 +58,8 @@ public:
 
 	void SetRenderDefault();
 
+	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
+
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
 
@@ -71,9 +73,44 @@ public:
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 	void SetDiffuseColor(const DirectX::XMFLOAT4& color);
+	void SetReflectionEnable(bool enabled);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+};
+
+
+class SkyBoxEffect :public IEffect, public IEffectTransform,
+	public IEffectMaterial, public IEffectMeshData
+{
+public:
+	SkyBoxEffect();
+	virtual ~SkyBoxEffect() override;
+
+	SkyBoxEffect(SkyBoxEffect&& moveFrom)noexcept;
+	SkyBoxEffect& operator=(SkyBoxEffect&& moveFrom)noexcept;
+
+	//
+	static SkyBoxEffect& Get();
+
+	//
+	bool InitAll(ID3D11Device* device);
+
+	//
+	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
+	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
+	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
+
+	void SetMaterial(const Material& material) override;
+
+	MeshDataInput GetInputData(const MeshData& meshData) override;
+
+	void SetRenderDefault();
+
+	void Apply(ID3D11DeviceContext* deviceContext) override;
 private:
 	class Impl;
 	std::unique_ptr<Impl> pImpl;

@@ -99,6 +99,9 @@
     <ClCompile Include="Collision.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="SkyBoxEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -199,12 +202,21 @@
     <None Include="HLSL\Basic.hlsli">
       <Filter>着色器</Filter>
     </None>
+    <None Include="HLSL\SkyBox.hlsli">
+      <Filter>着色器</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="HLSL\Basic_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
     <FxCompile Include="HLSL\Basic_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\SkyBox_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

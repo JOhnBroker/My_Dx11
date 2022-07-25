@@ -26,6 +26,9 @@ bool GameApp::Init()
 	if (!m_BasicEffect.InitAll(m_pd3dDevice.Get()))
 		return false;
 
+	if (!m_SkyboxEffect.InitAll(m_pd3dDevice.Get()))
+		return false;
+
 	if (!InitResource())
 		return false;
 
@@ -49,78 +52,40 @@ void GameApp::OnResize()
 
 void GameApp::UpdateScene(float dt)
 {
-	// 记录并更新物体位置和旋转弧度
-	static float theta = 0.0f, phi = 0.0f;
-	static XMMATRIX Left = XMMatrixTranslation(-5.0f, 0.0f, 0.0f);
-	static XMMATRIX Top = XMMatrixTranslation(0.0f, 4.0f, 0.0f);
-	static XMMATRIX Right = XMMatrixTranslation(5.0f, 0.0f, 0.0f);
-	static XMMATRIX Bottom = XMMatrixTranslation(0.0f, -4.0f, 0.0f);
+	m_CameraController.Update(dt);
 
-	theta += dt * 0.3f;
-	phi += dt * 0.5f;
-	// 更新物体运动
-	m_Sphere.GetTransform().SetPosition(-5.0f, 0.0f, 0.0f);
-	m_Sphere.GetTransform().SetRotation(-phi, theta, 0.0f);
-	m_Cubes.GetTransform().SetPosition(0.0f, 4.0f, 0.0f);
-	m_Cubes.GetTransform().SetRotation(-phi, theta, 0.0f);
-	m_Cylinder.GetTransform().SetPosition(5.0f, 0.0f, 0.0f);
-	m_House.GetTransform().SetPosition(0.0f, -4.0f, 0.0f);
-	m_House.GetTransform().SetRotation(0.0f, theta, 0.0f);
-	m_House.GetTransform().SetScale(0.005f, 0.005f, 0.005f);
-	m_Cylinder.GetTransform().SetRotation(phi, theta, 0.0f);
-	m_Triangle.GetTransform().SetRotation(0.0f, theta, 0.0f);
+	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
+	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
 
-	ImGuiIO& io = ImGui::GetIO();
-	// 拾取检测
-	ImVec2 mousePos = ImGui::GetMousePos();
-	mousePos.x = std::clamp(mousePos.x, 0.0f, m_ClientWidth - 1.0f);
-	mousePos.y = std::clamp(mousePos.y, 0.0f, m_ClientHeight - 1.0f);
-	Ray ray = Ray::ScreenToRay(*m_pCamera, mousePos.x, mousePos.y);
-	// 三角形顶点变换
-	static XMVECTOR V[3];
-	for (int i = 0; i < 3; ++i) 
-	{
-		V[i] = XMVector3TransformCoord(XMLoadFloat3(&m_TriangleMesh.vertices[i]), 
-			XMMatrixRotationY(theta));
-	}
-	bool hitObject = false;
-	std::string pickedObjStr = "None";
-	if (ray.Hit(m_BoundingSphere))
-	{
-		pickedObjStr = "Sphere";
-		hitObject = true;
-	}
-	else if (ray.Hit(m_Cubes.GetBoundingOrientedBox()))
-	{
-		pickedObjStr = "Cube";
-		hitObject = true;
-	}
-	else if (ray.Hit(m_Cylinder.GetBoundingOrientedBox()))
-	{
-		pickedObjStr = "Cylinder";
-		hitObject = true;
-	}
-	else if (ray.Hit(m_House.GetBoundingOrientedBox()))
-	{
-		pickedObjStr = "House";
-		hitObject = true;
-	}
-	else if (ray.Hit(V[0], V[1], V[2]))
-	{
-		pickedObjStr = "Triangle";
-		hitObject = true;
-	}
+	m_SkyboxEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 
-	if (hitObject == true && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	if (ImGui::Begin("Static Cube Mapping"))
 	{
-		std::wstring wstr = L"You clicked ";
-		wstr += UTF8ToWString(pickedObjStr) + L"!";
-		MessageBox(nullptr, wstr.c_str(), L"Message", 0);
-	}
-
-	if (ImGui::Begin("Picking"))
-	{
-		ImGui::Text("Current Object: %s", pickedObjStr.c_str());
+		static int skybox_item = 0;
+		static const char* skybox_strs[] = {
+			"Daylight",
+			"Sunset",
+			"Desert"
+		};
+		if (ImGui::Combo("Skybox", &skybox_item, skybox_strs, ARRAYSIZE(skybox_strs)))
+		{
+			Model* pModel = m_ModelManager.GetModel("Skybox");
+			switch (skybox_item)
+			{
+			case 0:
+				m_BasicEffect.SetTextureCube(m_TextureManager.GetTexture("DayLight"));
+				pModel->materials[0].Set<std::string>("$Skybox", "Daylight");
+				break;
+			case 1:
+				m_BasicEffect.SetTextureCube(m_TextureManager.GetTexture("Sunset"));
+				pModel->materials[0].Set<std::string>("$Skybox", "Sunset");
+				break;
+			case 2:
+				m_BasicEffect.SetTextureCube(m_TextureManager.GetTexture("Desert"));
+				pModel->materials[0].Set<std::string>("$Skybox", "Desert");
+				break;
+			}
+		}
 	}
 	ImGui::End();
 	ImGui::Render();
@@ -146,15 +111,17 @@ void GameApp::DrawScene()
 	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
 
 	m_BasicEffect.SetRenderDefault();
-
-	// 绘制不需要纹理的模型
+	m_BasicEffect.SetReflectionEnable(true);
 	m_Sphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	m_Cubes.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+
+	m_BasicEffect.SetReflectionEnable(false);
+	m_Ground.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	m_Cylinder.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	m_Triangle.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	m_House.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	
-	// 绘制需要纹理的模型
+
+	// 绘制天空盒
+	m_SkyboxEffect.SetRenderDefault();
+	m_Skybox.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	HR(m_pSwapChain->Present(0, m_IsDxgiFlipModel ? DXGI_PRESENT_ALLOW_TEARING : 0));
@@ -165,38 +132,7 @@ bool GameApp::InitResource()
 	// 初始化游戏对象
 
 	// 初始化
-	Model* pModel = m_ModelManager.CreateFromFile(".\\Model\\house.obj");
-	m_House.SetModel(pModel);
-	pModel->SetDebugObjectName("House");
 
-	pModel = m_ModelManager.CreateFromGeometry("Cube", Geometry::CreateBox());
-	m_Cubes.SetModel(pModel);
-	pModel->SetDebugObjectName("Cube");
-
-	pModel = m_ModelManager.CreateFromGeometry("Sphere", Geometry::CreateSphere());
-	m_Sphere.SetModel(pModel);
-	pModel->SetDebugObjectName("Sphere");
-	m_BoundingSphere.Center = XMFLOAT3(-5.0f, 0.0f, 0.0f);
-	m_BoundingSphere.Radius = 1.0f;
-
-	pModel = m_ModelManager.CreateFromGeometry("Cylinder", Geometry::CreateCylinder());
-	m_Cylinder.SetModel(pModel);
-	pModel->SetDebugObjectName("Cylinder");
-
-	// 三角形(带反面)
-	m_TriangleMesh.vertices.assign({
-		XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(1.0f, -1.0f, 0.0f),
-		XMFLOAT3(1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(-1.0f, -1.0f, 0.0f)
-		});
-	m_TriangleMesh.normals.assign({
-		XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f),
-		XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f)
-		});
-	m_TriangleMesh.texcoords.assign(6, XMFLOAT2());
-	m_TriangleMesh.indices16.assign({ 0,1,2,3,4,5 });
-	pModel = m_ModelManager.CreateFromGeometry("Triangle", m_TriangleMesh);
-	m_Triangle.SetModel(pModel);
-	pModel->SetDebugObjectName("Triangle");
 
 	// ******************
 	// 初始化摄像机
@@ -215,7 +151,7 @@ bool GameApp::InitResource()
 	m_pCamera = camera;
 	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
 	camera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);
-	camera->LookTo(XMFLOAT3(0.0f,0.0f,-10.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	camera->LookTo(XMFLOAT3(0.0f, 0.0f, -10.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 	m_BasicEffect.SetViewMatrix(camera->GetViewMatrixXM());
 	m_BasicEffect.SetProjMatrix(camera->GetProjMatrixXM());
