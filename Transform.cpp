@@ -2,6 +2,11 @@
 
 using namespace DirectX;
 
+Transform::Transform(const DirectX::XMFLOAT3& scale, const DirectX::XMFLOAT3& rotation, const DirectX::XMFLOAT3& position)
+	:m_Scale(scale), m_Rotation(rotation), m_Position(position)
+{
+}
+
 DirectX::XMFLOAT3 Transform::GetScale() const
 {
 	return m_Scale;
@@ -36,7 +41,7 @@ DirectX::XMFLOAT3 Transform::GetRightAxis() const
 {
 	XMMATRIX R = XMMatrixRotationRollPitchYawFromVector(XMLoadFloat3(&m_Rotation));
 	XMFLOAT3 right;
-	XMStoreFloat3(&right,R.r[0]);
+	XMStoreFloat3(&right, R.r[0]);
 	return right;
 }
 
@@ -143,7 +148,7 @@ void Transform::RotateAxis(const DirectX::XMFLOAT3& axis, float radian)
 {
 	XMVECTOR rotationVec = XMLoadFloat3(&m_Rotation);
 	//获得当前旋转矩阵 * 绕轴旋转一定角度
-	XMMATRIX R = XMMatrixRotationRollPitchYawFromVector(rotationVec) * 
+	XMMATRIX R = XMMatrixRotationRollPitchYawFromVector(rotationVec) *
 		XMMatrixRotationAxis(XMLoadFloat3(&axis), radian);
 	XMFLOAT4X4 rotMatrix;
 	XMStoreFloat4x4(&rotMatrix, R);
@@ -172,13 +177,13 @@ void Transform::RotateAround(const DirectX::XMFLOAT3& point, const DirectX::XMFL
 void Transform::Translate(const DirectX::XMFLOAT3& direction, float magnitude)
 {
 	XMVECTOR directionVec = XMVector3Normalize(XMLoadFloat3(&direction));
-	XMVECTOR newPosition = XMVectorMultiplyAdd(XMVectorReplicate(magnitude),directionVec,XMLoadFloat3(&m_Position));
+	XMVECTOR newPosition = XMVectorMultiplyAdd(XMVectorReplicate(magnitude), directionVec, XMLoadFloat3(&m_Position));
 	XMStoreFloat3(&m_Position, newPosition);
 }
 
 void Transform::LookAt(const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up)
 {
-	XMMATRIX View = XMMatrixLookAtLH(XMLoadFloat3(&m_Position), XMLoadFloat3(&target),XMLoadFloat3(&up));
+	XMMATRIX View = XMMatrixLookAtLH(XMLoadFloat3(&m_Position), XMLoadFloat3(&target), XMLoadFloat3(&up));
 	XMMATRIX InvView = XMMatrixInverse(nullptr, View);
 	XMFLOAT4X4 rotMatrix;
 	XMStoreFloat4x4(&rotMatrix, InvView);
@@ -199,7 +204,7 @@ DirectX::XMFLOAT3 Transform::GetEulerAnglesFromRotationMatrix(const DirectX::XMF
 	//通过旋转矩阵 反求欧拉角
 	float c = sqrt(1.0f - rotationMatrix(2, 1) * rotationMatrix(2, 1));
 	//防止r[2][1]出现大于1的情况
-	if (isnan(c)) 
+	if (isnan(c))
 	{
 		c = 0.0f;
 	}

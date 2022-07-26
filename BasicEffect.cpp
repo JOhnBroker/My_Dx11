@@ -122,11 +122,6 @@ void BasicEffect::SetRenderDefault()
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
-{
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureCube", textureCube);
-}
-
 void BasicEffect::DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& instancedBuffer, const GameObject& object, uint32_t numObject)
 {
 	//deviceContext->IASetInputLayout(pImpl->m_pInstancePosNormalTexLayout.Get());
@@ -171,21 +166,6 @@ void XM_CALLCONV BasicEffect::SetProjMatrix(FXMMATRIX P)
 	XMStoreFloat4x4(&pImpl->m_Proj, P);
 }
 
-void BasicEffect::SetDirLight(size_t pos, const DirectionalLight& dirLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
-}
-
-void BasicEffect::SetPointLight(size_t pos, const PointLight& pointLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PointLight")->SetRaw(&pointLight, sizeof(pointLight) * pos, sizeof(pointLight));
-}
-
-void BasicEffect::SetSpotLight(size_t pos, const SpotLight& spotLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
-}
-
 void BasicEffect::SetMaterial(const Material& material)
 {
 	TextureManager& tm = TextureManager::Get();
@@ -224,6 +204,26 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 	return input;
 }
 
+void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
+}
+
+void BasicEffect::SetDirLight(size_t pos, const DirectionalLight& dirLight)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
+}
+
+void BasicEffect::SetPointLight(size_t pos, const PointLight& pointLight)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PointLight")->SetRaw(&pointLight, sizeof(pointLight) * pos, sizeof(pointLight));
+}
+
+void BasicEffect::SetSpotLight(size_t pos, const SpotLight& spotLight)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
+}
+
 void BasicEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EyePosW")->SetFloatVector(3, reinterpret_cast<const float*>(&eyePos));
@@ -237,6 +237,16 @@ void BasicEffect::SetDiffuseColor(const DirectX::XMFLOAT4& color)
 void BasicEffect::SetReflectionEnabled(bool enabled)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ReflectionEnabled")->SetSInt(enabled);
+}
+
+void BasicEffect::SetRefractionEnabled(bool enabled)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_RefractionEnabled")->SetSInt(enabled);
+}
+
+void BasicEffect::SetRefractionEta(float eta)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Eta")->SetFloat(eta);
 }
 
 void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)

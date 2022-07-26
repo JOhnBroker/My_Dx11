@@ -20,6 +20,8 @@ class GameApp : public D3DApp
 public:
 	// 摄像机模式
 	enum class CameraMode { FirstPerson, ThirdPerson, Free };
+	// 球体的模式
+	enum class SphereMode { None, Reflection, Refraction };
 
 public:
 	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);
@@ -32,28 +34,38 @@ public:
 
 private:
 	bool InitResource();
+	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 
 private:
 	TextureManager m_TextureManager;
 	ModelManager m_ModelManager;
 
-	BasicEffect m_BasicEffect;
-	SkyBoxEffect m_SkyboxEffect;
+	BasicEffect m_BasicEffect;											// 对象渲染特效管理
+	SkyBoxEffect m_SkyboxEffect;										// 天空盒特效管理
 
-	std::unique_ptr<Depth2D> m_pDepthTexture;						// 深度缓冲贴图
+	std::unique_ptr<Depth2D> m_pDepthTexture;							// 深度缓冲区
+	std::unique_ptr<TextureCube> m_pDynamicTextureCube;					// 动态天空盒
+	std::unique_ptr<Depth2D> m_pDynamicCubeDepthTexture;				// 渲染动态天空盒的深度缓冲区
+	std::unique_ptr<Texture2D> m_pDebugDynamicCubeTexture;			// 调试动态天空盒用
 
-	int m_SceneMode = 0;
+	GameObject m_Sphere[5];												// 球
+	GameObject m_CenterSphere;											// 中心球
+	GameObject m_Cylinder[5];											// 圆柱
+	GameObject m_Ground;												// 地面
+	GameObject m_Skybox;												// 天空盒
+	GameObject m_DebugSkybox;											// 调试用天空盒
 
-	GameObject m_Sphere;
-	GameObject m_Cylinder;
-	GameObject m_Ground;												// 立方体
-	GameObject m_Skybox;
-	DirectX::BoundingSphere m_BoundingSphere;
+	std::shared_ptr<FirstPersonCamera> m_pCamera;						// 摄像机
+	std::shared_ptr<FirstPersonCamera> m_pCubeCamera;					// 动态天空盒的摄像机
+	std::shared_ptr<FirstPersonCamera> m_pDebugCamera;					// 调试动态天空盒的摄像机
+	FirstPersonCameraController m_CameraController;						// 摄像机控制器
 
-	GeometryData m_TriangleMesh;
+	ImVec2 m_DebugTextureXY;											// 调试显示纹理的位置
+	ImVec2 m_DebugTextureWH;											// 调试显示纹理的宽高
 
-	std::shared_ptr<FirstPersonCamera> m_pCamera;				// 摄像机
-	FirstPersonCameraController m_CameraController;
+	SphereMode m_SphereMode = SphereMode::Reflection;					// 中心球渲染模式
+	float m_SphereRad = 0.0f;											// 球体旋转弧度
+	float m_Eta = 1.0f / 1.51f;											// 空气/介质折射率
 
 };
 
