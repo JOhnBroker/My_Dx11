@@ -368,19 +368,18 @@ bool GameApp::InitResource()
 	camera->SetRotationX(XM_PIDIV4);
 	camera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);*/
 
-	auto camera = std::make_shared<FirstPersonCamera>();
-	m_pCamera = camera;
-	m_CameraController.InitCamera(camera.get());
-	camera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
-	camera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);
-	camera->LookTo(XMFLOAT3(0.0f, 0.0f, -10.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pCamera = std::make_shared<FirstPersonCamera>();
+	m_CameraController.InitCamera(m_pCamera.get());
+	m_pCamera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
+	m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);
+	m_pCamera->LookTo(XMFLOAT3(0.0f, 0.0f, -10.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 	m_pCubeCamera = std::make_shared<FirstPersonCamera>();
-	m_pCubeCamera->SetFrustum(XM_PIDIV2, 1.0f, 1.0f, 1000.0f);
+	m_pCubeCamera->SetFrustum(XM_PIDIV2, 1.0f, 0.1f, 1000.0f);
 	m_pCubeCamera->SetViewPort(0.0f, 0.0f, 256.0f, 256.0f);
 
 	m_pDebugCamera = std::make_shared<FirstPersonCamera>();
-	m_pDebugCamera->SetFrustum(XM_PIDIV2, 1.0f, 1.0f, 1000.0f);
+	m_pDebugCamera->SetFrustum(XM_PIDIV2, 1.0f, 0.1f, 1000.0f);
 	m_pDebugCamera->SetViewPort(0.0f, 0.0f, 256.0f, 256.0f);
 
 	// ******************
@@ -417,13 +416,14 @@ void GameApp::DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11Rende
 	frustum.Transform(frustum, camera.GetLocalToWorldMatrixXM());
 	D3D11_VIEWPORT viewport = camera.GetViewPort();
 	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
-	//
+	
+	//绘制模型
 	m_BasicEffect.SetViewMatrix(camera.GetViewMatrixXM());
 	m_BasicEffect.SetProjMatrix(camera.GetProjMatrixXM());
 	m_BasicEffect.SetEyePos(camera.GetPosition());
 	m_BasicEffect.SetRenderDefault();
 
-	//
+	// 只有球体才有反射或折射效果
 	if (drawCenterSphere)
 	{
 		switch (m_SphereMode)
@@ -462,6 +462,7 @@ void GameApp::DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11Rende
 		sphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	}
 
+	// 绘制天空盒
 	m_SkyboxEffect.SetViewMatrix(camera.GetViewMatrixXM());
 	m_SkyboxEffect.SetProjMatrix(camera.GetProjMatrixXM());
 	m_SkyboxEffect.SetRenderDefault();
