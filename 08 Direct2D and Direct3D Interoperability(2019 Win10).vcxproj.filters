@@ -99,11 +99,11 @@
     <ClCompile Include="Collision.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="CameraController.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="SkyBoxEffect.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraController.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -219,10 +219,28 @@
     <FxCompile Include="HLSL\Basic_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
+    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
     <FxCompile Include="HLSL\SkyBox_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
+    <FxCompile Include="HLSL\SkyBox_GS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\SkyBoxGS_PS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\SkyBoxGS_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\BasicGS_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Basic_GS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\BasicGS_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

@@ -1,6 +1,9 @@
 #include "SkyBox.hlsli"
 
-VertexPos VS(VertexPos vIn)
+VertexPosL VS(VertexPos vIn)
 {
-    return vIn;
+    VertexPosL vOut;
+    vOut.PosH = float4(vIn.PosL, 1.0f);
+    vOut.PosL = vIn.PosL;
+    return vOut;
 }

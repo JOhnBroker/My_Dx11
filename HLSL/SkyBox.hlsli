@@ -6,8 +6,7 @@ SamplerState g_Sam : register(s0);
 cbuffer CBChangesEveryFrame : register(b0)
 {
     matrix g_WorldViewProj;
-    matrix g_Views[6];
-    matrix g_Proj;
+    matrix g_ViewProjs[6];
 }
 
 struct VertexPos

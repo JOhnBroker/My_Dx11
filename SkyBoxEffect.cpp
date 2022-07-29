@@ -87,7 +87,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSVS", L"HLSL\\SkyBoxGS_VS.cso", device, "VS",
 		"vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox_PS.cso", device,"PS"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox_PS.cso", device, "PS"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSPS", L"HLSL\\SkyBoxGS_PS.cso", device, "PS"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGS", L"HLSL\\SkyBox_GS.cso", device, "GS"));
 
@@ -173,9 +173,9 @@ void SkyBoxEffect::SetRenderGS()
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void SkyBoxEffect::SetViewMatrixs(DirectX::FXMMATRIX V, int idx)
+void SkyBoxEffect::SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Views")->SetRaw(&V, sizeof(V) * idx, sizeof(V));
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProjs")->SetRaw(&VP, sizeof(VP) * idx, sizeof(VP));
 }
 
 void SkyBoxEffect::Apply(ID3D11DeviceContext* deviceContext)
@@ -187,6 +187,5 @@ void SkyBoxEffect::Apply(ID3D11DeviceContext* deviceContext)
 
 	VP = XMMatrixTranspose(VP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&VP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Proj")->SetFloatMatrix(4, 4, (const FLOAT*)&P);
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 }

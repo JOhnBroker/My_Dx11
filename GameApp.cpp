@@ -132,6 +132,7 @@ void GameApp::UpdateScene(float dt)
 				m_BasicEffect.SetRefractionEta(m_Eta);
 			}
 		}
+		ImGui::Checkbox("Use Geometry Shader", &m_UseGS);
 	}
 	ImGui::End();
 	// 球体动画
@@ -175,38 +176,47 @@ void GameApp::DrawScene()
 		{ 0.0f, 0.0f, -1.0f },  // -Z
 	};
 
-	//BoundingFrustum frustum;
-	//BoundingFrustum::CreateFromMatrix(frustum, m_pCamera->GetProjMatrixXM());
-	//frustum.Transform(frustum, m_pCamera->GetLocalToWorldMatrixXM());
-	//
-	//// 中心球绘制量较大，能不画就不画
-	//m_CenterSphere.FrustumCulling(frustum);
-	//m_BasicEffect.SetEyePos(m_CenterSphere.GetTransform().GetPosition());
-	//if (m_CenterSphere.InFrustum())
-	//{
-	//	for (int i = 0; i < 6; ++i)
-	//	{
-	//		m_pCubeCamera->LookAt(m_CenterSphere.GetTransform().GetPosition(), looks[i], ups[i]);
-	//		DrawScene(false, false, *m_pCubeCamera, m_pDynamicTextureCube->GetRenderTarget(i),
-	//			m_pDynamicCubeDepthTexture->GetDepthStencil(), m_pDynamicTextureCube->GetShaderResource());
-	//	}
-	//}
+	if (m_UseGS == false)
+	{
+		BoundingFrustum frustum;
+		BoundingFrustum::CreateFromMatrix(frustum, m_pCamera->GetProjMatrixXM());
+		frustum.Transform(frustum, m_pCamera->GetLocalToWorldMatrixXM());
 
+		// 中心球绘制量较大，能不画就不画
+		m_CenterSphere.FrustumCulling(frustum);
+		m_BasicEffect.SetEyePos(m_CenterSphere.GetTransform().GetPosition());
+		if (m_CenterSphere.InFrustum())
+		{
+			for (int i = 0; i < 6; ++i)
+			{
+				m_pCubeCamera->LookAt(m_CenterSphere.GetTransform().GetPosition(), looks[i], ups[i]);
+				DrawScene(false, false, *m_pCubeCamera, m_pDynamicTextureCube->GetRenderTarget(i),
+					m_pDynamicCubeDepthTexture->GetDepthStencil(), m_pDynamicTextureCube->GetShaderResource());
+			}
+		}
+		m_pSRV = m_pDynamicTextureCube->GetShaderResource();
+	}
+	else
 	{
 		for (int i = 0; i < 6; ++i)
 		{
 			m_pCubeCamera->LookAt(m_CenterSphere.GetTransform().GetPosition(), looks[i], ups[i]);
 			DirectX::XMMATRIX V = m_pCubeCamera->GetViewMatrixXM();
+			DirectX::XMMATRIX P = m_pCubeCamera->GetProjMatrixXM();
 			V.r[3] = g_XMIdentityR3;
-			V = V * m_pCubeCamera->GetProjMatrixXM();
-			m_SkyboxEffect.SetViewMatrixs(V, i);
+			V = V * P;
+			V = XMMatrixTranspose(V);
+			m_SkyboxEffect.SetViewProjMatrixs(V, i);
+			m_SkyboxEffect.SetWorldMatrix(m_pCubeCamera->GetLocalToWorldMatrixXM());
+			m_BasicEffect.SetViewProjMatrixs(V, i);
 		}
-		DrawScene(false, true, *m_pCubeCamera, m_pDynamicSkyboxGS->GetRenderTarget(),
+		DrawScene(false, m_UseGS, *m_pCubeCamera, m_pDynamicSkyboxGS->GetRenderTarget(),
 			m_pDepthArray->GetDepthStencil(), m_pDynamicSkyboxGS->GetShaderResource());
+		m_pSRV = m_pDynamicSkyboxGS->GetShaderResource();
 	}
 
 	// 绘制场景
-	DrawScene(true,false, *m_pCamera, GetBackBufferRTV(), m_pDepthTexture->GetDepthStencil(), m_pDynamicSkyboxGS->GetShaderResource());
+	DrawScene(true, m_UseGS, *m_pCamera, GetBackBufferRTV(), m_pDepthTexture->GetDepthStencil(), m_pSRV.Get());
 
 	// 绘制天空盒
 	static bool debugCube = false;
@@ -396,10 +406,11 @@ bool GameApp::InitResource()
 	pModel->materials[0].Set<std::string>("$Skybox", "Daylight");
 	m_Skybox.SetModel(pModel);
 
+	// 调试立方体现在放的是使用GS生成的动态天空盒
 	// 调试立方体
 	pModel = m_ModelManager.CreateFromGeometry("DebugSkybox", Geometry::CreateBox());
 	pModel->SetDebugObjectName("DebugSkybox");
-	pModel->materials[0].Set<std::string>("$Skybox", "DynamicCube");
+	pModel->materials[0].Set<std::string>("$Skybox", "DynamicCubeGS");
 	m_DebugSkybox.SetModel(pModel);
 
 	// ******************
@@ -459,69 +470,76 @@ void GameApp::DrawScene(bool drawCenterSphere, bool enableGS, const Camera& came
 	m_pd3dImmediateContext->ClearDepthStencilView(pDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	m_pd3dImmediateContext->OMSetRenderTargets(1, &pRTV, pDSV);
 
-	
+	BoundingFrustum frustum;
+	D3D11_VIEWPORT viewport = camera.GetViewPort();
+	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
+
+	//绘制模型
+	m_BasicEffect.SetViewMatrix(camera.GetViewMatrixXM());
+	m_BasicEffect.SetProjMatrix(camera.GetProjMatrixXM());
+	m_BasicEffect.SetEyePos(camera.GetPosition());
+	if (enableGS && !drawCenterSphere)
+	{
+		m_BasicEffect.SetRenderGS();
+	}
+	else
+	{
+		BoundingFrustum::CreateFromMatrix(frustum, camera.GetProjMatrixXM());
+		frustum.Transform(frustum, camera.GetLocalToWorldMatrixXM());
+		m_BasicEffect.SetRenderDefault();
+	}
+
+	// 只有球体才有反射或折射效果
+	if (drawCenterSphere)
+	{
+		switch (m_SphereMode)
+		{
+		case SphereMode::None:
+			m_BasicEffect.SetReflectionEnabled(false);
+			m_BasicEffect.SetRefractionEnabled(false);
+			break;
+		case SphereMode::Reflection:
+			m_BasicEffect.SetReflectionEnabled(true);
+			m_BasicEffect.SetRefractionEnabled(false);
+			break;
+		case SphereMode::Refraction:
+			m_BasicEffect.SetReflectionEnabled(false);
+			m_BasicEffect.SetRefractionEnabled(true);
+			break;
+		}
+		m_BasicEffect.SetTextureCube(pSRV);
+		m_CenterSphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+		m_BasicEffect.SetTextureCube(nullptr);
+	}
+
+	m_BasicEffect.SetReflectionEnabled(false);
+	m_BasicEffect.SetRefractionEnabled(false);
+
+	m_Ground.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+
+	for (auto& cylinder : m_Cylinder)
+	{
+		if (!enableGS)
+			cylinder.FrustumCulling(frustum);
+		cylinder.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	}
+	for (auto& sphere : m_Sphere)
+	{
+		if (!enableGS)
+			sphere.FrustumCulling(frustum);
+		sphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	}
 
 	// 绘制天空盒
 	m_SkyboxEffect.SetViewMatrix(camera.GetViewMatrixXM());
 	m_SkyboxEffect.SetProjMatrix(camera.GetProjMatrixXM());
-	if (enableGS) 
+	if (enableGS && !drawCenterSphere)
 	{
 		m_SkyboxEffect.SetRenderGS();
-		m_Skybox.Draw(m_pd3dImmediateContext.Get(), m_SkyboxEffect);
 	}
-	else 
+	else
 	{
-		BoundingFrustum frustum;
-		BoundingFrustum::CreateFromMatrix(frustum, camera.GetProjMatrixXM());
-		frustum.Transform(frustum, camera.GetLocalToWorldMatrixXM());
-		D3D11_VIEWPORT viewport = camera.GetViewPort();
-		m_pd3dImmediateContext->RSSetViewports(1, &viewport);
-
-		//绘制模型
-		m_BasicEffect.SetViewMatrix(camera.GetViewMatrixXM());
-		m_BasicEffect.SetProjMatrix(camera.GetProjMatrixXM());
-		m_BasicEffect.SetEyePos(camera.GetPosition());
-		m_BasicEffect.SetRenderDefault();
-
-		// 只有球体才有反射或折射效果
-		if (drawCenterSphere)
-		{
-			switch (m_SphereMode)
-			{
-			case SphereMode::None:
-				m_BasicEffect.SetReflectionEnabled(false);
-				m_BasicEffect.SetRefractionEnabled(false);
-				break;
-			case SphereMode::Reflection:
-				m_BasicEffect.SetReflectionEnabled(true);
-				m_BasicEffect.SetRefractionEnabled(false);
-				break;
-			case SphereMode::Refraction:
-				m_BasicEffect.SetReflectionEnabled(false);
-				m_BasicEffect.SetRefractionEnabled(true);
-				break;
-			}
-			m_BasicEffect.SetTextureCube(pSRV);
-			m_CenterSphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-			m_BasicEffect.SetTextureCube(nullptr);
-		}
-
-		m_BasicEffect.SetReflectionEnabled(false);
-		m_BasicEffect.SetRefractionEnabled(false);
-
-		m_Ground.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-
-		for (auto& cylinder : m_Cylinder)
-		{
-			cylinder.FrustumCulling(frustum);
-			cylinder.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-		}
-		for (auto& sphere : m_Sphere)
-		{
-			sphere.FrustumCulling(frustum);
-			sphere.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-		}
 		m_SkyboxEffect.SetRenderDefault();
-		m_Skybox.Draw(m_pd3dImmediateContext.Get(), m_SkyboxEffect);
 	}
+	m_Skybox.Draw(m_pd3dImmediateContext.Get(), m_SkyboxEffect);
 }

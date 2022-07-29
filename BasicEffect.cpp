@@ -94,15 +94,23 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicGSVS", L"HLSL/BasicGS_VS.cso", device, "VS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
 
 	// 创建像素着色器
 	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device, "PS", "ps_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicGSPS", L"HLSL/BasicGS_PS.cso", device, "PS", "ps_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicGS", L"HLSL/Basic_GS.cso", device, "GS", "gs_5_0");
 
 	// 创建通道
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "BasicVS";
 	passDesc.namePS = "BasicPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
+
+	passDesc.nameVS = "BasicGSVS";
+	passDesc.namePS = "BasicGSPS";
+	passDesc.nameGS = "BasicGS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicGS", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
@@ -118,6 +126,13 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 void BasicEffect::SetRenderDefault()
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
+void BasicEffect::SetRenderGS()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("BasicGS");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
@@ -247,6 +262,11 @@ void BasicEffect::SetRefractionEnabled(bool enabled)
 void BasicEffect::SetRefractionEta(float eta)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Eta")->SetFloat(eta);
+}
+
+void BasicEffect::SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProjs")->SetRaw(&VP, sizeof(VP) * idx, sizeof(VP));
 }
 
 void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)

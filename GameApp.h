@@ -51,6 +51,8 @@ private:
 	std::unique_ptr<TextureCube> m_pDynamicSkyboxGS;
 	std::unique_ptr<Depth2DArray> m_pDepthArray;
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pSRV = nullptr;
+
 	GameObject m_Sphere[5];												// 球
 	GameObject m_CenterSphere;											// 中心球
 	GameObject m_Cylinder[5];											// 圆柱
@@ -69,6 +71,7 @@ private:
 	SphereMode m_SphereMode = SphereMode::Reflection;					// 中心球渲染模式
 	float m_SphereRad = 0.0f;											// 球体旋转弧度
 	float m_Eta = 1.0f / 1.51f;											// 空气/介质折射率
+	bool m_UseGS = false;
 
 };
 

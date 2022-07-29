@@ -27,6 +27,7 @@ cbuffer CBDrawingStates : register(b2)
 cbuffer CBChangesEveryFrame : register(b3)
 {
     matrix g_ViewProj;
+    matrix g_ViewProjs[6];
     float3 g_EyePosW;
     float g_Pad2;
 }
@@ -51,6 +52,15 @@ struct VertexPosHWNormalTex
     float3 posW : POSITION; // 在世界中的位置
     float3 normalW : NORMAL; // 法向量在世界中的方向
     float2 tex : TEXCOORD;
+};
+
+struct VertexPosHWNormalTexRT
+{
+    float4 posH : SV_POSITION;
+    float3 posW : POSITION; // 在世界中的位置
+    float3 normalW : NORMAL; // 法向量在世界中的方向
+    float2 tex : TEXCOORD;
+    uint RTIndex : SV_RenderTargetArrayIndex;
 };
 
 struct VertexPosHWNormalColorTex

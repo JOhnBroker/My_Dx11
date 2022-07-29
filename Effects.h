@@ -57,6 +57,7 @@ public:
 	// BasicEffect
 
 	void SetRenderDefault();
+	void SetRenderGS();
 
 	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
 
@@ -77,6 +78,8 @@ public:
 	void SetReflectionEnabled(bool enabled);
 	void SetRefractionEnabled(bool enabled);
 	void SetRefractionEta(float eta);
+
+	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 
@@ -114,7 +117,7 @@ public:
 	void SetRenderDefault();
 	void SetRenderGS();
 
-	void SetViewMatrixs(DirectX::FXMMATRIX V, int idx);
+	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 private:

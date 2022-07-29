@@ -2,7 +2,7 @@
 
 [maxvertexcount(18)]
 void GS(
-	triangle VertexPos input[3],
+	triangle VertexPosL input[3],
 	inout TriangleStream<VertexPosLRT> output
 )
 {
@@ -16,8 +16,8 @@ void GS(
         [unroll]
         for (int j = 0; j < 3; ++j)
         {
-            //vertex.PosH = mul(float4(input[j].PosL, 1.0f), g_WorldViewProj).xyww;
-            float4 posH = mul(float4(input[j].PosL, 1.0f), g_Views[i]);
+            //vertex.PosH = mul(float4(input[j].PosL, 1.0f), g_ViewProjs[i]).xyww;
+            float4 posH = mul(input[j].PosH, g_ViewProjs[i]);
             vertex.PosH = posH.xyww;
             vertex.PosL = input[j].PosL;
             
