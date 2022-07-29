@@ -112,6 +112,9 @@ public:
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
 	void SetRenderDefault();
+	void SetRenderGS();
+
+	void SetViewMatrixs(DirectX::FXMMATRIX V, int idx);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 private:

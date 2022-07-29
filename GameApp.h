@@ -34,7 +34,7 @@ public:
 
 private:
 	bool InitResource();
-	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
+	void DrawScene(bool drawCenterSphere, bool enableGS, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV, ID3D11ShaderResourceView* pSRV);
 
 private:
 	TextureManager m_TextureManager;
@@ -47,6 +47,9 @@ private:
 	std::unique_ptr<TextureCube> m_pDynamicTextureCube;					// 动态天空盒
 	std::unique_ptr<Depth2D> m_pDynamicCubeDepthTexture;				// 渲染动态天空盒的深度缓冲区
 	std::unique_ptr<Texture2D> m_pDebugDynamicCubeTexture;			// 调试动态天空盒用
+
+	std::unique_ptr<TextureCube> m_pDynamicSkyboxGS;
+	std::unique_ptr<Depth2DArray> m_pDepthArray;
 
 	GameObject m_Sphere[5];												// 球
 	GameObject m_CenterSphere;											// 中心球

@@ -1,4 +1,4 @@
-﻿#include "Effects.h"
+#include "Effects.h"
 #include <XUtil.h>
 #include <RenderStates.h>
 #include <EffectHelper.h>
@@ -84,8 +84,12 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 		"vs_5_0", nullptr, blob.GetAddressOf()));
 	HR(device->CreateInputLayout(VertexPos::GetInputLayout(), ARRAYSIZE(VertexPos::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosLayout.ReleaseAndGetAddressOf()));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSVS", L"HLSL\\SkyBoxGS_VS.cso", device, "VS",
+		"vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox_PS.cso", device));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox_PS.cso", device,"PS"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSPS", L"HLSL\\SkyBoxGS_PS.cso", device, "PS"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGS", L"HLSL\\SkyBox_GS.cso", device, "GS"));
 
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "SkyboxVS";
@@ -93,6 +97,16 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Skybox", device, &passDesc))
 	{
 		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("Skybox");
+		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
+		pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
+	}
+
+	passDesc.nameVS = "SkyboxGSVS";
+	passDesc.nameGS = "SkyboxGS";
+	passDesc.namePS = "SkyboxGSPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("GenerateSkybox", device, &passDesc))
+	{
+		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("GenerateSkybox");
 		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 		pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	}
@@ -152,13 +166,27 @@ void SkyBoxEffect::SetRenderDefault()
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
+void SkyBoxEffect::SetRenderGS()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("GenerateSkybox");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
+void SkyBoxEffect::SetViewMatrixs(DirectX::FXMMATRIX V, int idx)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Views")->SetRaw(&V, sizeof(V) * idx, sizeof(V));
+}
+
 void SkyBoxEffect::Apply(ID3D11DeviceContext* deviceContext)
 {
 	XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
+	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
 	V.r[3] = g_XMIdentityR3;
-	XMMATRIX VP = V * XMLoadFloat4x4(&pImpl->m_Proj);
+	XMMATRIX VP = V * P;
 
 	VP = XMMatrixTranspose(VP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&VP);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Proj")->SetFloatMatrix(4, 4, (const FLOAT*)&P);
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 }
