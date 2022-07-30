@@ -1,8 +1,8 @@
 #include "Basic.hlsli"
 
-VertexPosHWNormalColorTex VS(VertexPosNormalTex vIn)
+VertexPosHWNormalTex VS(VertexPosNormalTex vIn)
 {
-    VertexPosHWNormalColorTex vOut;
+    VertexPosHWNormalTex vOut;
     
     vector posW = mul(float4(vIn.posL, 1.0f), g_World);
     
@@ -10,7 +10,5 @@ VertexPosHWNormalColorTex VS(VertexPosNormalTex vIn)
     vOut.posW = posW.xyz;
     vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
     vOut.tex = vIn.tex;
-    vOut.color = g_DiffuseColor;
-    
     return vOut;
 }

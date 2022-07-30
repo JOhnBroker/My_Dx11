@@ -105,6 +105,12 @@
     <ClCompile Include="CameraController.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="PostProcessEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ScreenGrab11.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -200,6 +206,9 @@
     <ClInclude Include="CameraController.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="ScreenGrab11.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli">
@@ -208,7 +217,10 @@
     <None Include="HLSL\Basic.hlsli">
       <Filter>着色器</Filter>
     </None>
-    <None Include="HLSL\SkyBox.hlsli">
+    <None Include="HLSL\ScreenFade.hlsli">
+      <Filter>着色器</Filter>
+    </None>
+    <None Include="HLSL\PostProcess.hlsli">
       <Filter>着色器</Filter>
     </None>
   </ItemGroup>
@@ -216,31 +228,22 @@
     <FxCompile Include="HLSL\Basic_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\Basic_VS.hlsl">
+    <FxCompile Include="HLSL\ScreenFade_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
+    <FxCompile Include="HLSL\ScreenFade_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_PS.hlsl">
+    <FxCompile Include="HLSL\Minimap_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_GS.hlsl">
+    <FxCompile Include="HLSL\Minimap_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBoxGS_PS.hlsl">
+    <FxCompile Include="HLSL\BasicInstance_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBoxGS_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\BasicGS_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Basic_GS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\BasicGS_PS.hlsl">
+    <FxCompile Include="HLSL\BasicObject_VS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

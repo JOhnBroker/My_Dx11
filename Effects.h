@@ -29,7 +29,6 @@ public:
 	{
 		DirectX::XMFLOAT4X4 world;
 		DirectX::XMFLOAT4X4 worldInvTranspose;
-		DirectX::XMFLOAT4 color;
 	};
 
 public:
@@ -57,9 +56,6 @@ public:
 	// BasicEffect
 
 	void SetRenderDefault();
-	void SetRenderGS();
-
-	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
 
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
@@ -68,18 +64,16 @@ public:
 	// 各种类型灯光允许的最大数目
 	static const int maxLights = 5;
 
-	void SetDirLight(size_t pos, const DirectionalLight& dirLight);
-	void SetPointLight(size_t pos, const PointLight& pointLight);
-	void SetSpotLight(size_t pos, const SpotLight& spotLight);
+	void SetDirLight(uint32_t pos, const DirectionalLight& dirLight);
+	void SetPointLight(uint32_t pos, const PointLight& pointLight);
+	void SetSpotLight(uint32_t pos, const SpotLight& spotLight);
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
-	void SetDiffuseColor(const DirectX::XMFLOAT4& color);
 
-	void SetReflectionEnabled(bool enabled);
-	void SetRefractionEnabled(bool enabled);
-	void SetRefractionEta(float eta);
-
-	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
+	void SetFogState(bool enabled);
+	void SetFogStart(float fogStart);
+	void SetFogColor(const DirectX::XMFLOAT4& fogColor);
+	void SetFogRange(float fogRange);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 
@@ -99,13 +93,13 @@ public:
 	SkyBoxEffect(SkyBoxEffect&& moveFrom)noexcept;
 	SkyBoxEffect& operator=(SkyBoxEffect&& moveFrom)noexcept;
 
-	//
+	// 获取单例
 	static SkyBoxEffect& Get();
 
-	//
+	// 初始化所需资源
 	bool InitAll(ID3D11Device* device);
 
-	//
+	//IEffectTransform
 	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
 	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
 	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
@@ -120,6 +114,44 @@ public:
 	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+};
+
+
+class PostProcessEffect 
+{
+public:
+	PostProcessEffect();
+	~PostProcessEffect();
+
+	PostProcessEffect(PostProcessEffect&& moveForm) noexcept;
+	PostProcessEffect& operator=(PostProcessEffect&& moveForm) noexcept;
+
+	//
+	static PostProcessEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	// 渐变特效
+	void RenderScreenFade(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp,
+		float fadeAmount);
+
+	// 小地图
+	void SetVisibleRange(float range);
+	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
+	void SetMinimapRect(const DirectX::XMFLOAT4& rect);// (Left, Front, Right, Back)
+	void RenderMinimap(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
 private:
 	class Impl;
 	std::unique_ptr<Impl> pImpl;

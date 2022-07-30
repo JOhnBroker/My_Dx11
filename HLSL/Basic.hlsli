@@ -1,7 +1,6 @@
 #include "LightHelper.hlsli"
 
 Texture2D g_DiffuseMap : register(t0);
-TextureCube g_TexCube : register(t1);
 SamplerState g_Sam : register(s0);
 
 
@@ -18,16 +17,16 @@ cbuffer CBChangesEveryObjectDrawing : register(b1)
 
 cbuffer CBDrawingStates : register(b2)
 {
-    int g_ReflectionEnabled;
-    int g_RefractionEnabled;
-    float g_Eta;
+    float4 g_FogColor;
+    int g_FogEnabled;
+    float g_FogStart;
+    float g_FogRange;
     float g_Pad;
 }
 
 cbuffer CBChangesEveryFrame : register(b3)
 {
     matrix g_ViewProj;
-    matrix g_ViewProjs[6];
     float3 g_EyePosW;
     float g_Pad2;
 }
@@ -79,5 +78,4 @@ struct InstancePosNormalTex
     float2 tex : TEXCOORD;
     matrix world : World;
     matrix worldInvTranspose : WorldInvTranspose;
-    float4 color : COLOR;
 };
