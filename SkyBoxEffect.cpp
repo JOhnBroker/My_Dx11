@@ -84,12 +84,12 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 		"vs_5_0", nullptr, blob.GetAddressOf()));
 	HR(device->CreateInputLayout(VertexPos::GetInputLayout(), ARRAYSIZE(VertexPos::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosLayout.ReleaseAndGetAddressOf()));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSVS", L"HLSL\\SkyBoxGS_VS.cso", device, "VS",
-		"vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+	//HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSVS", L"HLSL\\SkyBoxGS_VS.cso", device, "VS",
+	//	"vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox_PS.cso", device, "PS"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSPS", L"HLSL\\SkyBoxGS_PS.cso", device, "PS"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGS", L"HLSL\\SkyBox_GS.cso", device, "GS"));
+	//HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGSPS", L"HLSL\\SkyBoxGS_PS.cso", device, "PS"));
+	//HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxGS", L"HLSL\\SkyBox_GS.cso", device, "GS"));
 
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "SkyboxVS";
@@ -101,15 +101,15 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 		pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	}
 
-	passDesc.nameVS = "SkyboxGSVS";
-	passDesc.nameGS = "SkyboxGS";
-	passDesc.namePS = "SkyboxGSPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("GenerateSkybox", device, &passDesc))
-	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("GenerateSkybox");
-		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
-		pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
-	}
+	//passDesc.nameVS = "SkyboxGSVS";
+	//passDesc.nameGS = "SkyboxGS";
+	//passDesc.namePS = "SkyboxGSPS";
+	//HR(pImpl->m_pEffectHelper->AddEffectPass("GenerateSkybox", device, &passDesc))
+	//{
+	//	auto pPass = pImpl->m_pEffectHelper->GetEffectPass("GenerateSkybox");
+	//	pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
+	//	pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
+	//}
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
 	// 设置调试对象名

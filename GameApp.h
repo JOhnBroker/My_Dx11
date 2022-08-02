@@ -25,6 +25,8 @@ public:
 	enum class CameraMode { FirstPerson, ThirdPerson, Free };
 	// 球体的模式
 	enum class SphereMode { None, Reflection, Refraction };
+	// 地面的模式
+	enum class GroundMode { Floor, Stones };
 
 public:
 	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);
@@ -37,31 +39,34 @@ public:
 
 private:
 	bool InitResource();
-	void CreateRandomTrees();
-	void DrawScene(ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV, const D3D11_VIEWPORT& viewport);
+	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 
 private:
 	TextureManager m_TextureManager;
 	ModelManager m_ModelManager;
 
 	BasicEffect m_BasicEffect;											// 对象渲染特效管理
-	PostProcessEffect m_PostProcessEffect;								// 后处理特效管理
+	SkyBoxEffect m_SkyBoxEffect;									// 天空盒理特效管理
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;							// 深度缓冲区
-	std::unique_ptr<Texture2D> m_pMinimapTexture;						// 小地图纹理
-	std::unique_ptr<Texture2D> m_pLitTexture;							// 中间场景缓冲区
+	std::unique_ptr<TextureCube> m_pDynamicTextureCube;
+	std::unique_ptr<Depth2D> m_pDynamicCubeDepthTexture;
 
-	GameObject m_Trees;													// 树
+	GameObject m_Spheres[5];
 	GameObject m_Ground;												// 地面
-	std::unique_ptr<Buffer> m_pInstancedBuffer;
+	GameObject m_CenterSphere;
+	GameObject m_Cylinders[5];
+	GameObject m_Skybox;
 
 	std::shared_ptr<FirstPersonCamera> m_pCamera;						// 摄像机
+	std::shared_ptr<FirstPersonCamera> m_pCubeCamera;						// 摄像机
 	FirstPersonCameraController m_CameraController;						// 摄像机控制器
 
-	bool m_PrintScreenStarted = false;									// 截屏当前帧
-	bool m_FadeUsed = true;												// 是否使用淡入/淡出
-	float m_FadeAmount = 0.0f;											// 淡入/淡出系数
-	float m_FadeSign = 1.0f;											// 1.0f表示淡入，-1.0f表示淡出
+	float m_SphereRad = 0.0f;									// 球体旋转弧度
+
+	bool m_EnableNormalMap = true;								// 开启法线贴图
+
+	GroundMode m_GroundMode = GroundMode::Floor;                // 哪种地面类型
 };
 
 #endif

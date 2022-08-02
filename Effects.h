@@ -56,6 +56,9 @@ public:
 	// BasicEffect
 
 	void SetRenderDefault();
+	void SetRenderWithNormalMap();
+
+	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
 
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
@@ -69,6 +72,10 @@ public:
 	void SetSpotLight(uint32_t pos, const SpotLight& spotLight);
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
+
+	void SetReflectionEnabled(bool enabled);
+	void SetRefractionEnabled(bool enabled);
+	void SetRefractionEta(float eta);
 
 	void SetFogState(bool enabled);
 	void SetFogStart(float fogStart);
@@ -120,7 +127,7 @@ private:
 };
 
 
-class PostProcessEffect 
+class PostProcessEffect
 {
 public:
 	PostProcessEffect();
