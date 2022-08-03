@@ -33,6 +33,7 @@ public:
 	virtual void OnResize();                  // 该父类方法需要在窗口大小变动的时候调用
 	virtual void UpdateScene(float dt) = 0;   // 子类需要实现该方法，完成每一帧的更新
 	virtual void DrawScene() = 0;             // 子类需要实现该方法，完成每一帧的绘制
+	virtual void Compute() = 0;
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	// 窗口的消息回调函数
 protected:
@@ -56,10 +57,10 @@ protected:
 	bool      m_Maximized;       // 应用是否最大化
 	bool      m_Resizing;        // 窗口大小是否变化
 
-    bool m_IsDxgiFlipModel = false; // 是否使用DXGI翻转模型
-    UINT m_BackBufferCount = 0;		// 后备缓冲区数目
-    UINT m_FrameCount = 0;          // 当前帧
-    ComPtr<ID3D11RenderTargetView> m_pRenderTargetViews[2];     // 所有后备缓冲区对应的渲染目标视图
+	bool m_IsDxgiFlipModel = false; // 是否使用DXGI翻转模型
+	UINT m_BackBufferCount = 0;		// 后备缓冲区数目
+	UINT m_FrameCount = 0;          // 当前帧
+	ComPtr<ID3D11RenderTargetView> m_pRenderTargetViews[2];     // 所有后备缓冲区对应的渲染目标视图
 
 	CpuTimer m_Timer;           // 计时器
 

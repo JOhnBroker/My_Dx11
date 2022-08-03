@@ -220,6 +220,9 @@
     <None Include="HLSL\SkyBox.hlsli">
       <Filter>着色器</Filter>
     </None>
+    <None Include="HLSL\BitonicSort.hlsli">
+      <Filter>着色器</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="HLSL\Basic_PS.hlsl">
@@ -238,6 +241,12 @@
       <Filter>着色器</Filter>
     </FxCompile>
     <FxCompile Include="HLSL\NormalMap_PS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\MatrixTranspose_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\BitonicSort_CS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>
