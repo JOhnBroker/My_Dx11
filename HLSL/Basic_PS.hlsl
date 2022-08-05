@@ -6,6 +6,8 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
     uint texWidth, texHeight;
     g_DiffuseMap.GetDimensions(texWidth, texHeight);
     float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    
+    [flatten]
     if (texWidth > 0 && texHeight > 0)
     {
         // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
@@ -59,24 +61,31 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
     float4 litColor = texColor * (ambient + diffuse) + spec;
     
     [flatten]
-    if (g_ReflectionEnabled)
+    if (g_FogEnabled)
     {
-        float3 incident = -toEyeW;
-        float3 reflectionVertor = reflect(incident, pIn.normalW);
-        float4 reflectionColor = g_TexCube.Sample(g_Sam, reflectionVertor);
-        
-        litColor += g_Material.reflect * reflectionColor;
+        float fogLerp = saturate((distToEye - g_FogStart) / g_FogRange);
+        litColor = lerp(litColor, fogLerp);
     }
     
-    [flatten]
-    if (g_RefractionEnabled)
-    {
-        float3 incident = -toEyeW;
-        float3 refractionVector = refract(incident, pIn.normalW, g_Eta);
-        float4 refractionColor = g_TexCube.Sample(g_Sam, refractionVector);
-        litColor += g_Material.reflect * refractionColor;
-    }
+    //[flatten]
+    //if (g_ReflectionEnabled)
+    //{
+    //    float3 incident = -toEyeW;
+    //    float3 reflectionVertor = reflect(incident, pIn.normalW);
+    //    float4 reflectionColor = g_TexCube.Sample(g_Sam, reflectionVertor);
+    //    
+    //    litColor += g_Material.reflect * reflectionColor;
+    //}
+    //
+    //[flatten]
+    //if (g_RefractionEnabled)
+    //{
+    //    float3 incident = -toEyeW;
+    //    float3 refractionVector = refract(incident, pIn.normalW, g_Eta);
+    //    float4 refractionColor = g_TexCube.Sample(g_Sam, refractionVector);
+    //    litColor += g_Material.reflect * refractionColor;
+    //}
     
-    litColor.a = texColor.a * g_Material.diffuse.a;
+        litColor.a = texColor.a * g_Material.diffuse.a;
     return litColor;
 }

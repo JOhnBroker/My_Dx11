@@ -1,15 +1,15 @@
 #include "LightHelper.hlsli"
 
 Texture2D g_DiffuseMap : register(t0);
-Texture2D g_NormalMap : register(t1);
-TextureCube g_TexCube : register(t2);
-SamplerState g_Sam : register(s0);
-
+Texture2D g_DisplacementMap : register(t1);
+SamplerState g_SamLinearWrap : register(s0);
+SamplerState g_SamPointClamp : register(s1);
 
 cbuffer CBChangesEveryDrawing : register(b0)
 {
     matrix g_World;
     matrix g_WorldInvTranspose;
+    matrix g_TexTransform;
 }
 
 cbuffer CBChangesEveryObjectDrawing : register(b1)
@@ -17,19 +17,24 @@ cbuffer CBChangesEveryObjectDrawing : register(b1)
     Material g_Material;
 }
 
-cbuffer CBDrawingStates : register(b2)
-{
-    int g_ReflectionEnabled;
-    int g_RefractionEnabled;
-    float g_Eta; // 空气/介质折射比
-    float g_Pad;
-}
-
-cbuffer CBChangesEveryFrame : register(b3)
+cbuffer CBChangesEveryFrame : register(b2)
 {
     matrix g_ViewProj;
     float3 g_EyePosW;
-    float g_Pad2;
+    float g_Pad;
+}
+
+cbuffer CBDrawingStates : register(b3)
+{
+    float4 g_FogColor;
+    
+    int g_FogEnabled;
+    float g_FogStart;
+    float g_FogRange;
+    int g_WavesEnabled;         // 开启波浪绘制
+    
+    float g_GridSpatialStep;    // 栅格空间步长
+    float3 g_Pad2;
 }
 
 cbuffer CBChangesRarely : register(b4)

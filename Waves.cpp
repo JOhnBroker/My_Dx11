@@ -1,4 +1,4 @@
-#include <Waves.h>
+﻿#include <Waves.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
 #include <DXTrace.h>
@@ -43,7 +43,7 @@ void Waves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols,
 	Model::CreateFromGeometry(m_Model, device, m_MeshData, cpuWrite);
 	m_pModel = &m_Model;
 
-	if (TextureManager::Get().GetTexture("Texture\\water2.dds") == nullptr) 
+	if (TextureManager::Get().GetTexture("Texture\\water2.dds") == nullptr)
 	{
 		TextureManager::Get().CreateTexture("Texture\\water2.dds", false, true);
 	}
@@ -55,4 +55,168 @@ void Waves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols,
 	m_Model.materials[0].Set<float>("$SpecularPower", 32.0f);
 	m_Model.materials[0].Set<XMFLOAT2>("$TexOffset", XMFLOAT2());
 	m_Model.materials[0].Set<XMFLOAT2>("$TexScale", XMFLOAT2(m_TexU, m_TexV));
+}
+
+void CpuWaves::InitResource(ID3D11Device* device,
+	uint32_t rows, uint32_t cols, float texU, float texV, float timeStep, float spatialStep,
+	float wavesSpeed, float damping, float flowSpeedX, float flowSpeedY)
+{
+	Waves::InitResource(device, rows, cols, texU, texV, timeStep, spatialStep,
+		wavesSpeed, damping, flowSpeedX, flowSpeedY, true);
+
+	// 取出顶点数据
+	m_CurrSolution.swap(m_MeshData.vertices);
+	// 保持与顶点数目一致
+	m_PrevSolution.resize(m_CurrSolution.size());
+	m_CurrNormals.resize(m_CurrSolution.size());
+	// 顶点位置复制到Prev
+	std::copy(m_CurrSolution.begin(), m_CurrSolution.end(), m_PrevSolution.begin());
+}
+
+void CpuWaves::Update(float dt)
+{
+	m_AccumulateTime += dt;
+
+	auto& texOffset = m_Model.materials[0].Get<XMFLOAT2>("$TexOffset");
+	texOffset.x += m_FlowSpeedX;
+	texOffset.y += m_FlowSpeedY;
+
+	// 仅仅在累积时间大于时间步长时才更新
+	if (m_AccumulateTime > m_TimeStep)
+	{
+		m_isUpdated = true;
+
+		// 仅仅对内部顶点进行更新
+		for (size_t i = 1; i < m_NumRows - 1; ++i)
+		{
+			for (size_t j = 1; j < m_NumCols - 1; ++j)
+			{
+				// 在这次更新之后，我们将丢弃掉上一次模拟的数据。
+				// 因此我们将运算的结果保存到Prev[i][j]的位置上。
+				// 注意我们能够使用这种原址更新是因为Prev[i][j]
+				// 的数据仅在当前计算Next[i][j]的时候才用到
+				m_PrevSolution[i * m_NumCols + j].y =
+					m_K1 * m_PrevSolution[i * m_NumCols + j].y +
+					m_K2 * m_CurrSolution[i * m_NumCols + j].y +
+					m_K3 * (m_CurrSolution[i * m_NumCols + j + 1].y +
+						m_CurrSolution[i * m_NumCols + j - 1].y +
+						m_CurrSolution[(i + 1) * m_NumCols + j].y +
+						m_CurrSolution[(i - 1) * m_NumCols + j].y);
+			}
+		}
+		m_PrevSolution.swap(m_CurrSolution);
+
+		m_AccumulateTime = 0.0f;
+
+		for (size_t i = 1; i < m_NumRows; ++i)
+		{
+			for (size_t j = 1; j < m_NumCols; ++j)
+			{
+				float left = m_CurrSolution[i * m_NumCols + j - 1].y;
+				float right = m_CurrSolution[i * m_NumCols + j + 1].y;
+				float top = m_CurrSolution[(i - 1) * m_NumRows + j].y;
+				float bottom = m_CurrSolution[(i + 1) * m_NumRows + j].y;
+				m_CurrNormals[i * m_NumCols + j] = XMFLOAT3(-right + left, 2.0f * m_SpatialStep, bottom - top);
+				XMVECTOR nVec = XMVector3Normalize(XMLoadFloat3(&m_CurrNormals[i * m_NumCols + j]));
+				XMStoreFloat3(&m_CurrNormals[i * m_NumCols + j], nVec);
+
+			}
+		}
+	}
+
+}
+
+void CpuWaves::Disturb(uint32_t i, uint32_t j, float magnitude)
+{
+	assert(i > 1 && i < m_NumRows - 2);
+	assert(j > 1 && j < m_NumCols - 2);
+
+	float halfMag = 0.5 * magnitude;
+
+	// 对顶点[i][j]及其相邻顶点修改高度值
+	size_t curr = i * (size_t)m_NumCols + j;
+	m_CurrSolution[curr].y += magnitude;
+	m_CurrSolution[curr - 1].y += halfMag;
+	m_CurrSolution[curr + 1].y += halfMag;
+	m_CurrSolution[curr - m_NumCols].y += halfMag;
+	m_CurrSolution[curr + m_NumCols].y += halfMag;
+
+	m_isUpdated = true;
+}
+
+void CpuWaves::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)
+{
+	if (m_isUpdated)
+	{
+		m_isUpdated = false;
+
+		D3D11_MAPPED_SUBRESOURCE mappedData;
+		deviceContext->Map(m_Model.meshdatas[0].m_pVertices.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
+		memcpy_s(mappedData.pData, m_Model.meshdatas[0].m_VertexCount * sizeof(XMFLOAT3),
+			m_CurrSolution.data(), (uint32_t)m_CurrSolution.size() * sizeof(XMFLOAT3));
+		deviceContext->Unmap(m_Model.meshdatas[0].m_pVertices.Get(), 0);
+
+		deviceContext->Map(m_Model.meshdatas[0].m_pNormals.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
+		memcpy_s(mappedData.pData, m_Model.meshdatas[0].m_VertexCount * sizeof(XMFLOAT3),
+			m_CurrNormals.data(), (uint32_t)m_CurrNormals.size() * sizeof(XMFLOAT3));
+		deviceContext->Unmap(m_Model.meshdatas[0].m_pNormals.Get(), 0);
+
+	}
+}
+
+void GpuWaves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols, float texU, float texV, float timeStep, float spatialStep, float wavesSpeed, float damping, float flowSpeedX, float flowSpeedY)
+{
+}
+
+void GpuWaves::Update(ID3D11DeviceContext* deviceContext, float dt)
+{
+	m_AccumulateTime += dt;
+	auto& texOffset = m_Model.materials[0].Get<XMFLOAT2>("$TexOffset");
+	texOffset.x += m_FlowSpeedX * dt;
+	texOffset.y += m_FlowSpeedY * dt;
+
+	if (m_AccumulateTime > m_TimeStep)
+	{
+		m_pEffectHelper->GetConstantBufferVariable("g_WaveConstant0")->SetFloat(m_K1);
+		m_pEffectHelper->GetConstantBufferVariable("g_WaveConstant1")->SetFloat(m_K2);
+		m_pEffectHelper->GetConstantBufferVariable("g_WaveConstant2")->SetFloat(m_K3);
+
+		m_pEffectHelper->SetUnorderedAccessByName("g_PrevSolInput", m_pPrevSolutionTexture->GetUnorderedAccess(), 0);
+		m_pEffectHelper->SetUnorderedAccessByName("g_CurrSolInput", m_pCurrSolutionTexture->GetUnorderedAccess(), 0);
+		m_pEffectHelper->SetUnorderedAccessByName("g_Output", m_pNextSolutionTexture->GetUnorderedAccess(), 0);
+		auto pPass = m_pEffectHelper->GetEffectPass("WavesUpdate");
+		pPass->Apply(deviceContext);
+		pPass->Dispatch(deviceContext, m_NumCols, m_NumRows);
+
+		// 清除绑定
+		ID3D11UnorderedAccessView* nullUAVs[3]{};
+		deviceContext->CSSetUnorderedAccessViews(0, 3, nullUAVs, nullptr);
+
+		m_pCurrSolutionTexture.swap(m_pNextSolutionTexture);
+		m_pPrevSolutionTexture.swap(m_pNextSolutionTexture);
+		m_AccumulateTime = 0.0f;
+	}
+}
+
+void GpuWaves::Disturb(ID3D11DeviceContext* deviceContext, uint32_t i, uint32_t j, float magnitude)
+{
+	m_pEffectHelper->GetConstantBufferVariable("g_DisturbMagnitude")->SetFloat(magnitude);
+	uint32_t idx[2] = { j,i };
+	m_pEffectHelper->GetConstantBufferVariable("g_DisturbIndex")->SetUIntVector(2, idx);
+
+	m_pEffectHelper->SetUnorderedAccessByName("g_Output", m_pCurrSolutionTexture->GetUnorderedAccess(), 0);
+	m_pEffectHelper->GetEffectPass("WavesDisturb")->Apply(deviceContext);
+
+	deviceContext->Dispatch(1, 1, 1);
+
+	ID3D11UnorderedAccessView* nullUAVs[]{ nullptr };
+	deviceContext->CSSetUnorderedAccessViews(m_pEffectHelper->MapUnorderedAccessSlot("g_Output"), 1, nullUAVs, nullptr);
+
+}
+
+void GpuWaves::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)
+{
+
+	GameObject::Draw(deviceContext, effect);
+
 }

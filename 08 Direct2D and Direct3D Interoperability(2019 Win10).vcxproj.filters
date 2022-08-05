@@ -111,6 +111,9 @@
     <ClCompile Include="ScreenGrab11.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Waves.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -209,6 +212,9 @@
     <ClInclude Include="ScreenGrab11.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Waves.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli">
@@ -221,6 +227,9 @@
       <Filter>着色器</Filter>
     </None>
     <None Include="HLSL\BitonicSort.hlsli">
+      <Filter>着色器</Filter>
+    </None>
+    <None Include="HLSL\Waves.hlsli">
       <Filter>着色器</Filter>
     </None>
   </ItemGroup>
@@ -247,6 +256,12 @@
       <Filter>着色器</Filter>
     </FxCompile>
     <FxCompile Include="HLSL\BitonicSort_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\WavesDisturb_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\WavesUpdate.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

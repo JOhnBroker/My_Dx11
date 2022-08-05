@@ -185,6 +185,7 @@
     <ClCompile Include="Texture2D.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Transform.cpp" />
+    <ClCompile Include="Waves.cpp" />
     <ClCompile Include="WICTextureLoader11.cpp" />
     <ClCompile Include="WinMin.h" />
     <ClCompile Include="XUtil.cpp" />
@@ -220,6 +221,7 @@
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vertex.h" />
+    <ClInclude Include="Waves.h" />
     <ClInclude Include="WICTextureLoader11.h" />
     <ClInclude Include="XUtil.h" />
   </ItemGroup>
@@ -229,6 +231,7 @@
     </None>
     <None Include="HLSL\BitonicSort.hlsli" />
     <None Include="HLSL\SkyBox.hlsli" />
+    <None Include="HLSL\Waves.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include="HLSL\LightHelper.hlsli" />
@@ -331,6 +334,34 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="HLSL\WavesDisturb_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CS</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CS</EntryPointName>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="HLSL\WavesUpdate.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CS</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CS</EntryPointName>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">HLSL\%(Filename).cso</ObjectFileOutput>
     </FxCompile>

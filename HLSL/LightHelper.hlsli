@@ -1,7 +1,7 @@
 
 // 方向光
 struct DirectionalLight
-{
+{ 
     float4 ambient;
     float4 diffuse;
     float4 specular;
