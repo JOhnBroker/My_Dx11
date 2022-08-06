@@ -33,7 +33,6 @@ public:
 	virtual void OnResize();                  // 该父类方法需要在窗口大小变动的时候调用
 	virtual void UpdateScene(float dt) = 0;   // 子类需要实现该方法，完成每一帧的更新
 	virtual void DrawScene() = 0;             // 子类需要实现该方法，完成每一帧的绘制
-	virtual void Compute() = 0;
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	// 窗口的消息回调函数
 protected:

@@ -14,6 +14,7 @@
 #include <Collision.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
+#include <Waves.h>
 
 #include <ScreenGrab11.h>
 #include <wincodec.h>
@@ -35,14 +36,6 @@ public:
 	// 地面的模式
 	enum class GroundMode { Floor, Stones };
 
-	struct CB
-	{
-		UINT level;
-		UINT descendMask;
-		UINT matrixWidth;
-		UINT matrixHeight;
-	};
-
 public:
 	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);
 	~GameApp();
@@ -51,30 +44,35 @@ public:
 	void OnResize();
 	void UpdateScene(float dt);
 	void DrawScene();
-	void Compute();
 
 private:
 	bool InitResource();
 	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
-	void SetConstants(UINT level, UINT descendMask, UINT matrixWidth, UINT matrixHeight);
-	void GPUSort();
 
 private:
-	ComPtr<ID3D11Buffer> m_pConstantBuffer;
-	ComPtr<ID3D11Buffer> m_pTypedBuffer1;
-	ComPtr<ID3D11Buffer> m_pTypedBuffer2;
-	ComPtr<ID3D11Buffer> m_pTypedBufferCopy;
-	ComPtr<ID3D11UnorderedAccessView> m_pDataUAV1;
-	ComPtr<ID3D11UnorderedAccessView> m_pDataUAV2;
-	ComPtr<ID3D11ShaderResourceView> m_pDataSRV1;
-	ComPtr<ID3D11ShaderResourceView> m_pDataSRV2;
+	TextureManager m_TextureManager;
+	ModelManager m_ModelManager;
 
-	std::vector<UINT> m_RandomNums;
-	UINT m_RandomNumsCount = 0;
-	ComPtr<ID3D11ComputeShader>m_pBitonicSort_CS;
-	ComPtr<ID3D11ComputeShader>m_pMatrixTranspose_CS;
+	std::mt19937 m_RandEngine;
+	std::uniform_int_distribution<uint32_t> m_RowRange;
+	std::uniform_int_distribution<uint32_t> m_ColRange;
+	std::uniform_real_distribution<float> m_MagnitudeRange;
 
-	GpuTimer m_GpuTimer;
+	BasicEffect m_BasicEffect;
+
+	GameObject m_Land;
+	GameObject m_WireFence;
+	CpuWaves m_CpuWaves;
+	GpuWaves m_GpuWaves;
+
+	std::unique_ptr<Depth2D> m_pDepthTexture;
+	std::unique_ptr<Texture2D> m_pLitTexture;
+
+	float m_BaseTime = 0.0f;
+	int m_WavesMode = 1;
+	bool m_EnabledFog = true;
+
+	std::shared_ptr<ThirdPersonCamera> m_pCamera;
 
 };
 

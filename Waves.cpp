@@ -1,4 +1,4 @@
-﻿#include <Waves.h>
+#include <Waves.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
 #include <DXTrace.h>
@@ -78,8 +78,8 @@ void CpuWaves::Update(float dt)
 	m_AccumulateTime += dt;
 
 	auto& texOffset = m_Model.materials[0].Get<XMFLOAT2>("$TexOffset");
-	texOffset.x += m_FlowSpeedX;
-	texOffset.y += m_FlowSpeedY;
+	texOffset.x += m_FlowSpeedX * dt;
+	texOffset.y += m_FlowSpeedY * dt;
 
 	// 仅仅在累积时间大于时间步长时才更新
 	if (m_AccumulateTime > m_TimeStep)
@@ -108,9 +108,9 @@ void CpuWaves::Update(float dt)
 
 		m_AccumulateTime = 0.0f;
 
-		for (size_t i = 1; i < m_NumRows; ++i)
+		for (size_t i = 1; i < m_NumRows - 1; ++i) 
 		{
-			for (size_t j = 1; j < m_NumCols; ++j)
+			for (size_t j = 1; j < m_NumCols - 1; ++j) 
 			{
 				float left = m_CurrSolution[i * m_NumCols + j - 1].y;
 				float right = m_CurrSolution[i * m_NumCols + j + 1].y;
@@ -162,10 +162,39 @@ void CpuWaves::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)
 		deviceContext->Unmap(m_Model.meshdatas[0].m_pNormals.Get(), 0);
 
 	}
+	GameObject::Draw(deviceContext, effect);
 }
+
+std::unique_ptr<EffectHelper> GpuWaves::m_pEffectHelper = nullptr;
 
 void GpuWaves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols, float texU, float texV, float timeStep, float spatialStep, float wavesSpeed, float damping, float flowSpeedX, float flowSpeedY)
 {
+	if (!m_pEffectHelper) 
+	{
+		m_pEffectHelper = std::make_unique<EffectHelper>();
+		ComPtr<ID3DBlob> blob;
+		HR(D3DReadFileToBlob(L"HLSL\\WavesDisturb_CS.cso", blob.ReleaseAndGetAddressOf()));
+		HR(m_pEffectHelper->AddShader("WavesDisturb", device, blob.Get()));
+
+		HR(D3DReadFileToBlob(L"HLSL\\WavesUpdate.cso", blob.ReleaseAndGetAddressOf()));
+		HR(m_pEffectHelper->AddShader("WavesUpdate", device, blob.Get()));
+
+		EffectPassDesc passDesc;
+		passDesc.nameCS = "WavesUpdate";
+		m_pEffectHelper->AddEffectPass("WavesUpdate", device, &passDesc);
+		passDesc.nameCS = "WavesDisturb";
+		m_pEffectHelper->AddEffectPass("WavesDisturb", device, &passDesc);
+	}
+
+	Waves::InitResource(device, rows, cols, texU, texV, timeStep,
+		spatialStep, wavesSpeed, damping, flowSpeedX, flowSpeedY, false);
+
+	m_pPrevSolutionTexture = std::make_unique<Texture2D>(device, cols, rows, DXGI_FORMAT_R32_FLOAT, 1,
+		D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_pCurrSolutionTexture = std::make_unique<Texture2D>(device, cols, rows, DXGI_FORMAT_R32_FLOAT, 1,
+		D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_pNextSolutionTexture = std::make_unique<Texture2D>(device, cols, rows, DXGI_FORMAT_R32_FLOAT, 1,
+		D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 }
 
 void GpuWaves::Update(ID3D11DeviceContext* deviceContext, float dt)
@@ -214,9 +243,14 @@ void GpuWaves::Disturb(ID3D11DeviceContext* deviceContext, uint32_t i, uint32_t 
 
 }
 
-void GpuWaves::Draw(ID3D11DeviceContext* deviceContext, IEffect& effect)
+void GpuWaves::Draw(ID3D11DeviceContext* deviceContext, BasicEffect& effect)
 {
+	effect.SetTextureDisplacement(m_pCurrSolutionTexture->GetShaderResource());
+	effect.SetWavesStates(true, m_SpatialStep);
 
 	GameObject::Draw(deviceContext, effect);
 
+	effect.SetTextureDisplacement(nullptr);
+	effect.SetWavesStates(false);
+	effect.Apply(deviceContext);
 }

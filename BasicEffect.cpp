@@ -97,39 +97,25 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL/NormalMap_VS.cso", device, "VS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
-	HR(device->CreateInputLayout(VertexPosNormalTangentTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTangentTex::GetInputLayout()),
-		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTangentTexLayout.GetAddressOf()));
-
 	// 创建像素着色器
 	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device, "PS", "ps_5_0");
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL/NormalMap_PS.cso", device, "PS", "ps_5_0");
-
+	
 	// 创建通道
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "BasicVS";
 	passDesc.namePS = "BasicPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
 
-	passDesc.nameVS = "NormalMapVS";
-	passDesc.namePS = "NormalMapPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMap", device, &passDesc));
-
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamLinearWrap", RenderStates::SSLinearWrap.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamPointClamp", RenderStates::SSPointClamp.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "BasicEffect.VertexPosNormalTexLayout");
-	SetDebugObjectName(pImpl->m_pVertexPosNormalTangentTexLayout.Get(), "BasicEffect.VertexPosNormalTangentTexLayout");
 #endif
 	pImpl->m_pEffectHelper->SetDebugObjectName("BasicEffect");
 
 	return true;
-}
-
-void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
-{
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
 }
 
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -157,13 +143,25 @@ void BasicEffect::SetMaterial(const Material& material)
 	phongMat.diffuse.w = material.Get<float>("$Opacity");
 	phongMat.specular = material.Get<XMFLOAT4>("$SpecularColor");
 	phongMat.specular.w = material.Has<float>("$SpecularFactor") ? material.Get<float>("$SpecularFactor") : 1.0f;
-	phongMat.reflect = material.Get<XMFLOAT4>("$ReflectColor");
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
-	pStr = material.TryGet<std::string>("$Normal");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+
+	XMMATRIX TexTransform = XMMatrixIdentity();
+	if (material.Has<XMFLOAT2>("$TexScale")) 
+	{
+		auto& scale = material.Get<DirectX::XMFLOAT2>("$TexScale");
+		TexTransform.r[0] *= scale.x;
+		TexTransform.r[1] *= scale.y;
+	}
+	if (material.Has<XMFLOAT2>("$TexOffset")) 
+	{
+		auto& offset = material.Get<DirectX::XMFLOAT2>("$TexOffset");
+		TexTransform.r[3] += XMVectorSet(offset.x, offset.y, 0.0f, 0.0f);
+	}
+	TexTransform = XMMatrixTranspose(TexTransform);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexTransform")->SetFloatMatrix(4, 4, reinterpret_cast<const float*>(&TexTransform));
 }
 
 MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
@@ -171,31 +169,14 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 	MeshDataInput input;
 	input.pInputLayout = pImpl->m_pCurrInputLayout.Get();
 	input.topology = pImpl->m_CurrTopology;
-
-	if (pImpl->m_NormalmapEnabled)
+	input.pVertexBuffers =
 	{
-		input.pVertexBuffers =
-		{
-			meshData.m_pVertices.Get(),
-			meshData.m_pNormals.Get(),
-			meshData.m_pTangents.Get(),
-			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
-		};
-		input.strides = { 12,12,16,8 };
-		input.offsets = { 0,0,0,0 };
-	}
-	else
-	{
-		input.pVertexBuffers =
-		{
-			meshData.m_pVertices.Get(),
-			meshData.m_pNormals.Get(),
-			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
-			nullptr
-		};
-		input.strides = { 12,12,8,0 };
-		input.offsets = { 0,0,0,0 };
-	}
+		meshData.m_pVertices.Get(),
+		meshData.m_pNormals.Get(),
+		meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
+	};
+	input.strides = { 12,12,8 };
+	input.offsets = { 0,0,0 };
 
 	input.pIndexBuffer = meshData.m_pIndices.Get();
 	input.indexCount = meshData.m_IndexCount;
@@ -249,12 +230,28 @@ void BasicEffect::SetFogStart(float fogStart)
 
 void BasicEffect::SetFogColor(const DirectX::XMFLOAT4& fogColor)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FogColor")->SetFloatVector(1, reinterpret_cast<const float*>(&fogColor));
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FogColor")->SetFloatVector(4, reinterpret_cast<const float*>(&fogColor));
 }
 
 void BasicEffect::SetFogRange(float fogRange)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FogRange")->SetFloat(fogRange);
+}
+
+void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
+}
+
+void BasicEffect::SetWavesStates(bool enabled, float gridSpatialStep)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_GridSpatialStep")->SetFloat(gridSpatialStep);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WavesEnabled")->SetSInt(enabled);
+}
+
+void BasicEffect::SetTextureDisplacement(ID3D11ShaderResourceView* textureDisplacement)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DisplacementMap", textureDisplacement);
 }
 
 void BasicEffect::SetRenderDefault()
@@ -263,6 +260,8 @@ void BasicEffect::SetRenderDefault()
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_NormalmapEnabled = false;
+	pImpl->m_pCurrEffectPass->SetRasterizerState(nullptr);
+	pImpl->m_pCurrEffectPass->SetDepthStencilState(nullptr, 0);
 }
 
 void BasicEffect::SetRenderWithNormalMap()
@@ -271,6 +270,15 @@ void BasicEffect::SetRenderWithNormalMap()
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTangentTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_NormalmapEnabled = true;
+}
+
+void BasicEffect::SetRenderTransparent()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	pImpl->m_pCurrEffectPass->SetRasterizerState(RenderStates::RSNoCull.Get());
+	pImpl->m_pCurrEffectPass->SetBlendState(RenderStates::BSTransparent.Get(), nullptr, 0xFFFFFFFF);
 }
 
 void BasicEffect::DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& instancedBuffer, const GameObject& object, uint32_t numObject)

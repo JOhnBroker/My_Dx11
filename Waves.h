@@ -147,7 +147,7 @@ public:
 
 	void Disturb(ID3D11DeviceContext* deviceContext, uint32_t i, uint32_t j, float magnitude);
 
-	void Draw(ID3D11DeviceContext* deviceContext, IEffect& effect);
+	void Draw(ID3D11DeviceContext* deviceContext, BasicEffect& effect);
 
 private:
 	static std::unique_ptr<EffectHelper> m_pEffectHelper;

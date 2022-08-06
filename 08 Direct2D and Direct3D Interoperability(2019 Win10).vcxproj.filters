@@ -223,12 +223,6 @@
     <None Include="HLSL\Basic.hlsli">
       <Filter>着色器</Filter>
     </None>
-    <None Include="HLSL\SkyBox.hlsli">
-      <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\BitonicSort.hlsli">
-      <Filter>着色器</Filter>
-    </None>
     <None Include="HLSL\Waves.hlsli">
       <Filter>着色器</Filter>
     </None>
@@ -237,25 +231,7 @@
     <FxCompile Include="HLSL\Basic_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\SkyBox_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
     <FxCompile Include="HLSL\Basic_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\NormalMap_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\NormalMap_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\MatrixTranspose_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\BitonicSort_CS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
     <FxCompile Include="HLSL\WavesDisturb_CS.hlsl">

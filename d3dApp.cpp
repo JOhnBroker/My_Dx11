@@ -81,34 +81,33 @@ int D3DApp::Run()
 
 	m_Timer.Reset();
 
-	Compute();
-	//while (msg.message != WM_QUIT)
-	//{
-	//	if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
-	//	{
-	//		TranslateMessage(&msg);
-	//		DispatchMessage(&msg);
-	//	}
-	//	else
-	//	{
-	//		m_Timer.Tick();
-	//
-	//		if (!m_AppPaused)
-	//		{
-	//			CalculateFrameStats();
-	//			ImGui_ImplDX11_NewFrame();
-	//			ImGui_ImplWin32_NewFrame();
-	//			ImGui::NewFrame();
-	//			UpdateScene(m_Timer.DeltaTime());
-	//			DrawScene();
-	//			m_FrameCount++;
-	//		}
-	//		else
-	//		{
-	//			Sleep(100);
-	//		}
-	//	}
-	//}
+	while (msg.message != WM_QUIT)
+	{
+		if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			m_Timer.Tick();
+
+			if (!m_AppPaused)
+			{
+				CalculateFrameStats();
+				ImGui_ImplDX11_NewFrame();
+				ImGui_ImplWin32_NewFrame();
+				ImGui::NewFrame();
+				UpdateScene(m_Timer.DeltaTime());
+				DrawScene();
+				m_FrameCount++;
+			}
+			else
+			{
+				Sleep(100);
+			}
+		}
+	}
 
 	return (int)msg.wParam;
 }

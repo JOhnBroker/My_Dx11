@@ -56,6 +56,11 @@ public:
 	// BasicEffect
 
 	void SetRenderDefault();
+	//
+	void SetRenderTransparent();
+
+	void SetTextureDisplacement(ID3D11ShaderResourceView* textureDisplacement);
+
 	void SetRenderWithNormalMap();
 
 	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
@@ -81,6 +86,8 @@ public:
 	void SetFogStart(float fogStart);
 	void SetFogColor(const DirectX::XMFLOAT4& fogColor);
 	void SetFogRange(float fogRange);
+
+	void SetWavesStates(bool enabled, float gridSpatialStep = 0.0f);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

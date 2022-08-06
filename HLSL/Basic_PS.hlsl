@@ -11,7 +11,7 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
     if (texWidth > 0 && texHeight > 0)
     {
         // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
-        texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
+        texColor = g_DiffuseMap.Sample(g_SamLinearWrap, pIn.tex);
         clip(texColor.a - 0.1f);
     }
 
@@ -64,7 +64,7 @@ float4 PS(VertexPosHWNormalTex pIn) : SV_Target
     if (g_FogEnabled)
     {
         float fogLerp = saturate((distToEye - g_FogStart) / g_FogRange);
-        litColor = lerp(litColor, fogLerp);
+        litColor = lerp(litColor, g_FogColor, fogLerp);
     }
     
     //[flatten]
