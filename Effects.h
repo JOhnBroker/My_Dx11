@@ -55,9 +55,35 @@ public:
 
 	// BasicEffect
 
+	// 默认状态来绘制
 	void SetRenderDefault();
-	//
+	// 透明混合绘制
 	void SetRenderTransparent();
+
+	// OIT pass1
+
+	// 清空OIT缓冲区
+	void ClearOITBuffers(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11UnorderedAccessView* flBuffer,
+		ID3D11UnorderedAccessView* startOffsetBuffer);
+
+	// 顺序无关透明度存储
+	void SetRenderOITStorage(
+		ID3D11UnorderedAccessView* flBuffer,
+		ID3D11UnorderedAccessView* startOffsetBuffer,
+		uint32_t renderTargetWidth);
+
+	// OIT pass2
+
+	// 完成OIT渲染
+	void RenderOIT(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* flBuffer,
+		ID3D11ShaderResourceView* startOffsetBuffer,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
 
 	void SetTextureDisplacement(ID3D11ShaderResourceView* textureDisplacement);
 

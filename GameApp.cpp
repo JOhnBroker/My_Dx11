@@ -38,8 +38,13 @@ void GameApp::OnResize()
 	D3DApp::OnResize();
 
 	m_pDepthTexture = std::make_unique<Depth2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
+	m_pFLStaticNodeBuffer = std::make_unique<StructuredBuffer<FLStaticNode>>(m_pd3dDevice.Get(), m_ClientWidth * m_ClientHeight * 4);
+	m_pStartOffsetBuffer = std::make_unique<ByteAddressBuffer>(m_pd3dDevice.Get(), m_ClientWidth * m_ClientHeight);
 	m_pLitTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+	
 	m_pDepthTexture->SetDebugObjectName("DepthTexture");
+	m_pFLStaticNodeBuffer->SetDebugObjectName("FLStaticNodeBuffer");
+	m_pStartOffsetBuffer->SetDebugObjectName("StartOffsetBuffer");
 	m_pLitTexture->SetDebugObjectName("LitTexture");
 
 	if (m_pCamera != nullptr)
@@ -67,7 +72,7 @@ void GameApp::UpdateScene(float dt)
 	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
 
-	if (ImGui::Begin("Waves"))
+	if (ImGui::Begin("OIT"))
 	{
 		static const char* wavemode_strs[] = {
 			"CPU",
@@ -88,6 +93,7 @@ void GameApp::UpdateScene(float dt)
 		{
 			m_BasicEffect.SetFogState(m_EnabledFog);
 		}
+		ImGui::Checkbox("Enable OIT", &m_EnabledOIT);
 
 	}
 	ImGui::End();
@@ -132,9 +138,9 @@ void GameApp::DrawScene()
 	}
 
 	float gray[4] = { 0.75f,0.75f,0.75f,1.0f };
-	m_pd3dImmediateContext->ClearRenderTargetView(GetBackBufferRTV(), gray);
+	ID3D11RenderTargetView* pRTVs[1] = { m_EnabledOIT ? m_pLitTexture->GetRenderTarget() : GetBackBufferRTV() };
+	m_pd3dImmediateContext->ClearRenderTargetView(*pRTVs, gray);
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	ID3D11RenderTargetView* pRTVs[1] = { GetBackBufferRTV() };
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
 	D3D11_VIEWPORT viewport = m_pCamera->GetViewPort();
 	m_pd3dImmediateContext->RSSetViewports(1, &viewport);
@@ -143,11 +149,27 @@ void GameApp::DrawScene()
 	m_BasicEffect.SetRenderDefault();
 	m_Land.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 
-	// 绘制半透明/透明对象
-	m_BasicEffect.SetRenderTransparent();
-	m_WireFence.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	// 存放透明物体的像素片元
+	if (m_EnabledOIT)
+	{
+		m_BasicEffect.ClearOITBuffers(
+			m_pd3dImmediateContext.Get(),
+			m_pFLStaticNodeBuffer->GetUnorderedAccess(),
+            m_pStartOffsetBuffer->GetUnorderedAccess()
+		);
+		m_BasicEffect.SetRenderOITStorage(
+			m_pFLStaticNodeBuffer->GetUnorderedAccess(),
+			m_pStartOffsetBuffer->GetUnorderedAccess(),
+			m_ClientWidth);
+	}
+	else
+	{
+		m_BasicEffect.SetRenderTransparent();
+	}
 
-	if (m_WavesMode) 
+	m_RedBox.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	m_YellowBox.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+	if (m_WavesMode)
 	{
 		m_GpuWaves.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	}
@@ -155,7 +177,20 @@ void GameApp::DrawScene()
 	{
 		m_CpuWaves.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	}
-	
+
+	// 透明混合
+	if (m_EnabledOIT)
+	{
+		m_BasicEffect.RenderOIT(
+			m_pd3dImmediateContext.Get(),
+			m_pFLStaticNodeBuffer->GetShaderResource(),
+			m_pStartOffsetBuffer->GetShaderResource(),
+			m_pLitTexture->GetShaderResource(),
+			GetBackBufferRTV(),
+			m_pCamera->GetViewPort());
+	}
+	pRTVs[0] = GetBackBufferRTV();
+	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, nullptr);	
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	HR(m_pSwapChain->Present(0, m_IsDxgiFlipModel ? DXGI_PRESENT_ALLOW_TEARING : 0));
@@ -181,16 +216,30 @@ bool GameApp::InitResource()
 		m_Land.GetTransform().SetPosition(0.0f, -1.0f, 0.0f);
 	}
 	{
-		Model* pModel = m_ModelManager.CreateFromGeometry("WireFence", Geometry::CreateBox(8.0f, 8.0f, 8.0f));
-		pModel->SetDebugObjectName("WireFence");
-		m_TextureManager.CreateTexture("..\\Texture\\WireFence.dds");
-		pModel->materials[0].Set<std::string>("$Diffuse", "..\\Texture\\WireFence.dds");
+		Model* pModel = m_ModelManager.CreateFromGeometry("RedBox", Geometry::CreateBox(8.0f, 8.0f, 8.0f));
+		pModel->SetDebugObjectName("RedBox");
+		m_TextureManager.CreateTexture("Texture\\Red.dds");
+		pModel->materials[0].Set<std::string>("$Diffuse", "Texture\\Red.dds");
 		pModel->materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f));
 		pModel->materials[0].Set<XMFLOAT4>("$DiffuseColor", XMFLOAT4(0.6f, 0.6f, 0.6f, 1.0f));
 		pModel->materials[0].Set<XMFLOAT4>("$SpecularColor", XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 		pModel->materials[0].Set<float>("$SpecularPower", 16.0f);
-		m_WireFence.SetModel(pModel);
-		m_WireFence.GetTransform().SetPosition(-2.0f, 2.0f, -4.0f);
+		pModel->materials[0].Set<float>("$Opacity", 0.5f);
+		m_RedBox.SetModel(pModel);
+		m_RedBox.GetTransform().SetPosition(-6.0f, 2.0f, -4.0f);
+	}
+	{
+		Model* pModel = m_ModelManager.CreateFromGeometry("YellowBox", Geometry::CreateBox(8.0f, 8.0f, 8.0f));
+		pModel->SetDebugObjectName("YellowBox");
+		m_TextureManager.CreateTexture("Texture\\Yellow.dds");
+		pModel->materials[0].Set<std::string>("$Diffuse", "Texture\\Yellow.dds");
+		pModel->materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f));
+		pModel->materials[0].Set<XMFLOAT4>("$DiffuseColor", XMFLOAT4(0.6f, 0.6f, 0.6f, 1.0f));
+		pModel->materials[0].Set<XMFLOAT4>("$SpecularColor", XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+		pModel->materials[0].Set<float>("$SpecularPower", 16.0f);
+		pModel->materials[0].Set<float>("$Opacity", 0.5f);
+		m_YellowBox.SetModel(pModel);
+		m_YellowBox.GetTransform().SetPosition(-2.0f, 1.8f, 0.0f);
 	}
 
 	// 初始化水面波浪
@@ -199,8 +248,8 @@ bool GameApp::InitResource()
 
 	// 初始化随机数生成器
 	m_RandEngine.seed(std::random_device()());
-	m_RowRange = std::uniform_int_distribution<UINT>(5, m_CpuWaves.RowCount() - 5);
-	m_ColRange = std::uniform_int_distribution<UINT>(5, m_CpuWaves.ColumnCount() - 5);
+	m_RowRange = std::uniform_int_distribution<UINT>(5, m_GpuWaves.RowCount() - 5);
+	m_ColRange = std::uniform_int_distribution<UINT>(5, m_GpuWaves.ColumnCount() - 5);
 	m_MagnitudeRange = std::uniform_real_distribution<float>(0.5f, 1.0f);
 
 	// ******************
@@ -218,8 +267,6 @@ bool GameApp::InitResource()
 
 	m_BasicEffect.SetViewMatrix(camera->GetViewMatrixXM());
 	m_BasicEffect.SetProjMatrix(camera->GetProjMatrixXM());		//忘记设置投影矩阵了
-
-	//TODO: CPU Waves 的绘制有问题，水体不显示
 
 	//m_pCamera = std::make_shared<FirstPersonCamera>();
 	//m_CameraController.InitCamera(m_pCamera.get());

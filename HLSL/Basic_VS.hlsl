@@ -4,16 +4,16 @@ VertexPosHWNormalTex VS(VertexPosNormalTex vIn)
 {
     VertexPosHWNormalTex vOut;
     
-    // »æÖÆË®²¨Ê±
+    // ç»˜åˆ¶æ°´æ³¢æ—¶
     if (g_WavesEnabled)
     {
-        // Ê¹ÓÃÓ³Éäµ½[0,1]x[0,1]Çø¼äµÄÎÆÀí×ø±ê½øĞĞ²ÉÑù
-        vIn.posL.y += g_DisplacementMap.SampleLevel(g_SamLinearWrap, vIn.tex, 0.0).r;
-        // Ê¹ÓÃÓĞÏŞ²î·Ö·¨¹ÀËã·¨ÏòÁ¿
-        float left = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, uint2(-1, 0)).r;
-        float right = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, uint2(1, 0)).r;
-        float top = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, uint2(0, -1)).r;
-        float bottom = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, uint2(0, 1)).r;
+        // ä½¿ç”¨æ˜ å°„åˆ°[0,1]x[0,1]åŒºé—´çš„çº¹ç†åæ ‡è¿›è¡Œé‡‡æ ·
+        vIn.posL.y += g_DisplacementMap.SampleLevel(g_SamLinearWrap, vIn.tex, 0.0f).r;
+        // ä½¿ç”¨æœ‰é™å·®åˆ†æ³•ä¼°ç®—æ³•å‘é‡
+        float left = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, int2(-1, 0)).r;
+        float right = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, int2(1, 0)).r;
+        float top = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, int2(0, -1)).r;
+        float bottom = g_DisplacementMap.SampleLevel(g_SamPointClamp, vIn.tex, 0.0f, int2(0, 1)).r;
         vIn.normalL = normalize(float3(-right + left, 2.0f * g_GridSpatialStep, bottom - top));
     }
     

@@ -226,6 +226,9 @@
     <None Include="HLSL\Waves.hlsli">
       <Filter>着色器</Filter>
     </None>
+    <None Include="HLSL\OIT.hlsli">
+      <Filter>着色器</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="HLSL\Basic_PS.hlsl">
@@ -237,7 +240,16 @@
     <FxCompile Include="HLSL\WavesDisturb_CS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
-    <FxCompile Include="HLSL\WavesUpdate.hlsl">
+    <FxCompile Include="HLSL\WavesUpdate_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\OIT_Render_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\OIT_Render_PS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\OIT_Store_PS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>

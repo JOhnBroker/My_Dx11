@@ -1,9 +1,9 @@
 #include "LightHelper.hlsli"
 
-Texture2D g_DiffuseMap : register(t0);
-Texture2D g_DisplacementMap : register(t1);
-SamplerState g_SamLinearWrap : register(s0);
-SamplerState g_SamPointClamp : register(s1);
+Texture2D g_DiffuseMap : register(t0);              // 物体纹理
+Texture2D g_DisplacementMap : register(t1);         // 位移贴图
+SamplerState g_SamLinearWrap : register(s0);        // 线性过滤+Wrap采样器
+SamplerState g_SamPointClamp : register(s1);        // 点过滤+Clamp采样器
 
 cbuffer CBChangesEveryDrawing : register(b0)
 {

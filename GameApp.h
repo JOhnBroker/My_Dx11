@@ -26,6 +26,18 @@
 
 #define TRANSPOSE_BLOCK_SIZE 16
 
+struct FragmentData
+{
+	uint32_t color;
+	float depth;
+};
+
+struct FLStaticNode
+{
+	FragmentData data;
+	uint32_t next;
+};
+
 class GameApp : public D3DApp
 {
 public:
@@ -61,9 +73,13 @@ private:
 	BasicEffect m_BasicEffect;
 
 	GameObject m_Land;
-	GameObject m_WireFence;
+	GameObject m_RedBox;
+	GameObject m_YellowBox;
 	CpuWaves m_CpuWaves;
 	GpuWaves m_GpuWaves;
+
+	std::unique_ptr<StructuredBuffer<FLStaticNode>> m_pFLStaticNodeBuffer;
+	std::unique_ptr<ByteAddressBuffer> m_pStartOffsetBuffer;
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;
 	std::unique_ptr<Texture2D> m_pLitTexture;
@@ -71,6 +87,7 @@ private:
 	float m_BaseTime = 0.0f;
 	int m_WavesMode = 1;
 	bool m_EnabledFog = true;
+	bool m_EnabledOIT = true;
 
 	std::shared_ptr<ThirdPersonCamera> m_pCamera;
 
