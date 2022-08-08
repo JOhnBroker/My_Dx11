@@ -229,6 +229,12 @@
     <None Include="HLSL\OIT.hlsli">
       <Filter>着色器</Filter>
     </None>
+    <None Include="HLSL\PostProcess.hlsli">
+      <Filter>着色器</Filter>
+    </None>
+    <None Include="HLSL\Blur.hlsli">
+      <Filter>着色器</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="HLSL\Basic_PS.hlsl">
@@ -250,6 +256,21 @@
       <Filter>着色器</Filter>
     </FxCompile>
     <FxCompile Include="HLSL\OIT_Store_PS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Blur_Horz_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Blur_Vert_CS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Composite_VS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Composite_PS.hlsl">
+      <Filter>着色器</Filter>
+    </FxCompile>
+    <FxCompile Include="HLSL\Sobel_CS.hlsl">
       <Filter>着色器</Filter>
     </FxCompile>
   </ItemGroup>
