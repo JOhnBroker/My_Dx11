@@ -26,6 +26,9 @@ bool GameApp::Init()
 	if (!m_BasicEffect.InitAll(m_pd3dDevice.Get()))
 		return false;
 
+	if (!m_PostProcessEffect.InitAll(m_pd3dDevice.Get()))
+		return false;
+
 	if (!InitResource())
 		return false;
 
@@ -40,12 +43,16 @@ void GameApp::OnResize()
 	m_pDepthTexture = std::make_unique<Depth2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
 	m_pFLStaticNodeBuffer = std::make_unique<StructuredBuffer<FLStaticNode>>(m_pd3dDevice.Get(), m_ClientWidth * m_ClientHeight * 4);
 	m_pStartOffsetBuffer = std::make_unique<ByteAddressBuffer>(m_pd3dDevice.Get(), m_ClientWidth * m_ClientHeight);
-	m_pLitTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
-	
+	m_pLitTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight,
+		DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+	m_pTempTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight,
+		DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+
 	m_pDepthTexture->SetDebugObjectName("DepthTexture");
 	m_pFLStaticNodeBuffer->SetDebugObjectName("FLStaticNodeBuffer");
 	m_pStartOffsetBuffer->SetDebugObjectName("StartOffsetBuffer");
 	m_pLitTexture->SetDebugObjectName("LitTexture");
+	m_pTempTexture->SetDebugObjectName("TempTexture");
 
 	if (m_pCamera != nullptr)
 	{
@@ -72,29 +79,34 @@ void GameApp::UpdateScene(float dt)
 	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
 
-	if (ImGui::Begin("OIT"))
+	if (ImGui::Begin("Blur and Sobel"))
 	{
-		static const char* wavemode_strs[] = {
-			"CPU",
-			"GPU"
-		};
-		if (ImGui::Combo("Waves Mode", &m_WavesMode, wavemode_strs, ARRAYSIZE(wavemode_strs)))
-		{
-			if (m_WavesMode)
-			{
-				m_GpuWaves.InitResource(m_pd3dDevice.Get(), 256, 256, 5.0f, 5.0f, 0.03f, 0.625f, 2.0f, 0.2f, 0.05f, 0.1f);
-			}
-			else
-			{
-				m_CpuWaves.InitResource(m_pd3dDevice.Get(), 256, 256, 5.0f, 5.0f, 0.03f, 0.625f, 2.0f, 0.2f, 0.05f, 0.1f);
-			}
-		}
+		ImGui::Checkbox("Enable OIT", &m_EnabledOIT);
 		if (ImGui::Checkbox("Enable Fog", &m_EnabledFog))
 		{
 			m_BasicEffect.SetFogState(m_EnabledFog);
 		}
-		ImGui::Checkbox("Enable OIT", &m_EnabledOIT);
-
+		static int mode = m_BlurMode;
+		static const char* modeStrs[] = {
+			"Sobel Mode",
+			"Blur Mode"
+		};
+		if (ImGui::Combo("Mode", &mode, modeStrs, ARRAYSIZE(modeStrs))) 
+		{
+			m_BlurMode = mode;
+		}
+		if(m_BlurMode)
+		{
+			if (ImGui::SliderInt("Blur Radius", &m_BlurRadius, 1, 15)) 
+			{
+				m_PostProcessEffect.SetBlurKernelSize(m_BlurRadius * 2 + 1);
+			}
+			if (ImGui::SliderFloat("Blur Sigma", &m_BlurSigma, 1.0f, 20.0f)) 
+			{
+				m_PostProcessEffect.SetBlurSigma(m_BlurSigma);
+			}
+			ImGui::SliderInt("Blur Times", &m_BlurTimes, 0, 5);
+		}
 	}
 	ImGui::End();
 	ImGui::Render();
@@ -102,27 +114,12 @@ void GameApp::UpdateScene(float dt)
 	if (m_Timer.TotalTime() - m_BaseTime >= 0.25f)
 	{
 		m_BaseTime += 0.25f;
-		if (m_WavesMode) 
-		{
-			m_GpuWaves.Disturb(m_pd3dImmediateContext.Get(),
-				m_RowRange(m_RandEngine), m_ColRange(m_RandEngine),
-				m_MagnitudeRange(m_RandEngine));
-		}
-		else
-		{
-			m_CpuWaves.Disturb(	m_RowRange(m_RandEngine), m_ColRange(m_RandEngine),
-				m_MagnitudeRange(m_RandEngine));
-		}
+		m_GpuWaves.Disturb(m_pd3dImmediateContext.Get(),
+			m_RowRange(m_RandEngine), m_ColRange(m_RandEngine),
+			m_MagnitudeRange(m_RandEngine));
 	}
-	
-	if (m_WavesMode) 
-	{
-		m_GpuWaves.Update(m_pd3dImmediateContext.Get(), dt);
-	}
-	else
-	{
-		m_CpuWaves.Update(dt);
-	}
+	m_GpuWaves.Update(m_pd3dImmediateContext.Get(), dt);
+
 
 }
 
@@ -138,7 +135,7 @@ void GameApp::DrawScene()
 	}
 
 	float gray[4] = { 0.75f,0.75f,0.75f,1.0f };
-	ID3D11RenderTargetView* pRTVs[1] = { m_EnabledOIT ? m_pLitTexture->GetRenderTarget() : GetBackBufferRTV() };
+	ID3D11RenderTargetView* pRTVs[1] = { m_EnabledOIT ? m_pTempTexture->GetRenderTarget() : m_pLitTexture->GetRenderTarget() };
 	m_pd3dImmediateContext->ClearRenderTargetView(*pRTVs, gray);
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
@@ -169,14 +166,10 @@ void GameApp::DrawScene()
 
 	m_RedBox.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 	m_YellowBox.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	if (m_WavesMode)
-	{
-		m_GpuWaves.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	}
-	else
-	{
-		m_CpuWaves.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
-	}
+	m_GpuWaves.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
+
+	// 清空
+	m_pd3dImmediateContext->OMSetRenderTargets(0, nullptr, nullptr);
 
 	// 透明混合
 	if (m_EnabledOIT)
@@ -185,10 +178,47 @@ void GameApp::DrawScene()
 			m_pd3dImmediateContext.Get(),
 			m_pFLStaticNodeBuffer->GetShaderResource(),
 			m_pStartOffsetBuffer->GetShaderResource(),
+			m_pTempTexture->GetShaderResource(),
+			m_pLitTexture->GetRenderTarget(),
+			m_pCamera->GetViewPort());
+	}
+
+	// 滤波
+	
+	// 高斯滤波
+	if (m_BlurMode == 1) 
+	{
+		for (int i = 0; i < m_BlurTimes; ++i) 
+		{
+			m_PostProcessEffect.ComputeGaussianBlurX(m_pd3dImmediateContext.Get(),
+				m_pLitTexture->GetShaderResource(),
+				m_pTempTexture->GetUnorderedAccess(),
+				m_ClientWidth, m_ClientHeight);
+			m_PostProcessEffect.ComputeGaussianBlurY(m_pd3dImmediateContext.Get(),
+				m_pTempTexture->GetShaderResource(),
+				m_pLitTexture->GetUnorderedAccess(),
+				m_ClientWidth, m_ClientHeight);
+		}
+
+		m_PostProcessEffect.RenderComposite(m_pd3dImmediateContext.Get(),
 			m_pLitTexture->GetShaderResource(),
+			nullptr,
 			GetBackBufferRTV(),
 			m_pCamera->GetViewPort());
 	}
+	else 
+	{
+		m_PostProcessEffect.ComputeSobel(m_pd3dImmediateContext.Get(),
+			m_pLitTexture->GetShaderResource(),
+			m_pTempTexture->GetUnorderedAccess(),
+			m_ClientWidth, m_ClientHeight);
+		m_PostProcessEffect.RenderComposite(m_pd3dImmediateContext.Get(),
+			m_pLitTexture->GetShaderResource(),
+			m_pTempTexture->GetShaderResource(),
+			GetBackBufferRTV(),
+			m_pCamera->GetViewPort());
+	}
+
 	pRTVs[0] = GetBackBufferRTV();
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, nullptr);	
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -244,7 +274,6 @@ bool GameApp::InitResource()
 
 	// 初始化水面波浪
 	m_GpuWaves.InitResource(m_pd3dDevice.Get(), 256, 256, 5.0f, 5.0f, 0.03f, 0.625f, 2.0f, 0.2f, 0.05f, 0.1f);
-	m_CpuWaves.InitResource(m_pd3dDevice.Get(), 256, 256, 5.0f, 5.0f, 0.03f, 0.625f, 2.0f, 0.2f, 0.05f, 0.1f);
 
 	// 初始化随机数生成器
 	m_RandEngine.seed(std::random_device()());
@@ -301,6 +330,9 @@ bool GameApp::InitResource()
 	m_BasicEffect.SetFogColor(XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f));
 	m_BasicEffect.SetFogStart(15.0f);
 	m_BasicEffect.SetFogRange(135.0f);
+
+	m_PostProcessEffect.SetBlurKernelSize(m_BlurRadius * 2 + 1);
+	m_PostProcessEffect.SetBlurSigma(m_BlurSigma);
 
 	return true;
 }

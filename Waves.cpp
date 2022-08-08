@@ -176,7 +176,7 @@ void GpuWaves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols, 
 		HR(D3DReadFileToBlob(L"HLSL\\WavesDisturb_CS.cso", blob.ReleaseAndGetAddressOf()));
 		HR(m_pEffectHelper->AddShader("WavesDisturb", device, blob.Get()));
 
-		HR(D3DReadFileToBlob(L"HLSL\\WavesUpdate.cso", blob.ReleaseAndGetAddressOf()));
+		HR(D3DReadFileToBlob(L"HLSL\\WavesUpdate_CS.cso", blob.ReleaseAndGetAddressOf()));
 		HR(m_pEffectHelper->AddShader("WavesUpdate", device, blob.Get()));
 
 		EffectPassDesc passDesc;

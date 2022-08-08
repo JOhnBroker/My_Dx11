@@ -71,11 +71,11 @@ private:
 	std::uniform_real_distribution<float> m_MagnitudeRange;
 
 	BasicEffect m_BasicEffect;
+	PostProcessEffect m_PostProcessEffect;
 
 	GameObject m_Land;
 	GameObject m_RedBox;
 	GameObject m_YellowBox;
-	CpuWaves m_CpuWaves;
 	GpuWaves m_GpuWaves;
 
 	std::unique_ptr<StructuredBuffer<FLStaticNode>> m_pFLStaticNodeBuffer;
@@ -83,13 +83,18 @@ private:
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;
 	std::unique_ptr<Texture2D> m_pLitTexture;
+	std::unique_ptr<Texture2D> m_pTempTexture;
 
 	float m_BaseTime = 0.0f;
-	int m_WavesMode = 1;
 	bool m_EnabledFog = true;
 	bool m_EnabledOIT = true;
+	int m_BlurMode = 1;
 
-	std::shared_ptr<ThirdPersonCamera> m_pCamera;
+	float m_BlurSigma = 2.5f;
+	int m_BlurRadius = 5;
+	int m_BlurTimes = 1;
+
+	std::shared_ptr<Camera> m_pCamera;
 
 };
 
