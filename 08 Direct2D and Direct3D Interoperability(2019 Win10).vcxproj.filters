@@ -215,63 +215,20 @@
     <ClInclude Include="Waves.h">
       <Filter>头文件</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="HLSL\LightHelper.hlsli">
+    <ClInclude Include="HLSL\Basic.hlsl">
       <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\Basic.hlsli">
+    </ClInclude>
+    <ClInclude Include="HLSL\FullScreenTriangle.hlsl">
       <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\Waves.hlsli">
+    </ClInclude>
+    <ClInclude Include="HLSL\LightHelper.hlsl">
       <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\OIT.hlsli">
+    </ClInclude>
+    <ClInclude Include="HLSL\Shadow.hlsl">
       <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\PostProcess.hlsli">
+    </ClInclude>
+    <ClInclude Include="HLSL\Skybox.hlsl">
       <Filter>着色器</Filter>
-    </None>
-    <None Include="HLSL\Blur.hlsli">
-      <Filter>着色器</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="HLSL\Basic_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Basic_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\WavesDisturb_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\WavesUpdate_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\OIT_Render_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\OIT_Render_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\OIT_Store_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Blur_Horz_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Blur_Vert_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Composite_VS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Composite_PS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
-    <FxCompile Include="HLSL\Sobel_CS.hlsl">
-      <Filter>着色器</Filter>
-    </FxCompile>
+    </ClInclude>
   </ItemGroup>
 </Project>
