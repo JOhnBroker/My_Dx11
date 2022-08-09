@@ -3,11 +3,11 @@
 
 #include "LightHelper.hlsl"
 
-Texture2D g_DiffuseMap : register(t0);  // ÎïÌåÎÆÀí
-Texture2D g_NormalMap : register(t1);   // ·¨ÏßÌùÍ¼
-Texture2D g_ShadowMap : register(t2);   // ÒõÓ°ÌùÍ¼
-SamplerState g_Sam : register(s0); // ÏßĞÔ¹ıÂË+Wrap²ÉÑùÆ÷
-SamplerState g_SamShadow : register(s1); // µã¹ıÂË+Clamp²ÉÑùÆ÷
+Texture2D g_DiffuseMap : register(t0);  // ç‰©ä½“çº¹ç†
+Texture2D g_NormalMap : register(t1);   // æ³•çº¿è´´å›¾
+Texture2D g_ShadowMap : register(t2);   // é˜´å½±è´´å›¾
+SamplerState g_Sam : register(s0); // çº¿æ€§è¿‡æ»¤+Wrapé‡‡æ ·å™¨
+SamplerState g_SamShadow : register(s1); // ç‚¹è¿‡æ»¤+Clampé‡‡æ ·å™¨
 
 cbuffer CBChangesEveryDrawing : register(b0)
 {
@@ -53,8 +53,8 @@ struct VertexInput
 struct VertexOutput
 {
     float4 posH : SV_POSITION;
-    float3 posW : POSITION; // ÔÚÊÀ½çÖĞµÄÎ»ÖÃ
-    float3 normalW : NORMAL; // ·¨ÏòÁ¿ÔÚÊÀ½çÖĞµÄ·½Ïò
+    float3 posW : POSITION; // åœ¨ä¸–ç•Œä¸­çš„ä½ç½®
+    float3 normalW : NORMAL; // æ³•å‘é‡åœ¨ä¸–ç•Œä¸­çš„æ–¹å‘
 #if defined USE_NOEMAL_MAP
     float4 tangentW :TANGENT;
 #endif
@@ -78,7 +78,7 @@ VertexOutput BasicVS(VertexInput vIn)
     return vOut;
 }
 
-// ÏñËØ×ÅÉ«Æ÷
+// åƒç´ ç€è‰²å™¨
 float4 PS(VertexOutput pIn) : SV_Target
 {
     uint texWidth, texHeight;
@@ -88,15 +88,15 @@ float4 PS(VertexOutput pIn) : SV_Target
     [flatten]
     if (texWidth > 0 && texHeight > 0)
     {
-        // ÌáÇ°½øĞĞAlpha²Ã¼ô£¬¶Ô²»·ûºÏÒªÇóµÄÏñËØ¿ÉÒÔ±ÜÃâºóĞøÔËËã
+        // æå‰è¿›è¡ŒAlphaè£å‰ªï¼Œå¯¹ä¸ç¬¦åˆè¦æ±‚çš„åƒç´ å¯ä»¥é¿å…åç»­è¿ç®—
         texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
         clip(texColor.a - 0.1f);
     }
 
-    // ±ê×¼»¯·¨ÏòÁ¿
+    // æ ‡å‡†åŒ–æ³•å‘é‡
     pIn.normalW = normalize(pIn.normalW);
 
-    // Çó³ö¶¥µãÖ¸ÏòÑÛ¾¦µÄÏòÁ¿£¬ÒÔ¼°¶¥µãÓëÑÛ¾¦µÄ¾àÀë
+    // æ±‚å‡ºé¡¶ç‚¹æŒ‡å‘çœ¼ç›çš„å‘é‡ï¼Œä»¥åŠé¡¶ç‚¹ä¸çœ¼ç›çš„è·ç¦»
     float3 toEyeW = normalize(g_EyePosW - pIn.posW);
     float distToEye = distance(g_EyePosW, pIn.posW);
     
@@ -106,7 +106,7 @@ float4 PS(VertexOutput pIn) : SV_Target
     pIn.normalW = NormalSampleToWorldSpace(normalMapSample, pIn.normalW, pIn.tangentW);
 #endif
     
-    // ³õÊ¼»¯Îª0 
+    // åˆå§‹åŒ–ä¸º0 
     float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -114,6 +114,10 @@ float4 PS(VertexOutput pIn) : SV_Target
     float4 D = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 S = float4(0.0f, 0.0f, 0.0f, 0.0f);
     int i = 0;
+    
+    float shadow[5] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    shadow[0] = CalcShadowFactor(g_SamShadow, g_ShadowMap, pIn.ShadowPosH, g_DepthBias);
     
     [unroll]
     for (i = 0; i < 5; ++i)

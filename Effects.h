@@ -122,6 +122,42 @@ private:
 	std::unique_ptr<Impl> pImpl;
 };
 
+class ShadowEffect :public IEffect, public IEffectTransform,
+	public IEffectMaterial, public IEffectMeshData 
+{
+public:
+	ShadowEffect();
+	virtual ~ShadowEffect() override;
+
+	ShadowEffect(ShadowEffect&& moveFrom) noexcept;
+	ShadowEffect& operator=(ShadowEffect&& moveFrom) noexcept;
+
+	static ShadowEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
+	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
+	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
+
+	void SetMaterial(const Material& material) override;
+
+	MeshDataInput GetInputData(const MeshData& meshData) override;
+
+	void SetRenderDepthOnly();
+
+	void SetRenderAlphaClip();
+
+	void RenderDepthToTexture(ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	void Apply(ID3D11DeviceContext* deviceContext) override;
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+};
 
 class SkyBoxEffect :public IEffect, public IEffectTransform,
 	public IEffectMaterial, public IEffectMeshData

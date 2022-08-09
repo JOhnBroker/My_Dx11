@@ -290,7 +290,7 @@ void Texture2DMSArray::SetDebugObjectName(std::string_view name)
 #endif
 }
 
-
+// 从Depth2D 创建DSV和SRV的格式要求
 static DXGI_FORMAT GetDepthTextureFormat(DepthStencilBitsFlag flag)
 {
 	switch (flag)
