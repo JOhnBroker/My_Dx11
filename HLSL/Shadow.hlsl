@@ -11,7 +11,7 @@ cbuffer CB : register(b0)
 struct VertexPosNormalTex
 {
     float3 posL : POSITION;
-    float3 normal : NORMAL;
+    float3 normalL : NORMAL;
     float2 texCoord : TEXCOORD;
 };
 
@@ -46,7 +46,7 @@ void ShadowPS(VertexPosHTex pIn, uniform float clipValue)
 
 float4 DebugPS(VertexPosHTex pIn) : SV_Target
 {
-    float depth = g_DiffuseMap.Sample(g_Sam, pIn.texCoord);
+    float depth = g_DiffuseMap.Sample(g_Sam, pIn.texCoord).r;
     return float4(depth.rrr, 1.0f);
 }
 

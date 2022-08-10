@@ -227,10 +227,10 @@ float CalcShadowFactor(SamplerComparisonState samShadow,
     // float result3 = depth <= s3;  // .s2      .s3
     // float result = BilinearLerp(result0, result1, result2, result3, a, b);  // a b为算出的插值相对位置 
     
-    float s0 = g_ShadowMap.Sample(g_SamShadow, tex.xy).r;
-    float s1 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(SMAP_DX, 0)).r;
-    float s2 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(0, SMAP_DX)).r;
-    float s3 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(SMAP_DX, SMAP_DX)).r;
+    //float s0 = g_ShadowMap.Sample(g_SamShadow, tex.xy).r;
+    //float s1 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(SMAP_DX, 0)).r;
+    //float s2 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(0, SMAP_DX)).r;
+    //float s3 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(SMAP_DX, SMAP_DX)).r;
     
     [unroll]
     for (int i = 0; i < 9; ++i)

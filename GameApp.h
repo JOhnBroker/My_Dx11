@@ -57,14 +57,10 @@ public:
 	void UpdateScene(float dt);
 	void DrawScene();
 
-private:
-	bool InitResource();
-
 	void RenderShadow();
 	void RenderForward();
 	void RenderSkybox();
 
-	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 	template<class Effect>
 	void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})
 	{
@@ -88,6 +84,9 @@ private:
 		// 房屋
 		m_House.Draw(m_pd3dImmediateContext.Get(), effect);
 	};
+private:
+	bool InitResource();
+	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 
 private:
 	TextureManager m_TextureManager;

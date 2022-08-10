@@ -26,7 +26,7 @@ public:
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
 	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	ComPtr<ID3D11InputLayout> m_pVertexPosLayout;
+	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTex;
 
 	XMFLOAT4X4 m_View, m_Proj;
 };
@@ -82,21 +82,21 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\SkyBox.hlsl", device, "SkyboxVS",
-		"vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\Skybox.hlsl", device,
+		"SkyboxVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
-		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosLayout.GetAddressOf()));
+		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTex.GetAddressOf()));
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\SkyBox.hlsl", device, "SkyboxPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\Skybox.hlsl", device,
+		"SkyboxPS", "ps_5_0"));
 
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "SkyboxVS";
 	passDesc.namePS = "SkyboxPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Skybox", device, &passDesc))
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Skybox", device, &passDesc));
 	{
 		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("Skybox");
 		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
-		pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	}
 
 	//passDesc.nameVS = "SkyboxGSVS";
@@ -112,7 +112,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
-	SetDebugObjectName(pImpl->m_pVertexPosLayout.Get(), "SkyboxEffect.VertexPosLayout");
+	SetDebugObjectName(pImpl->m_pVertexPosNormalTex.Get(), "SkyboxEffect.VertexPosLayout");
 #endif
 
 	pImpl->m_pEffectHelper->SetDebugObjectName("SkyboxEffect");
@@ -162,14 +162,14 @@ MeshDataInput SkyBoxEffect::GetInputData(const MeshData& meshData)
 void SkyBoxEffect::SetRenderDefault()
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Skybox");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosLayout;
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTex;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
 void SkyBoxEffect::SetRenderGS()
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("GenerateSkybox");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosLayout;
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTex;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 

@@ -13,7 +13,7 @@ using namespace DirectX;
 class ShadowEffect::Impl
 {
 public:
-	Impl() {};
+	Impl() {}
 	~Impl() = default;
 
 public:
@@ -91,12 +91,14 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	// 创建顶点布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\FullScreenTriangle.hlsl",
-		device, "FullScreenTriangleTexcoordVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\Shadow.hlsl",
+		device, "FullScreenTriangleTexcoordVS"));
 
 	// 创建像素着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl", device, "ShadowPS", "ps_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugPS", L"HLSL\\Shadow.hlsl", device, "DebugPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl", 
+		device, "ShadowPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugPS", L"HLSL\\Shadow.hlsl",
+		device, "DebugPS", "ps_5_0"));
 
 	// 创建通道Pass
 	EffectPassDesc passDesc;
@@ -109,7 +111,7 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip")->SetRasterizerState(RenderStates::RSShadow.Get());
 
 	passDesc.nameVS = "FullScreenTriangleTexcoordVS";
-	passDesc.namePS = "DebugPs";
+	passDesc.namePS = "DebugPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Debug", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
@@ -121,6 +123,41 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->SetDebugObjectName("ShadowEffect");
 
 	return true;
+}
+
+void ShadowEffect::SetRenderDepthOnly()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthOnly");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
+void ShadowEffect::SetRenderAlphaClip()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
+void ShadowEffect::RenderDepthToTexture(
+	ID3D11DeviceContext* deviceContext,
+	ID3D11ShaderResourceView* input,
+	ID3D11RenderTargetView* output,
+	const D3D11_VIEWPORT& vp)
+{
+	deviceContext->IASetInputLayout(nullptr);
+	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Debug");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", input);
+	pImpl->m_pCurrEffectPass->Apply(deviceContext);
+	deviceContext->OMSetRenderTargets(1, &output, nullptr);
+	deviceContext->RSSetViewports(1, &vp);
+	deviceContext->Draw(3, 0);
+
+	int slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_DiffuseMap");
+	input = nullptr;
+	deviceContext->PSSetShaderResources(slot, 1, &input);
+	deviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 void XM_CALLCONV ShadowEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -155,7 +192,7 @@ MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)
 		meshData.m_pNormals.Get(),
 		meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
 	};
-	input.strides = { 12,12,0 };
+	input.strides = { 12,12,8 };
 	input.offsets = { 0,0,0 };
 
 	input.pIndexBuffer = meshData.m_pIndices.Get();
@@ -164,46 +201,11 @@ MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)
 	return input;
 }
 
-void ShadowEffect::SetRenderDepthOnly()
-{
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthOnly");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
-	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-}
-
-void ShadowEffect::SetRenderAlphaClip()
-{
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
-	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-}
-
-void ShadowEffect::RenderDepthToTexture(
-	ID3D11DeviceContext* deviceContext,
-	ID3D11ShaderResourceView* input,
-	ID3D11RenderTargetView* output,
-	const D3D11_VIEWPORT& vp)
-{
-	deviceContext->IASetInputLayout(nullptr);
-	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Debug");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", input);
-	pImpl->m_pCurrEffectPass->Apply(deviceContext);
-	deviceContext->OMSetRenderTargets(1, &output, nullptr);
-	deviceContext->RSSetViewports(1, &vp);
-	deviceContext->Draw(3, 0);
-
-	int slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_DiffuseMap");
-	input = nullptr;
-	deviceContext->CSSetShaderResources(slot, 1, &input);
-	deviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-}
-
 void ShadowEffect::Apply(ID3D11DeviceContext* deviceContext)
 {
-	XMMATRIX MVP = XMLoadFloat4x4(&pImpl->m_World) * XMLoadFloat4x4(&pImpl->m_View) * XMLoadFloat4x4(&pImpl->m_Proj);
-	MVP = XMMatrixTranspose(MVP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const float*)&MVP);
+	XMMATRIX WVP = XMLoadFloat4x4(&pImpl->m_World) * XMLoadFloat4x4(&pImpl->m_View) * XMLoadFloat4x4(&pImpl->m_Proj);
+	WVP = XMMatrixTranspose(WVP);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&WVP);
 
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 }

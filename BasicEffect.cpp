@@ -102,18 +102,22 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
 
 	// 创建顶点着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL/Basic.hlsl", device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL\\Basic.hlsl", 
+		device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL/Basic.hlsl", device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf());
-	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
+	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL\\Basic.hlsl", 
+		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf());
+	HR(device->CreateInputLayout(VertexPosNormalTangentTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTangentTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTangentTexLayout.GetAddressOf()));
 
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic.hlsl", device, "BasicPS", "ps_5_0");
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL/Basic.hlsl", device, "BasicPS", "ps_5_0", defines);
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL\\Basic.hlsl", 
+		device, "BasicPS", "ps_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL\\Basic.hlsl",
+		device, "BasicPS", "ps_5_0", defines);
 
 	// 创建通道
 	EffectPassDesc passDesc;

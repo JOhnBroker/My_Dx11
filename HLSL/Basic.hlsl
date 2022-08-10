@@ -7,7 +7,7 @@ Texture2D g_DiffuseMap : register(t0);  // 物体纹理
 Texture2D g_NormalMap : register(t1);   // 法线贴图
 Texture2D g_ShadowMap : register(t2);   // 阴影贴图
 SamplerState g_Sam : register(s0); // 线性过滤+Wrap采样器
-SamplerState g_SamShadow : register(s1); // 点过滤+Clamp采样器
+SamplerComparisonState g_SamShadow : register(s1); // 点过滤+Clamp采样器
 
 cbuffer CBChangesEveryDrawing : register(b0)
 {
@@ -44,7 +44,7 @@ struct VertexInput
 {
     float3 posL : POSITION;
     float3 normalL : NORMAL;
-#if defined USE_NOEMAL_MAP
+#if defined USE_NORMAL_MAP
     float4 tangentL :TANGENT;
 #endif
     float2 tex : TEXCOORD;
@@ -55,10 +55,10 @@ struct VertexOutput
     float4 posH : SV_POSITION;
     float3 posW : POSITION; // 在世界中的位置
     float3 normalW : NORMAL; // 法向量在世界中的方向
-#if defined USE_NOEMAL_MAP
+#if defined USE_NORMAL_MAP
     float4 tangentW :TANGENT;
 #endif
-    float2 tex : TEXCOORD;
+    float2 tex : TEXCOORD0;
     float4 ShadowPosH : TEXCOORD1;
 };
 
@@ -70,7 +70,7 @@ VertexOutput BasicVS(VertexInput vIn)
     vOut.posW = posW.xyz;
     vOut.posH = mul(posW, g_ViewProj);
     vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
-#if defined USE_NOEMAL_MAP
+#if defined USE_NORMAL_MAP
     vOut.tangentW = mul(vIn.tangentL, g_World);
 #endif
     vOut.tex = vIn.tex;
@@ -100,7 +100,7 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     float3 toEyeW = normalize(g_EyePosW - pIn.posW);
     float distToEye = distance(g_EyePosW, pIn.posW);
     
-#if defined USE_NOEMAL_MAP
+#if defined USE_NORMAL_MAP
     pIn.tangentW = normalize(pIn.tangentW);
     float3 normalMapSample = g_NormalMap.Sample(g_Sam, pIn.tex).rgb;
     pIn.normalW = NormalSampleToWorldSpace(normalMapSample, pIn.normalW, pIn.tangentW);
@@ -124,8 +124,8 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     {
         ComputeDirectionalLight(g_Material, g_DirLight[i], pIn.normalW, toEyeW, A, D, S);
         ambient += A;
-        diffuse += D;
-        spec += S;
+        diffuse += shadow[i] * D;
+        spec += shadow[i] * S;
     }
     
     [unroll]
