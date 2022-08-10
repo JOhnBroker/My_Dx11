@@ -39,7 +39,9 @@ SamplerState g_Sam : register(s0);
 void ShadowPS(VertexPosHTex pIn, uniform float clipValue)
 {
     float4 diffuse = g_DiffuseMap.Sample(g_Sam, pIn.texCoord);
-    clip(diffuse.a - 0.1f);
+    
+    // 不要将透明像素写入深度贴图
+    clip(diffuse.a - clipValue);
 }
 
 float4 DebugPS(VertexPosHTex pIn) : SV_Target

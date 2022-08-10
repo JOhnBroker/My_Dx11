@@ -79,7 +79,7 @@ VertexOutput BasicVS(VertexInput vIn)
 }
 
 // 像素着色器
-float4 PS(VertexOutput pIn) : SV_Target
+float4 BasicPS(VertexOutput pIn) : SV_Target
 {
     uint texWidth, texHeight;
     g_DiffuseMap.GetDimensions(texWidth, texHeight);

@@ -68,6 +68,14 @@ void RenderStates::InitAll(ID3D11Device* device)
 	HR(device->CreateRasterizerState(&rasterizerDesc, RSCullClockWise.GetAddressOf()));
 
 	// 深度偏移模式
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.FrontCounterClockwise = false;
+	rasterizerDesc.DepthClipEnable = true;
+	rasterizerDesc.DepthBias = 0;
+	rasterizerDesc.DepthBiasClamp = 0.0f;
+	rasterizerDesc.SlopeScaledDepthBias = 1.0f;			// 斜率为1.0f
+	HR(device->CreateRasterizerState(&rasterizerDesc, RSShadow.GetAddressOf()));
 
 	// ******************
 	// 初始化采样器状态
@@ -113,12 +121,25 @@ void RenderStates::InitAll(ID3D11Device* device)
 	HR(device->CreateSamplerState(&sampDesc, SSAnistropicWrap16x.GetAddressOf()));
 
 	// 采样器状态：深度比较与Border模式
+	sampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
+	sampDesc.MaxAnisotropy = 1;
+	sampDesc.MinLOD = 0.0f;
+	sampDesc.MaxLOD = 0.0f;
+	sampDesc.BorderColor[0] = 0.0f;
+	sampDesc.BorderColor[1] = 0.0f;
+	sampDesc.BorderColor[2] = 0.0f;
+	sampDesc.BorderColor[3] = 1.0f;
+	HR(device->CreateSamplerState(&sampDesc, SSShadowPCF.GetAddressOf()));
 
 	// ******************
 	// 初始化混合状态
 	//
 	CD3D11_BLEND_DESC blendDesc(CD3D11_DEFAULT{});
-	
+
 	auto& rtDesc = blendDesc.RenderTarget[0];
 
 	// Alpha-To-Coverage 模式
@@ -149,7 +170,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	rtDesc.DestBlend = D3D11_BLEND_ONE;
 	rtDesc.BlendOp = D3D11_BLEND_OP_ADD;
 	rtDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
-    rtDesc.DestBlendAlpha = D3D11_BLEND_ONE;
+	rtDesc.DestBlendAlpha = D3D11_BLEND_ONE;
 	rtDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	HR(device->CreateBlendState(&blendDesc, BSAdditive.GetAddressOf()));
 
@@ -169,7 +190,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// ******************
 	// 初始化深度/模板状态
 	//
-    CD3D11_DEPTH_STENCIL_DESC dsDesc(CD3D11_DEFAULT{});
+	CD3D11_DEPTH_STENCIL_DESC dsDesc(CD3D11_DEFAULT{});
 
 	// 仅允许深度值一致的像素进行写入的深度/模板状态
 	// 没必要写入深度
@@ -227,7 +248,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// 对于背面的几何体我们是不进行渲染的，所以这里的设置无关紧要
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	HR(device->CreateDepthStencilState(&dsDesc, DSSWriteStencil.GetAddressOf()));

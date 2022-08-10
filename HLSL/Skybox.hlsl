@@ -5,7 +5,7 @@ uniform matrix g_ViewProj;
 
 struct VertexPosNormalTex
 {
-    float3 PosL : POSITION;
+    float3 posL : POSITION;
     float3 normal : NORMAL;
     float2 texCoord : TEXCOORD;
 };
@@ -16,6 +16,7 @@ struct VertexPosNormalTex
 //--------------------------------------------------------------------------------------
 TextureCube<float4> g_SkyboxTexture : register(t5);
 Texture2D<float> g_DepthTexture : register(t6);
+
 Texture2D<float4> g_LitTexture : register(t7);
 
 SamplerState g_SamplerDiffuse : register(s0);
@@ -26,16 +27,16 @@ struct SkyboxVSOut
     float3 skyboxCoord : skyboxCoord;
 };
 
-SkyboxVSOut VS(VertexPosNormalTex vIn)
+SkyboxVSOut SkyboxVS(VertexPosNormalTex vIn)
 {
     SkyboxVSOut vOut;
     
-    vOut.posViewport = mul(float4(vIn.PosL, 1.0f), g_WorldViewProj).xyww;
-    vOut.skyboxCoord = vIn.PosL;
+    vOut.posViewport = mul(float4(vIn.posL, 1.0f), g_ViewProj).xyww;
+    vOut.skyboxCoord = vIn.posL;
     return vOut;
 }
 
-float4 PS(SkyboxVSOut pIn) : SV_Target
+float4 SkyboxPS(SkyboxVSOut pIn) : SV_Target
 {
     uint2 coord = pIn.posViewport.xy;
     

@@ -92,48 +92,107 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+
+	D3D_SHADER_MACRO defines[] =
+	{
+		{"USE_NORMAL_MAP",""},
+		{nullptr,nullptr}
+	};
+
+	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
+
 	// 创建顶点着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL/Basic_VS.cso", device, "VS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
-	pImpl->m_pEffectHelper->CreateShaderFromFile("OITRenderVS", L"HLSL/OIT_Render_VS.cso", device, "VS", "vs_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL/Basic.hlsl", device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
+	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL/Basic.hlsl", device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf());
+	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
+		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTangentTexLayout.GetAddressOf()));
+
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic_PS.cso", device);
-	pImpl->m_pEffectHelper->CreateShaderFromFile("OITRenderPS", L"HLSL/OIT_Render_PS.cso", device);
-	pImpl->m_pEffectHelper->CreateShaderFromFile("OITStorePS", L"HLSL/OIT_Store_PS.cso", device);
-	
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL/Basic.hlsl", device, "BasicPS", "ps_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL/Basic.hlsl", device, "BasicPS", "ps_5_0", defines);
+
 	// 创建通道
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "BasicVS";
 	passDesc.namePS = "BasicPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
 
-	passDesc.nameVS = "BasicVS";
-	passDesc.namePS = "OITStorePS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("OITStore", device, &passDesc));
-	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("OITStore");
-		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
-		pPass->SetBlendState(RenderStates::BSTransparent.Get(), nullptr, 0xFFFFFFFF);
-		pPass->SetDepthStencilState(RenderStates::DSSNoDepthWrite.Get(), 0);
-	}
+	passDesc.nameVS = "NormalMapVS";
+	passDesc.namePS = "NormalMapPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMap", device, &passDesc));
 
-	passDesc.nameVS = "OITRenderVS";
-	passDesc.namePS = "OITRenderPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("OITRender", device, &passDesc));
-
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamLinearWrap", RenderStates::SSLinearWrap.Get());
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamPointClamp", RenderStates::SSPointClamp.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "BasicEffect.VertexPosNormalTexLayout");
+	SetDebugObjectName(pImpl->m_pVertexPosNormalTangentTexLayout.Get(), "BasicEffect.VertexPosNormalTangentTexLayout");
 #endif
 	pImpl->m_pEffectHelper->SetDebugObjectName("BasicEffect");
 
 	return true;
+}
+
+void BasicEffect::SetMaterial(const Material& material)
+{
+	TextureManager& tm = TextureManager::Get();
+
+	PhongMaterial phongMat{};
+	phongMat.ambient = material.Get<XMFLOAT4>("$AmbientColor");
+	phongMat.diffuse = material.Get<XMFLOAT4>("$DiffuseColor");
+	phongMat.diffuse.w = material.Has<float>("$Opacity") ? material.Get<float>("$Opacity") : 1.0f;
+	phongMat.specular = material.Get<XMFLOAT4>("$SpecularColor");
+	phongMat.specular.w = material.Has<float>("$SpecularFactor") ? material.Get<float>("$SpecularFactor") : 1.0f;
+	if (material.Has<XMFLOAT4>("$ReflectColor"))
+	{
+		phongMat.reflect = material.Get<XMFLOAT4>("$ReflectColor");
+	}
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
+
+	auto pStr = material.TryGet<std::string>("$Diffuse");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+	pStr = material.TryGet<std::string>("$Normal");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+}
+
+MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
+{
+	MeshDataInput input;
+	input.pInputLayout = pImpl->m_pCurrInputLayout.Get();
+	input.topology = pImpl->m_CurrTopology;
+	if (pImpl->m_NormalmapEnabled)
+	{
+		input.pVertexBuffers =
+		{
+			meshData.m_pVertices.Get(),
+			meshData.m_pNormals.Get(),
+			meshData.m_pTangents.Get(),
+			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
+		};
+		input.strides = { 12,12,16,8 };
+		input.offsets = { 0,0,0,0 };
+	}
+	else
+	{
+		input.pVertexBuffers =
+		{
+			meshData.m_pVertices.Get(),
+			meshData.m_pNormals.Get(),
+			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
+			nullptr
+		};
+		input.strides = { 12,12,8,0 };
+		input.offsets = { 0,0,0,0 };
+	}
+
+	input.pIndexBuffer = meshData.m_pIndices.Get();
+	input.indexCount = meshData.m_IndexCount;
+	return input;
 }
 
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -151,54 +210,10 @@ void XM_CALLCONV BasicEffect::SetProjMatrix(FXMMATRIX P)
 	XMStoreFloat4x4(&pImpl->m_Proj, P);
 }
 
-void BasicEffect::SetMaterial(const Material& material)
+void XM_CALLCONV BasicEffect::SetShadowTransformMatrix(DirectX::FXMMATRIX S)
 {
-	TextureManager& tm = TextureManager::Get();
-
-	PhongMaterial phongMat{};
-	phongMat.ambient = material.Get<XMFLOAT4>("$AmbientColor");
-	phongMat.diffuse = material.Get<XMFLOAT4>("$DiffuseColor");
-	phongMat.diffuse.w = material.Get<float>("$Opacity");
-	phongMat.specular = material.Get<XMFLOAT4>("$SpecularColor");
-	phongMat.specular.w = material.Has<float>("$SpecularFactor") ? material.Get<float>("$SpecularFactor") : 1.0f;
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
-
-	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
-
-	XMMATRIX TexTransform = XMMatrixIdentity();
-	if (material.Has<XMFLOAT2>("$TexScale")) 
-	{
-		auto& scale = material.Get<DirectX::XMFLOAT2>("$TexScale");
-		TexTransform.r[0] *= scale.x;
-		TexTransform.r[1] *= scale.y;
-	}
-	if (material.Has<XMFLOAT2>("$TexOffset")) 
-	{
-		auto& offset = material.Get<DirectX::XMFLOAT2>("$TexOffset");
-		TexTransform.r[3] += XMVectorSet(offset.x, offset.y, 0.0f, 0.0f);
-	}
-	TexTransform = XMMatrixTranspose(TexTransform);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexTransform")->SetFloatMatrix(4, 4, reinterpret_cast<const float*>(&TexTransform));
-}
-
-MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
-{
-	MeshDataInput input;
-	input.pInputLayout = pImpl->m_pCurrInputLayout.Get();
-	input.topology = pImpl->m_CurrTopology;
-	input.pVertexBuffers =
-	{
-		meshData.m_pVertices.Get(),
-		meshData.m_pNormals.Get(),
-		meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
-	};
-	input.strides = { 12,12,8 };
-	input.offsets = { 0,0,0 };
-
-	input.pIndexBuffer = meshData.m_pIndices.Get();
-	input.indexCount = meshData.m_IndexCount;
-	return input;
+	XMMATRIX shadowTransform = XMMatrixTranspose(S);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowTransform")->SetFloatMatrix(4, 4, (const float*)&shadowTransform);
 }
 
 void BasicEffect::SetDirLight(uint32_t pos, const DirectionalLight& dirLight)
@@ -267,15 +282,22 @@ void BasicEffect::SetWavesStates(bool enabled, float gridSpatialStep)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WavesEnabled")->SetSInt(enabled);
 }
 
+void BasicEffect::SetDepthBias(float bias)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DepthBias")->SetFloat(bias);
+}
+
+void BasicEffect::SetTextureShadowMap(ID3D11ShaderResourceView* textureShadowMap)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_ShadowMap", textureShadowMap);
+}
+
 void BasicEffect::SetRenderDefault()
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_NormalmapEnabled = false;
-	pImpl->m_pCurrEffectPass->SetRasterizerState(nullptr);
-	pImpl->m_pCurrEffectPass->SetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-	pImpl->m_pCurrEffectPass->SetDepthStencilState(nullptr, 0);
 }
 
 void BasicEffect::SetRenderWithNormalMap()
@@ -322,10 +344,10 @@ void BasicEffect::SetRenderOITStorage(
 }
 
 void BasicEffect::RenderOIT(
-	ID3D11DeviceContext* deviceContext, 
-	ID3D11ShaderResourceView* flBuffer, 
-	ID3D11ShaderResourceView* startOffsetBuffer, 
-	ID3D11ShaderResourceView* input, 
+	ID3D11DeviceContext* deviceContext,
+	ID3D11ShaderResourceView* flBuffer,
+	ID3D11ShaderResourceView* startOffsetBuffer,
+	ID3D11ShaderResourceView* input,
 	ID3D11RenderTargetView* output,
 	const D3D11_VIEWPORT& vp)
 {

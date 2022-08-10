@@ -59,43 +59,65 @@ public:
 
 private:
 	bool InitResource();
+
+	void RenderShadow();
+	void RenderForward();
+	void RenderSkybox();
+
 	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
+	template<class Effect>
+	void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})
+	{
+		// 有法线贴图
+		{
+			m_Ground.Draw(m_pd3dImmediateContext.Get(), effect);
+
+			for (auto& cylinder : m_Cylinders)
+			{
+				cylinder.Draw(m_pd3dImmediateContext.Get(), effect);
+			}
+		}
+
+		// 没有法线贴图
+		fun(effect, m_pd3dImmediateContext.Get());
+		// 石球
+		for (auto& sphere : m_Spheres)
+		{
+			sphere.Draw(m_pd3dImmediateContext.Get(), effect);
+		}
+		// 房屋
+		m_House.Draw(m_pd3dImmediateContext.Get(), effect);
+	};
 
 private:
 	TextureManager m_TextureManager;
 	ModelManager m_ModelManager;
 
-	std::mt19937 m_RandEngine;
-	std::uniform_int_distribution<uint32_t> m_RowRange;
-	std::uniform_int_distribution<uint32_t> m_ColRange;
-	std::uniform_real_distribution<float> m_MagnitudeRange;
+	bool m_UpdateLight = true;
+	bool m_EnableNormalMap = true;
+	bool m_EnableDebug = true;
+	int m_SlopeIndex = 0;
 
 	BasicEffect m_BasicEffect;
-	PostProcessEffect m_PostProcessEffect;
+	SkyBoxEffect m_SkyboxEffect;
+	ShadowEffect m_ShadowEffect;
 
-	GameObject m_Land;
-	GameObject m_RedBox;
-	GameObject m_YellowBox;
-	GpuWaves m_GpuWaves;
-
-	std::unique_ptr<StructuredBuffer<FLStaticNode>> m_pFLStaticNodeBuffer;
-	std::unique_ptr<ByteAddressBuffer> m_pStartOffsetBuffer;
+	GameObject m_Ground;
+	GameObject m_Cylinders[10];
+	GameObject m_Spheres[10];
+	GameObject m_House;
+	GameObject m_Skybox;
 
 	std::unique_ptr<Depth2D> m_pDepthTexture;
 	std::unique_ptr<Texture2D> m_pLitTexture;
-	std::unique_ptr<Texture2D> m_pTempTexture;
+	std::unique_ptr<Depth2D> m_pShadowMapTexture;
+	std::unique_ptr<Texture2D> m_pDebugShadowTexture;
 
-	float m_BaseTime = 0.0f;
-	bool m_EnabledFog = true;
-	bool m_EnabledOIT = true;
-	int m_BlurMode = 1;
+	DirectionalLight m_DirLights[3] = {};
+	DirectX::XMFLOAT3 m_OriginalLightDirs[3] = {};
 
-	float m_BlurSigma = 2.5f;
-	int m_BlurRadius = 5;
-	int m_BlurTimes = 1;
-
-	std::shared_ptr<Camera> m_pCamera;
-
+	std::shared_ptr<FirstPersonCamera> m_pCamera;
+	FirstPersonCameraController m_CameraController;
 };
 
 #endif

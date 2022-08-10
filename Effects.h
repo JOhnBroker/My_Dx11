@@ -86,10 +86,16 @@ public:
 		const D3D11_VIEWPORT& vp);
 
 	void SetTextureDisplacement(ID3D11ShaderResourceView* textureDisplacement);
-
+	// 带法线贴图绘制
 	void SetRenderWithNormalMap();
 
+	// 天空盒
 	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
+
+	// 阴影
+	void XM_CALLCONV SetShadowTransformMatrix(DirectX::FXMMATRIX S);
+	void SetDepthBias(float bias);
+	void SetTextureShadowMap(ID3D11ShaderResourceView* textureShadowMap);
 
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
@@ -123,7 +129,7 @@ private:
 };
 
 class ShadowEffect :public IEffect, public IEffectTransform,
-	public IEffectMaterial, public IEffectMeshData 
+	public IEffectMaterial, public IEffectMeshData
 {
 public:
 	ShadowEffect();
@@ -186,6 +192,11 @@ public:
 
 	void SetRenderDefault();
 	void SetRenderGS();
+
+	// 设置深度图
+	void SetDepthTexture(ID3D11ShaderResourceView* depthTexture);
+	// 设置场景渲染图
+	void SetLitTexture(ID3D11ShaderResourceView* litTexture);
 
 	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
 
