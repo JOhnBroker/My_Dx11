@@ -232,6 +232,16 @@ float CalcShadowFactor(SamplerComparisonState samShadow,
     //float s2 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(0, SMAP_DX)).r;
     //float s3 = g_ShadowMap.Sample(g_SamShadow, tex.xy + float2(SMAP_DX, SMAP_DX)).r;
     
+    // 硬边缘
+    //float result = shadowMap.Sample(samShadow, shadowPosH.xy).r;
+    //if (depth <= result)
+    //{
+    //    percentLit = 1.0f;
+    //
+    //}
+    // 
+    //return percentLit;
+    
     [unroll]
     for (int i = 0; i < 9; ++i)
     {

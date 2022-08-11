@@ -139,7 +139,7 @@ void GameApp::DrawScene()
 
 	if (m_EnableDebug)
 	{
-		if (ImGui::Begin("Debug Buffer", &m_EnableDebug))
+		if (ImGui::Begin("Depth Buffer", &m_EnableDebug))
 		{
 			CD3D11_VIEWPORT vp(0.0f, 0.0f, (float)m_pDebugShadowTexture->GetWidth(), (float)m_pDebugShadowTexture->GetHeight());
 			m_ShadowEffect.RenderDepthToTexture(
@@ -170,7 +170,7 @@ void GameApp::RenderShadow()
 	m_pd3dImmediateContext->OMSetRenderTargets(0, nullptr, m_pShadowMapTexture->GetDepthStencil());
 	m_pd3dImmediateContext->RSSetViewports(1, &shadowViewport);
 
-	m_ShadowEffect.SetRenderDepthOnly();
+	m_ShadowEffect.SetRenderAlphaClip();
 	DrawScene<ShadowEffect>(m_ShadowEffect);
 }
 void GameApp::RenderForward()
@@ -371,16 +371,16 @@ bool GameApp::InitResource()
 		}
 	}
 	{
-		Model* pModel = m_ModelManager.CreateFromFile("Model\\house.obj");
-		pModel->SetDebugObjectName("House");
+		Model* pModel = m_ModelManager.CreateFromFile("Model\\tree.obj");
+		pModel->SetDebugObjectName("Tree");
 		m_House.SetModel(pModel);
 
-		XMMATRIX S = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		XMMATRIX S = XMMatrixScaling(0.005f, 0.005f, 0.005f);
 		BoundingBox houseBox = m_House.GetBoundingBox();
 		houseBox.Transform(houseBox, S);
 
 		Transform& houseTransform = m_House.GetTransform();
-		houseTransform.SetScale(0.01f, 0.01f, 0.01f);
+		houseTransform.SetScale(0.005f, 0.005f, 0.005f);
 		houseTransform.SetPosition(0.0f, -(houseBox.Center.y - houseBox.Extents.y + 3.0f), 0.0f);
 	}
 	{

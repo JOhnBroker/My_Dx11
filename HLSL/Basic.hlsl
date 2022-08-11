@@ -117,6 +117,7 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     
     float shadow[5] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
     
+    //shadow[0] = CalcShadowFactor(g_Sam, g_ShadowMap, pIn.ShadowPosH, g_DepthBias);
     shadow[0] = CalcShadowFactor(g_SamShadow, g_ShadowMap, pIn.ShadowPosH, g_DepthBias);
     
     [unroll]

@@ -92,10 +92,10 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\Shadow.hlsl",
-		device, "FullScreenTriangleTexcoordVS"));
+		device, "FullScreenTriangleTexcoordVS", "vs_5_0"));
 
 	// 创建像素着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl", 
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl",
 		device, "ShadowPS", "ps_5_0"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugPS", L"HLSL\\Shadow.hlsl",
 		device, "DebugPS", "ps_5_0"));
@@ -137,6 +137,8 @@ void ShadowEffect::SetRenderAlphaClip()
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
+	//pImpl->m_pEffectHelper->GetConstantBufferVariable("clipValue")->SetFloat(0.1f);
 }
 
 void ShadowEffect::RenderDepthToTexture(
