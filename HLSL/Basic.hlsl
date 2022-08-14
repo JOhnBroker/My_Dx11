@@ -6,6 +6,7 @@
 Texture2D g_DiffuseMap : register(t0);  // 物体纹理
 Texture2D g_NormalMap : register(t1);   // 法线贴图
 Texture2D g_ShadowMap : register(t2);   // 阴影贴图
+Texture2D g_AmbientOcclusionMap : register(t3);
 SamplerState g_Sam : register(s0); // 线性过滤+Wrap采样器
 SamplerComparisonState g_SamShadow : register(s1); // 点过滤+Clamp采样器
 
@@ -60,6 +61,9 @@ struct VertexOutput
 #endif
     float2 tex : TEXCOORD0;
     float4 ShadowPosH : TEXCOORD1;
+#if defined USE_SSAO_MAP
+    float4 SSAOPosH : TEXCOORD2;
+#endif
 };
 
 VertexOutput BasicVS(VertexInput vIn)
@@ -75,6 +79,15 @@ VertexOutput BasicVS(VertexInput vIn)
 #endif
     vOut.tex = vIn.tex;
     vOut.ShadowPosH = mul(posW, g_ShadowTransform);
+#if defined USE_SSAO_MAP
+    // 从NDC坐标[-1, 1]^2变换到纹理空间坐标[0, 1]^2
+    // u = 0.5x + 0.5
+    // v = -0.5y + 0.5
+    // ((xw, yw, zw, w) + (w, -w, 0, 0)) * (0.5, -0.5, 1, 1) = ((0.5x + 0.5)w, (-0.5y + 0.5)w, zw, w)
+    //                                                      = (uw, vw, zw, w)
+    //                                                      =>  (u, v, z, 1)
+    vOut.SSAOPosH = (vOut.posH + float4(vOut.posH.w, -vOut.posH.w, 0.0f, 0.0f)) * float4(0.5f, -0.5f, 1.0f, 1.0f);
+#endif
     return vOut;
 }
 
@@ -106,6 +119,13 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     pIn.normalW = NormalSampleToWorldSpace(normalMapSample, pIn.normalW, pIn.tangentW);
 #endif
     
+    float ambientAccess = 1.0f;
+    
+#if defined USE_SSAO_MAP
+    pIn.SSAOPosH /= pIn.SSAOPosH.w;
+    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
+#endif
+    
     // 初始化为0 
     float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -124,7 +144,7 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     for (i = 0; i < 5; ++i)
     {
         ComputeDirectionalLight(g_Material, g_DirLight[i], pIn.normalW, toEyeW, A, D, S);
-        ambient += A;
+        ambient += ambientAccess * A;
         diffuse += shadow[i] * D;
         spec += shadow[i] * S;
     }

@@ -111,10 +111,16 @@
     <ClCompile Include="ScreenGrab11.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Waves.cpp">
+    <ClCompile Include="ShadowEffect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ShadowEffect.cpp">
+    <ClCompile Include="Waves.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="SSAOEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SSAOManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -215,9 +221,6 @@
     <ClInclude Include="ScreenGrab11.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Waves.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="HLSL\Basic.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
@@ -231,6 +234,15 @@
       <Filter>着色器</Filter>
     </ClInclude>
     <ClInclude Include="HLSL\Skybox.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="Waves.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="SSAOManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\SSAO.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
   </ItemGroup>

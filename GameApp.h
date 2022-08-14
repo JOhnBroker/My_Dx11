@@ -14,6 +14,7 @@
 #include <Collision.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
+#include <SSAOManager.h>
 #include <Waves.h>
 
 #include <ScreenGrab11.h>
@@ -60,6 +61,7 @@ public:
 	void RenderShadow();
 	void RenderForward();
 	void RenderSkybox();
+	void RenderSSAO();
 
 	template<class Effect>
 	void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})
@@ -91,15 +93,17 @@ private:
 private:
 	TextureManager m_TextureManager;
 	ModelManager m_ModelManager;
+	SSAOManager m_SSAOManager;
 
+	bool m_EnableSSAO = true;
 	bool m_UpdateLight = true;
 	bool m_EnableNormalMap = true;
 	bool m_EnableDebug = true;
-	int m_SlopeIndex = 0;
 
 	BasicEffect m_BasicEffect;
 	SkyBoxEffect m_SkyboxEffect;
 	ShadowEffect m_ShadowEffect;
+	SSAOEffect m_SSAOEffect;
 
 	GameObject m_Ground;
 	GameObject m_Cylinders[10];
@@ -110,7 +114,7 @@ private:
 	std::unique_ptr<Depth2D> m_pDepthTexture;
 	std::unique_ptr<Texture2D> m_pLitTexture;
 	std::unique_ptr<Depth2D> m_pShadowMapTexture;
-	std::unique_ptr<Texture2D> m_pDebugShadowTexture;
+	std::unique_ptr<Texture2D> m_pDebugAOTexture;
 
 	DirectionalLight m_DirLights[3] = {};
 	DirectX::XMFLOAT3 m_OriginalLightDirs[3] = {};

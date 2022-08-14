@@ -35,9 +35,10 @@ public:
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTangentTexLayout;
 
-	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
-
 	bool m_NormalmapEnabled = false;
+	bool m_AmbientOcclusionMapEnabled = false;
+
+	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
 };
 
 //
@@ -220,6 +221,11 @@ void XM_CALLCONV BasicEffect::SetShadowTransformMatrix(DirectX::FXMMATRIX S)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowTransform")->SetFloatMatrix(4, 4, (const float*)&shadowTransform);
 }
 
+void BasicEffect::SetShadowEnabled(bool enabled)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EnableShadow")->SetSInt(enabled);
+}
+
 void BasicEffect::SetDirLight(uint32_t pos, const DirectionalLight& dirLight)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
@@ -294,6 +300,16 @@ void BasicEffect::SetDepthBias(float bias)
 void BasicEffect::SetTextureShadowMap(ID3D11ShaderResourceView* textureShadowMap)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_ShadowMap", textureShadowMap);
+}
+
+void BasicEffect::SetSSAOEnabled(bool enabled)
+{
+	pImpl->m_AmbientOcclusionMapEnabled = enabled;
+}
+
+void BasicEffect::SetTextureAmbientOcclusion(ID3D11ShaderResourceView* textureAmbientOcclusion)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_AmbientOcclusionMap", textureAmbientOcclusion);
 }
 
 void BasicEffect::SetRenderDefault()

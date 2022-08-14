@@ -94,8 +94,13 @@ public:
 
 	// 阴影
 	void XM_CALLCONV SetShadowTransformMatrix(DirectX::FXMMATRIX S);
+	void SetShadowEnabled(bool enabled);
 	void SetDepthBias(float bias);
 	void SetTextureShadowMap(ID3D11ShaderResourceView* textureShadowMap);
+
+	// SSAO
+	void SetSSAOEnabled(bool enabled);
+	void SetTextureAmbientOcclusion(ID3D11ShaderResourceView* textureAmbientOcclusion);
 
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
@@ -103,6 +108,8 @@ public:
 	// 光照、材质和纹理相关设置
 	// 各种类型灯光允许的最大数目
 	static const int maxLights = 5;
+
+	// 设置其它参数
 
 	void SetDirLight(uint32_t pos, const DirectionalLight& dirLight);
 	void SetPointLight(uint32_t pos, const PointLight& pointLight);
@@ -269,6 +276,83 @@ public:
 		ID3D11ShaderResourceView* input,
 		ID3D11RenderTargetView* output,
 		const D3D11_VIEWPORT& vp);
+
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+};
+
+
+class SSAOEffect :public IEffect, public IEffectTransform,
+	public IEffectMaterial, public IEffectMeshData 
+{
+public:
+	SSAOEffect();
+	virtual ~SSAOEffect() override;
+
+	SSAOEffect(SSAOEffect&& moveFrom) noexcept;
+	SSAOEffect& operator=(SSAOEffect&& moveFrom) noexcept;
+
+	static SSAOEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
+	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
+	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
+
+	void SetMaterial(const Material& material) override;
+
+	MeshDataInput GetInputData(const MeshData& meshData) override;
+
+	// Pass1 绘制观察空间法向量和深度贴图
+	void SetRenderNormalDepthMap(bool enableAlphaClip = false);
+
+	// Pass2 绘制SSAO图
+	void SetTextureRandomVec(ID3D11ShaderResourceView* textureRandomVec);
+
+	void SetOcclusionInfo(float radius, float fadeStart, float fadeEnd, float surfaceEpsilon);
+
+	void SetFrustumFarPlanePoints(const DirectX::XMFLOAT4 farPlanePoints[3]);
+
+	void SetOffsetVectors(const DirectX::XMFLOAT4 offsetVectors[14]);
+
+	void RenderToSSAOTexture(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* normalDepth,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp,
+		uint32_t sampleCount);
+
+	// Pass3 对SSAO图进行双边滤波
+
+	void SetBlurWeight(const float weight[11]);
+
+	void SetBlurRadius(int radius);
+
+	// 进行水平双边滤波，要求输入输出图像大小相同
+	void BilateralBlurX(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11ShaderResourceView* normalDepth,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	// 进行竖直双边滤波，要求输入输出图像大小相同
+	void BilateralBlurY(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11ShaderResourceView* normalDepth,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	// 绘制AO图到纹理
+	void RenderAmbientOcclusionToTexture(ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	void Apply(ID3D11DeviceContext* deviceContext) override;
 
 private:
 	class Impl;

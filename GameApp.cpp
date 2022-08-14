@@ -32,6 +32,9 @@ bool GameApp::Init()
 	if (!m_ShadowEffect.InitAll(m_pd3dDevice.Get()))
 		return false;
 
+	if (!m_SSAOEffect.InitAll(m_pd3dDevice.Get()))
+		return false;
+
 	if (!InitResource())
 		return false;
 
@@ -44,9 +47,11 @@ void GameApp::OnResize()
 
 	m_pDepthTexture = std::make_unique<Depth2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
 	m_pLitTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_pDebugAOTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth / 2, m_ClientHeight / 2, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	m_pDepthTexture->SetDebugObjectName("DepthTexture");
 	m_pLitTexture->SetDebugObjectName("LitTexture");
+	m_pDebugAOTexture->SetDebugObjectName("DebugAOTexture");
 
 	if (m_pCamera != nullptr)
 	{
@@ -60,37 +65,42 @@ void GameApp::OnResize()
 
 void GameApp::UpdateScene(float dt)
 {
-	static const DirectX::XMFLOAT3 lightDirs[] =
-	{
-		XMFLOAT3(1.0f / sqrtf(2.0f),-1.0f / sqrtf(2.0f),0.0f),
-		XMFLOAT3(3.0f / sqrtf(13.0f),-2.0f / sqrtf(13.0f),0.0f),
-		XMFLOAT3(2.0f / sqrtf(5.0f),-1.0f / sqrtf(5.0f),0.0f),
-		XMFLOAT3(3.0f / sqrtf(10.0f),-1.0f / sqrtf(10.0f),0.0f),
-		XMFLOAT3(4.0f / sqrtf(17.0f),-1.0f / sqrtf(17.0f),0.0f)
-	};
 	m_CameraController.Update(dt);
 
-	if (ImGui::Begin("Shadow Mapping"))
+	if (ImGui::Begin("SSAO"))
 	{
 		ImGui::Checkbox("Animate Light", &m_UpdateLight);
 		ImGui::Checkbox("Enable Normal map", &m_EnableNormalMap);
-		if (ImGui::SliderInt("Light Slope Level", &m_SlopeIndex, 0, 4))
+		ImGui::Separator();
+		if (ImGui::Checkbox("Enable SSAO", &m_EnableSSAO)) 
 		{
-			m_OriginalLightDirs[0] = lightDirs[m_SlopeIndex];
+			if (!m_EnableSSAO) 
+			{
+				m_EnableSSAO = false;
+			}
+			m_BasicEffect.SetSSAOEnabled(m_EnableSSAO);
 		}
-		static float depthBias = 0.005f;
-		if (ImGui::SliderFloat("Depth Bias", &depthBias, 0.0f, 0.02f, "%.3f"))
+		if (m_EnableSSAO) 
 		{
-			m_BasicEffect.SetDepthBias(depthBias);
+			ImGui::SliderFloat("Epsilon", &m_SSAOManager.m_SurfaceEpsilon, 0.0f, 0.1f, "%.2f");
+			static float range = m_SSAOManager.m_OcclusionFadeEnd - m_SSAOManager.m_OcclusionFadeStart;
+			ImGui::SliderFloat("Fade Start", &m_SSAOManager.m_OcclusionFadeStart, 0.0f, 2.0f, "%.2f");
+			if (ImGui::SliderFloat("Fade Range", &range, 0.0f, 3.0f, "%.2f"))
+			{
+				m_SSAOManager.m_OcclusionFadeEnd = m_SSAOManager.m_OcclusionFadeStart + range;
+			}
+			ImGui::SliderFloat("Sample Radius", &m_SSAOManager.m_OcclusionRadius, 0.0f, 2.0f, "%.1f");
+			ImGui::SliderInt("Sample Count", reinterpret_cast<int*>(&m_SSAOManager.m_SampleCount), 1, 14);
+			ImGui::Checkbox("Debug SSAO", &m_EnableDebug);
 		}
-
-		ImGui::Checkbox("Enable Debug", &m_EnableDebug);
+		ImGui::Separator();
 	}
 	ImGui::End();
 
-	m_SkyboxEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 	m_BasicEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 	m_BasicEffect.SetEyePos(m_pCamera->GetPosition());
+	m_SkyboxEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
+	m_SSAOEffect.SetViewMatrix(m_pCamera->GetViewMatrixXM());
 
 	// 更新光照
 	static float theta = 0;
@@ -133,23 +143,27 @@ void GameApp::DrawScene()
 		m_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_pRenderTargetViews[m_FrameCount].ReleaseAndGetAddressOf());
 	}
 
+	if (m_EnableSSAO) 
+	{
+		RenderSSAO();
+	}
 	RenderShadow();
 	RenderForward();
 	RenderSkybox();
 
 	if (m_EnableDebug)
 	{
-		if (ImGui::Begin("Depth Buffer", &m_EnableDebug))
+		if (ImGui::Begin("Debug Buffer", &m_EnableDebug))
 		{
-			CD3D11_VIEWPORT vp(0.0f, 0.0f, (float)m_pDebugShadowTexture->GetWidth(), (float)m_pDebugShadowTexture->GetHeight());
+			CD3D11_VIEWPORT vp(0.0f, 0.0f, (float)m_pDebugAOTexture->GetWidth(), (float)m_pDebugAOTexture->GetHeight());
 			m_ShadowEffect.RenderDepthToTexture(
 				m_pd3dImmediateContext.Get(),
 				m_pShadowMapTexture->GetShaderResource(),
-				m_pDebugShadowTexture->GetRenderTarget(),
+				m_pDebugAOTexture->GetRenderTarget(),
 				vp);
 			ImVec2 winSize = ImGui::GetWindowSize();
 			float smaller = (std::min)(winSize.x - 20, winSize.y - 36);
-			ImGui::Image(m_pDebugShadowTexture->GetShaderResource(), ImVec2(smaller, smaller));
+			ImGui::Image(m_pDebugAOTexture->GetShaderResource(), ImVec2(smaller, smaller));
 		}
 		ImGui::End();
 	}
@@ -170,7 +184,7 @@ void GameApp::RenderShadow()
 	m_pd3dImmediateContext->OMSetRenderTargets(0, nullptr, m_pShadowMapTexture->GetDepthStencil());
 	m_pd3dImmediateContext->RSSetViewports(1, &shadowViewport);
 
-	m_ShadowEffect.SetRenderAlphaClip();
+	m_ShadowEffect.SetRenderDepthOnly();
 	DrawScene<ShadowEffect>(m_ShadowEffect);
 }
 void GameApp::RenderForward()
@@ -178,12 +192,16 @@ void GameApp::RenderForward()
 	float black[4] = { 0.0f,0.0f,0.0f,1.0f };
 	ID3D11RenderTargetView* pRTVs[]{ m_pLitTexture->GetRenderTarget() };
 	m_pd3dImmediateContext->ClearRenderTargetView(pRTVs[0], black);
-	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	if (!m_EnableSSAO) 
+	{
+		m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	}
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
 	D3D11_VIEWPORT vp = m_pCamera->GetViewPort();
 	m_pd3dImmediateContext->RSSetViewports(1, &vp);
 
 	m_BasicEffect.SetTextureShadowMap(m_pShadowMapTexture->GetShaderResource());
+	m_BasicEffect.SetTextureAmbientOcclusion(m_EnableSSAO ? m_SSAOManager.GetAmbientOcclusionTexture() : nullptr);
 
 	if (m_EnableNormalMap)
 	{
@@ -199,6 +217,7 @@ void GameApp::RenderForward()
 	});
 
 	m_BasicEffect.SetTextureShadowMap(nullptr);
+	m_BasicEffect.SetTextureAmbientOcclusion(nullptr);
 	m_BasicEffect.Apply(m_pd3dImmediateContext.Get());
 }
 void GameApp::RenderSkybox()
@@ -221,6 +240,21 @@ void GameApp::RenderSkybox()
 	m_SkyboxEffect.SetDepthTexture(nullptr);
 	m_SkyboxEffect.SetLitTexture(nullptr);
 	m_SkyboxEffect.Apply(m_pd3dImmediateContext.Get());
+}
+void GameApp::RenderSSAO()
+{
+	// Pass1 绘制场景 生成法线深度图
+	m_SSAOManager.Begin(m_pd3dImmediateContext.Get(), m_pDepthTexture->GetDepthStencil(), m_pCamera->GetViewPort());
+	{
+		m_SSAOEffect.SetRenderNormalDepthMap(m_pd3dImmediateContext.Get());
+		DrawScene<SSAOEffect>(m_SSAOEffect);
+	}
+	m_SSAOManager.End(m_pd3dImmediateContext.Get());
+	// Pass2 生产AO
+	m_SSAOManager.RenderToSSAOTexture(m_pd3dImmediateContext.Get(), m_SSAOEffect, *m_pCamera);
+
+	// Pass3 混合
+	m_SSAOManager.BlurAmbientMap(m_pd3dImmediateContext.Get(), m_SSAOEffect);
 }
 void GameApp::DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV)
 {
@@ -309,19 +343,23 @@ bool GameApp::InitResource()
 
 	// 初始化阴影贴图和特效
 	m_pShadowMapTexture = std::make_unique<Depth2D>(m_pd3dDevice.Get(), 2048, 2048);
-	m_pDebugShadowTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), 2048, 2048, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	m_pShadowMapTexture->SetDebugObjectName("ShadowMapTexture");
-	m_pDebugShadowTexture->SetDebugObjectName("DebugShadowTexture");
 
+	m_BasicEffect.SetSSAOEnabled(m_EnableSSAO);
 	m_BasicEffect.SetDepthBias(0.005f);
 	m_BasicEffect.SetViewMatrix(camera->GetViewMatrixXM());
 	m_BasicEffect.SetProjMatrix(camera->GetProjMatrixXM());		//忘记设置投影矩阵了
+
+	m_SSAOEffect.SetViewMatrix(camera->GetViewMatrixXM());
+	m_SSAOEffect.SetProjMatrix(camera->GetProjMatrixXM());
 
 	m_ShadowEffect.SetProjMatrix(XMMatrixOrthographicLH(40.0f, 40.0f, 20.0f, 60.0f));
 
 	m_SkyboxEffect.SetViewMatrix(camera->GetViewMatrixXM());
 	m_SkyboxEffect.SetProjMatrix(camera->GetProjMatrixXM());
+
+	m_SSAOManager.InitResource(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
 
 	// 初始化对象
 	{
