@@ -45,7 +45,7 @@ void Waves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols,
 
 	if (TextureManager::Get().GetTexture("Texture\\water2.dds") == nullptr)
 	{
-		TextureManager::Get().CreateTexture("Texture\\water2.dds", false, true);
+		TextureManager::Get().CreateFromFile("Texture\\water2.dds", false, true);
 	}
 	m_Model.materials[0].Set<std::string>("$Diffuse", "Texture\\water2.dds");
 	m_Model.materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f));
@@ -108,9 +108,9 @@ void CpuWaves::Update(float dt)
 
 		m_AccumulateTime = 0.0f;
 
-		for (size_t i = 1; i < m_NumRows - 1; ++i) 
+		for (size_t i = 1; i < m_NumRows - 1; ++i)
 		{
-			for (size_t j = 1; j < m_NumCols - 1; ++j) 
+			for (size_t j = 1; j < m_NumCols - 1; ++j)
 			{
 				float left = m_CurrSolution[i * m_NumCols + j - 1].y;
 				float right = m_CurrSolution[i * m_NumCols + j + 1].y;
@@ -169,7 +169,7 @@ std::unique_ptr<EffectHelper> GpuWaves::m_pEffectHelper = nullptr;
 
 void GpuWaves::InitResource(ID3D11Device* device, uint32_t rows, uint32_t cols, float texU, float texV, float timeStep, float spatialStep, float wavesSpeed, float damping, float flowSpeedX, float flowSpeedY)
 {
-	if (!m_pEffectHelper) 
+	if (!m_pEffectHelper)
 	{
 		m_pEffectHelper = std::make_unique<EffectHelper>();
 		ComPtr<ID3DBlob> blob;

@@ -1,6 +1,7 @@
 #include "XUtil.h"
 #include "ModelManager.h"
 #include "TextureManager.h"
+#include "ImGuiLog.h"
 
 #include <filesystem>
 
@@ -21,8 +22,13 @@ void Model::CreateFromFile(Model& model, ID3D11Device* device, std::string_view 
 
 	Importer importer;
 
-	auto pAssimpScene = importer.ReadFile(filename.data(), aiProcess_ConvertToLeftHanded |
-		aiProcess_GenBoundingBoxes | aiProcess_Triangulate | aiProcess_ImproveCacheLocality);
+    importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
+    auto pAssimpScene = importer.ReadFile(filename.data(), 
+        aiProcess_ConvertToLeftHanded |     // 转为左手系
+        aiProcess_GenBoundingBoxes |        // 获取碰撞盒
+        aiProcess_Triangulate |             // 将多边形拆分
+        aiProcess_ImproveCacheLocality |    // 改善缓存局部性
+        aiProcess_SortByPType);             // 按图元顶点数排序用于移除非三角形图元
 
 	if (pAssimpScene && !(pAssimpScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) && pAssimpScene->HasMeshes())
 	{
@@ -169,25 +175,59 @@ void Model::CreateFromFile(Model& model, ID3D11Device* device, std::string_view 
 				material.Set("$TransparentColor", vec);
 			if (aiReturn_SUCCESS == pAiMaterial->Get(AI_MATKEY_COLOR_REFLECTIVE, (float*)&vec, &num))
 				material.Set("$ReflectiveColor", vec);
-			if (pAiMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) 
-			{
-				aiString aiPath;
-				pAiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &aiPath);
-				fs::path tex_filename = filename;
-				tex_filename = tex_filename.parent_path() / aiPath.C_Str();
-				TextureManager::Get().CreateTexture(tex_filename.string(), true, true);
-				material.Set("$Diffuse", tex_filename.string());
-			}
-			if (pAiMaterial->GetTextureCount(aiTextureType_NORMALS) > 0) 
-			{
-				aiString aiPath;
-				pAiMaterial->GetTexture(aiTextureType_NORMALS, 0, &aiPath);
-				fs::path tex_filename = filename;
-				tex_filename = tex_filename.parent_path() / aiPath.C_Str();
-				TextureManager::Get().CreateTexture(tex_filename.string());
-				material.Set("$Normal", tex_filename.string());
-			}
-		}
+            aiString aiPath;
+            fs::path texFilename;
+            std::string texName;
+
+            auto TryCreateTexture = [&](aiTextureType type, std::string_view propertyName, bool genMips = false, bool forceSRGB = false) {
+                if (!pAiMaterial->GetTextureCount(type))
+                    return;
+
+                pAiMaterial->GetTexture(type, 0, &aiPath);
+
+                // 纹理已经预先加载进来
+                if (aiPath.data[0] == '*')
+                {
+                    texName = filename;
+                    texName += aiPath.C_Str();
+                    char* pEndStr = nullptr;
+                    aiTexture* pTex = pAssimpScene->mTextures[strtol(aiPath.data + 1, &pEndStr, 10)];
+                    TextureManager::Get().CreateFromMemory(texName, pTex->pcData, pTex->mHeight ? pTex->mWidth * pTex->mHeight : pTex->mWidth, genMips, forceSRGB);
+                    material.Set(propertyName, std::string(texName));
+                }
+                // 纹理通过文件名索引
+                else
+                {
+                    texFilename = filename;
+                    texFilename = texFilename.parent_path() / aiPath.C_Str();
+                    TextureManager::Get().CreateFromFile(texFilename.string(), genMips, forceSRGB);
+                    material.Set(propertyName, texFilename.string());
+                }
+            };
+
+            TryCreateTexture(aiTextureType_DIFFUSE, "$Diffuse", true, true);
+            TryCreateTexture(aiTextureType_NORMALS, "$Normal");
+            TryCreateTexture(aiTextureType_BASE_COLOR, "$Albedo", true, true);
+            TryCreateTexture(aiTextureType_NORMAL_CAMERA, "$NormalCamera");
+            TryCreateTexture(aiTextureType_METALNESS, "$Metalness");
+            TryCreateTexture(aiTextureType_DIFFUSE_ROUGHNESS, "$Roughness");
+            TryCreateTexture(aiTextureType_AMBIENT_OCCLUSION, "$AmbientOcclusion");
+        }
+    }
+    else
+    {
+        std::string warning = "[Warning]: ModelManager::CreateFromFile, failed to load \"";
+        warning += filename;
+        warning += "\"\n";
+
+        if (ImGuiLog::HasInstance())
+        {
+            ImGuiLog::Get().AddLog(warning.c_str());
+        }
+        else
+        {
+            OutputDebugStringA(warning.c_str());
+        }
 	}
 }
 

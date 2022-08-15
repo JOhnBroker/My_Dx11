@@ -58,10 +58,10 @@ public:
 	void UpdateScene(float dt);
 	void DrawScene();
 
+	void RenderSSAO();
 	void RenderShadow();
 	void RenderForward();
 	void RenderSkybox();
-	void RenderSSAO();
 
 	template<class Effect>
 	void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})

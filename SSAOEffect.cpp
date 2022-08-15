@@ -25,7 +25,7 @@ public:
 	std::shared_ptr<IEffectPass> m_pCurrEffectPass;
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
 	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	
+
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 
 	ComPtr<ID3D11SamplerState> m_pSamNormalDepth;
@@ -42,7 +42,7 @@ namespace
 
 SSAOEffect::SSAOEffect()
 {
-	if (g_pInstance) 
+	if (g_pInstance)
 	{
 		throw std::exception("SSAOEffect is a singleton!");
 	}
@@ -67,7 +67,7 @@ SSAOEffect& SSAOEffect::operator=(SSAOEffect&& moveFrom) noexcept
 
 SSAOEffect& SSAOEffect::Get()
 {
-	if(!g_pInstance)
+	if (!g_pInstance)
 	{
 		throw std::exception("SSAOEffect needs an instance!");
 	}
@@ -76,10 +76,10 @@ SSAOEffect& SSAOEffect::Get()
 
 bool SSAOEffect::InitAll(ID3D11Device* device)
 {
-	if(!device)
+	if (!device)
 		return false;
 	if (!RenderStates::IsInit())
-		return false;
+		throw std::exception("RenderStates need to be initialized first!");
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
@@ -107,7 +107,7 @@ bool SSAOEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_GeometryPS", L"HLSL\\SSAO.hlsl", device, "GeometryPS", "ps_5_0"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_PS", L"HLSL\\SSAO.hlsl", device, "SSAO_PS", "ps_5_0"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_BilateralVertPS", L"HLSL\\SSAO.hlsl", device, "BilateralPS", "ps_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_BilateralHorzPS", L"HLSL\\SSAO.hlsl", device, "BilateralPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_BilateralHorzPS", L"HLSL\\SSAO.hlsl", device, "BilateralPS", "ps_5_0", defines));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugAO_PS", L"HLSL\\SSAO.hlsl", device, "DebugAO_PS", "ps_5_0"));
 
 	// 创建通道
@@ -134,7 +134,7 @@ bool SSAOEffect::InitAll(ID3D11Device* device)
 
 	D3D11_SAMPLER_DESC samplerDesc;
 	ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-	
+
 	// 用于法向量和深度的采样器
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = samplerDesc.AddressV = samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -189,7 +189,7 @@ void SSAOEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 }
 
 MeshDataInput SSAOEffect::GetInputData(const MeshData& meshData)
@@ -234,7 +234,7 @@ void SSAOEffect::SetOcclusionInfo(float radius, float fadeStart, float fadeEnd, 
 
 void SSAOEffect::SetFrustumFarPlanePoints(const DirectX::XMFLOAT4 farPlanePoints[3])
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_BlurWeights")->SetRaw(farPlanePoints);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FarPlanePoints")->SetRaw(farPlanePoints);
 }
 
 void SSAOEffect::SetOffsetVectors(const DirectX::XMFLOAT4 offsetVectors[14])
@@ -243,10 +243,10 @@ void SSAOEffect::SetOffsetVectors(const DirectX::XMFLOAT4 offsetVectors[14])
 }
 
 void SSAOEffect::RenderToSSAOTexture(
-	ID3D11DeviceContext* deviceContext, 
-	ID3D11ShaderResourceView* normalDepth, 
-	ID3D11RenderTargetView* output, 
-	const D3D11_VIEWPORT& vp, 
+	ID3D11DeviceContext* deviceContext,
+	ID3D11ShaderResourceView* normalDepth,
+	ID3D11RenderTargetView* output,
+	const D3D11_VIEWPORT& vp,
 	uint32_t sampleCount)
 {
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -272,13 +272,13 @@ void SSAOEffect::SetBlurWeight(const float weight[11])
 
 void SSAOEffect::SetBlurRadius(int radius)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_BlurRadius")->SetUInt(radius);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_BlurRadius")->SetSInt(radius);
 }
 
 void SSAOEffect::BilateralBlurX(
-	ID3D11DeviceContext* deviceContext, 
-	ID3D11ShaderResourceView* input, 
-	ID3D11ShaderResourceView* normalDepth, 
+	ID3D11DeviceContext* deviceContext,
+	ID3D11ShaderResourceView* input,
+	ID3D11ShaderResourceView* normalDepth,
 	ID3D11RenderTargetView* output,
 	const D3D11_VIEWPORT& vp)
 {
@@ -287,7 +287,7 @@ void SSAOEffect::BilateralBlurX(
 	deviceContext->OMSetRenderTargets(1, &output, nullptr);
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_InputImage", input);
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalDepthMap", normalDepth);
-	float texelSize[2] = { 1.0 / vp.Width,1.0f / vp.Height };
+	float texelSize[2] = { 1.0f / vp.Width,1.0f / vp.Height };
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexelSize")->SetFloatVector(2, texelSize);
 	auto pPass = pImpl->m_pEffectHelper->GetEffectPass("SSAO_BlurHorz");
 	pPass->Apply(deviceContext);
@@ -302,10 +302,10 @@ void SSAOEffect::BilateralBlurX(
 }
 
 void SSAOEffect::BilateralBlurY(
-	ID3D11DeviceContext* deviceContext, 
-	ID3D11ShaderResourceView* input, 
+	ID3D11DeviceContext* deviceContext,
+	ID3D11ShaderResourceView* input,
 	ID3D11ShaderResourceView* normalDepth,
-	ID3D11RenderTargetView* output, 
+	ID3D11RenderTargetView* output,
 	const D3D11_VIEWPORT& vp)
 {
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -313,7 +313,7 @@ void SSAOEffect::BilateralBlurY(
 	deviceContext->OMSetRenderTargets(1, &output, nullptr);
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_InputImage", input);
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalDepthMap", normalDepth);
-	float texelSize[2] = { 1.0 / vp.Width,1.0f / vp.Height };
+	float texelSize[2] = { 1.0f / vp.Width,1.0f / vp.Height };
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexelSize")->SetFloatVector(2, texelSize);
 	auto pPass = pImpl->m_pEffectHelper->GetEffectPass("SSAO_BlurVert");
 	pPass->Apply(deviceContext);
@@ -330,7 +330,7 @@ void SSAOEffect::BilateralBlurY(
 void SSAOEffect::RenderAmbientOcclusionToTexture(
 	ID3D11DeviceContext* deviceContext,
 	ID3D11ShaderResourceView* input,
-	ID3D11RenderTargetView* output, 
+	ID3D11RenderTargetView* output,
 	const D3D11_VIEWPORT& vp)
 {
 	deviceContext->IASetInputLayout(nullptr);
@@ -374,6 +374,6 @@ void SSAOEffect::Apply(ID3D11DeviceContext* deviceContext)
 
 	PT = XMMatrixTranspose(PT);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewToTexSpace")->SetFloatMatrix(4, 4, (const FLOAT*)&PT);
-	
+
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 }

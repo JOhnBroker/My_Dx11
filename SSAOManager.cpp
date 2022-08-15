@@ -17,8 +17,8 @@ void SSAOManager::InitResource(ID3D11Device* device, int width, int height)
 void SSAOManager::OnResize(ID3D11Device* device, int width, int height)
 {
 	m_pNormalDepthTexture = std::make_unique<Texture2D>(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	m_pAOTexture = std::make_unique<Texture2D>(device, width, height, DXGI_FORMAT_R16_FLOAT);
-	m_pAOTempTexture = std::make_unique<Texture2D>(device, width, height, DXGI_FORMAT_R16_FLOAT);
+	m_pAOTexture = std::make_unique<Texture2D>(device, width / 2, height / 2, DXGI_FORMAT_R16_FLOAT);
+	m_pAOTempTexture = std::make_unique<Texture2D>(device, width / 2, height / 2, DXGI_FORMAT_R16_FLOAT);
 
 	m_pNormalDepthTexture->SetDebugObjectName("NormalDepthTexture");
 	m_pAOTexture->SetDebugObjectName("SSAOTexture");
@@ -26,8 +26,8 @@ void SSAOManager::OnResize(ID3D11Device* device, int width, int height)
 }
 
 void SSAOManager::Begin(
-	ID3D11DeviceContext* deviceContext, 
-	ID3D11DepthStencilView* dsv, 
+	ID3D11DeviceContext* deviceContext,
+	ID3D11DepthStencilView* dsv,
 	const D3D11_VIEWPORT& vp)
 {
 	ID3D11RenderTargetView* pRTVs[1] = { m_pNormalDepthTexture->GetRenderTarget() };
@@ -75,10 +75,10 @@ void SSAOManager::BlurAmbientMap(ID3D11DeviceContext* deviceContext, SSAOEffect&
 	CD3D11_VIEWPORT vp(0.0f, 0.0f, (float)m_pAOTempTexture->GetWidth(), (float)m_pAOTempTexture->GetHeight());
 	ssaoEffect.SetBlurRadius(m_BlurRadius);
 	ssaoEffect.SetBlurWeight(m_BlurWeights);
-	for (uint32_t i = 0; i < m_BlurCount; ++i) 
+	for (uint32_t i = 0; i < m_BlurCount; ++i)
 	{
 		ssaoEffect.BilateralBlurX(deviceContext, m_pAOTexture->GetShaderResource(), m_pNormalDepthTexture->GetShaderResource(), m_pAOTempTexture->GetRenderTarget(), vp);
-		ssaoEffect.BilateralBlurX(deviceContext, m_pAOTempTexture->GetShaderResource(), m_pNormalDepthTexture->GetShaderResource(), m_pAOTexture->GetRenderTarget(), vp);
+		ssaoEffect.BilateralBlurY(deviceContext, m_pAOTempTexture->GetShaderResource(), m_pNormalDepthTexture->GetShaderResource(), m_pAOTexture->GetRenderTarget(), vp);
 	}
 }
 
@@ -124,7 +124,7 @@ void SSAOManager::BuildOffsetVectors()
 	std::mt19937 randEngine;
 	randEngine.seed(std::random_device()());
 	std::uniform_real_distribution<float> randF(0.25f, 1.0f);
-	for (int i = 0; i < 14; ++i) 
+	for (int i = 0; i < 14; ++i)
 	{
 		// 创建长度范围在[0.25, 1.0]内的随机长度的向量
 		float s = randF(randEngine);
@@ -148,7 +148,7 @@ void SSAOManager::BuildRandomVectorTexture(ID3D11Device* device)
 	std::mt19937 randEngine;
 	randEngine.seed(std::random_device()());
 	std::uniform_real_distribution<float> randf(0.0f, 1.0f);
-	for(int i=0;i<256*256;++i)
+	for (int i = 0; i < 256 * 256; ++i)
 	{
 		randomVectors[i] = XMCOLOR(randf(randEngine), randf(randEngine), randf(randEngine), 0.0f);
 	}

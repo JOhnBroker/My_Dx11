@@ -97,8 +97,8 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	// 创建像素着色器
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl",
 		device, "ShadowPS", "ps_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugPS", L"HLSL\\Shadow.hlsl",
-		device, "DebugPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugShadowPS", L"HLSL\\Shadow.hlsl",
+		device, "DebugShadowPS", "ps_5_0"));
 
 	// 创建通道Pass
 	EffectPassDesc passDesc;
@@ -111,8 +111,8 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip")->SetRasterizerState(RenderStates::RSShadow.Get());
 
 	passDesc.nameVS = "FullScreenTriangleTexcoordVS";
-	passDesc.namePS = "DebugPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Debug", device, &passDesc));
+	passDesc.namePS = "DebugShadowPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("DebugShadow", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
@@ -138,7 +138,6 @@ void ShadowEffect::SetRenderAlphaClip()
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
-	//pImpl->m_pEffectHelper->GetConstantBufferVariable("clipValue")->SetFloat(0.1f);
 }
 
 void ShadowEffect::RenderDepthToTexture(
@@ -149,7 +148,7 @@ void ShadowEffect::RenderDepthToTexture(
 {
 	deviceContext->IASetInputLayout(nullptr);
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Debug");
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DebugShadow");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", input);
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 	deviceContext->OMSetRenderTargets(1, &output, nullptr);

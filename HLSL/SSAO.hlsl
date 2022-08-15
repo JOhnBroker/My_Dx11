@@ -24,7 +24,7 @@ cbuffer CBChangesEveryObjectDrawing : register(b0)
     matrix g_WorldInvTransposeView;
 }
 
-cbuffer CBChangesOnResize : register(b1)
+cbuffer CBChangesOnResize : register(b2)
 {
     // SSAO
     matrix g_ViewToTexSpace;        // Proj * Texture
@@ -32,7 +32,7 @@ cbuffer CBChangesOnResize : register(b1)
     float2 g_TexelSize;             // (1.0f / W, 1.0f / H)
 }
 
-cbuffer CBChangesRarely : register(b2)
+cbuffer CBChangesRarely : register(b3)
 {
     float4 g_OffsetVectors[14];
     
@@ -65,7 +65,7 @@ struct VertexPosHVNormalTex
     float4 posH : SV_Position;
     float3 posV : POSITION;
     float3 normalV : NORMAL;
-    float2 tex : TEXCOORD;
+    float2 tex : TEXCOORD0;
 };
 
 VertexPosHVNormalTex GeometryVS(VertexPosNormalTex vIn)
@@ -73,7 +73,7 @@ VertexPosHVNormalTex GeometryVS(VertexPosNormalTex vIn)
     VertexPosHVNormalTex vOut;
     
     vOut.posH = mul(float4(vIn.posL, 1.0f), g_WorldViewProj);
-    vOut.posV = mul(float4(vIn.posL, 1.0f), g_WorldView);
+    vOut.posV = mul(float4(vIn.posL, 1.0f), g_WorldView).xyz;
     vOut.normalV = mul(vIn.normalL, (float3x3) g_WorldInvTransposeView);
     vOut.tex = vIn.tex;
     
@@ -116,7 +116,7 @@ float OcclusionFunction(float distZ)
     {
         float fadeLength = g_OcclusionFadeEnd - g_OcclusionFadeStart;
         // 当distZ由g_OcclusionFadeStart逐渐趋向于g_OcclusionFadeEnd，遮蔽值由1线性减小至0
-        occlusion = saturate(g_OcclusionFadeEnd - distZ) / fadeLength;
+        occlusion = saturate((g_OcclusionFadeEnd - distZ) / fadeLength);
     }
         return occlusion;
 }
@@ -162,8 +162,8 @@ float4 SSAO_PS(float4 posH:SV_Position,
     
     // 
     // 获取随机向量并从[0, 1]^3映射到[-1, 1]^3
-    float3 randVec = g_RandomVecMap.SampleLevel(g_SamRandomVec, 4.0 * texcoord, 0.0f);
-    randVec = 2.0f * randVec + 1.0f;
+    float3 randVec = g_RandomVecMap.SampleLevel(g_SamRandomVec, 4.0f * texcoord, 0.0f).xyz;
+    randVec = 2.0f * randVec - 1.0f;
     
     float occlusionSum = 0.0f;
     
@@ -188,7 +188,7 @@ float4 SSAO_PS(float4 posH:SV_Position,
         // 测试点r是否遮蔽p
         //   - 点积dot(n, normalize(r - p))度量遮蔽点r到平面(p, n)前侧的距离。
         //   - 遮蔽权重的大小取决于遮蔽点与其目标点之间的距离。
-        float distZ = p.z - q.z;
+        float distZ = p.z - r.z;
         float dp = max(dot(n, normalize(r - p)), 0.0f);
         float occlusion = dp * OcclusionFunction(distZ);
         
@@ -209,10 +209,10 @@ float4 BilateralPS(float4 posH : SV_Position,
                     float2 texcoord : TEXCOORD) : SV_Target
 {
     // 总是把中心值加进去计算
-    float color = s_BlurWeights[g_BlurRadius] * g_InputImage.SampleLevel(g_SamBlur, texcoord, 0.0f);
+    float4 color = s_BlurWeights[g_BlurRadius] * g_InputImage.SampleLevel(g_SamBlur, texcoord, 0.0f);
     float totalWeight = s_BlurWeights[g_BlurRadius];
     
-    float4 centerNormalDepth = g_NormalDepthMap.SampleLevel(g_SamNormalDepth, texcoord, 0.0f);
+    float4 centerNormalDepth = g_NormalDepthMap.SampleLevel(g_SamBlur, texcoord, 0.0f);
     // 分拆出观察空间的法向量和深度
     float3 centerNormal = centerNormalDepth.xyz;
     float centerDepth = centerNormalDepth.w;
@@ -224,10 +224,10 @@ float4 BilateralPS(float4 posH : SV_Position,
             continue;
 #if defined BLUR_HORZ
         float2 offset = float2(g_TexelSize.x * i, 0.0f);
-        float4 neighborNormalDepth = g_NormalDepthMap.SampleLevel(g_SamNormalDepth, texcoord + offset, 0.0f);
+        float4 neighborNormalDepth = g_NormalDepthMap.SampleLevel(g_SamBlur, texcoord + offset, 0.0f);
 #else
         float2 offset = float2(0.0f, g_TexelSize.y * i);
-        float4 neighborNormalDepth = g_NormalDepthMap.SampleLevel(g_SamNormalDepth, texcoord + offset, 0.0f);
+        float4 neighborNormalDepth = g_NormalDepthMap.SampleLevel(g_SamBlur, texcoord + offset, 0.0f);
 #endif
         float3 neighborNormal = neighborNormalDepth.xyz;
         float neighborDepth = neighborNormalDepth.w;
@@ -236,7 +236,7 @@ float4 BilateralPS(float4 posH : SV_Position,
         // 因此不考虑加入当前相邻值
         // 中心值直接加入
         
-        if (dot(neighborNormal, centerNormal) >= 0.0f && abs(neighborDepth - centerDepth) <= 0.2f)
+        if (dot(neighborNormal, centerNormal) >= 0.8f && abs(neighborDepth - centerDepth) <= 0.2f)
         {
             float weight = s_BlurWeights[i + g_BlurRadius];
             // 将相邻像素加入进行模糊

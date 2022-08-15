@@ -14,6 +14,7 @@ cbuffer CBChangesEveryDrawing : register(b0)
 {
     matrix g_World;
     matrix g_WorldInvTranspose;
+    matrix g_WorldViewProj;
 }
 
 cbuffer CBChangesEveryObjectDrawing : register(b1)
@@ -72,10 +73,10 @@ VertexOutput BasicVS(VertexInput vIn)
     vector posW = mul(float4(vIn.posL, 1.0f), g_World);
     
     vOut.posW = posW.xyz;
-    vOut.posH = mul(posW, g_ViewProj);
+    vOut.posH = mul(float4(vIn.posL, 1.0f), g_WorldViewProj);
     vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
 #if defined USE_NORMAL_MAP
-    vOut.tangentW = mul(vIn.tangentL, g_World);
+    vOut.tangentW = float4(mul(vIn.tangentL.xyz, (float3x3) g_World), vIn.tangentL.w);
 #endif
     vOut.tex = vIn.tex;
     vOut.ShadowPosH = mul(posW, g_ShadowTransform);
@@ -94,18 +95,20 @@ VertexOutput BasicVS(VertexInput vIn)
 // 像素着色器
 float4 BasicPS(VertexOutput pIn) : SV_Target
 {
-    uint texWidth, texHeight;
-    g_DiffuseMap.GetDimensions(texWidth, texHeight);
-    float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    //uint texWidth, texHeight;
+    //g_DiffuseMap.GetDimensions(texWidth, texHeight);
+    //float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    //
+    //[flatten]
+    //if (texWidth > 0 && texHeight > 0)
+    //{
+    //    // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
+    //    texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
+    //    clip(texColor.a - 0.1f);
+    //}
+    float4 texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
+    clip(texColor.a - 0.1f);
     
-    [flatten]
-    if (texWidth > 0 && texHeight > 0)
-    {
-        // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
-        texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
-        clip(texColor.a - 0.1f);
-    }
-
     // 标准化法向量
     pIn.normalW = normalize(pIn.normalW);
 

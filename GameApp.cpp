@@ -48,6 +48,7 @@ void GameApp::OnResize()
 	m_pDepthTexture = std::make_unique<Depth2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
 	m_pLitTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_pDebugAOTexture = std::make_unique<Texture2D>(m_pd3dDevice.Get(), m_ClientWidth / 2, m_ClientHeight / 2, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_SSAOManager.OnResize(m_pd3dDevice.Get(), m_ClientWidth, m_ClientHeight);
 
 	m_pDepthTexture->SetDebugObjectName("DepthTexture");
 	m_pLitTexture->SetDebugObjectName("LitTexture");
@@ -58,7 +59,7 @@ void GameApp::OnResize()
 		m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 1.0f, 1000.0f);
 		m_pCamera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
 		m_BasicEffect.SetProjMatrix(m_pCamera->GetProjMatrixXM());
-		m_SkyboxEffect.SetProjMatrix(m_pCamera->GetProjMatrixXM());
+		m_SSAOEffect.SetProjMatrix(m_pCamera->GetProjMatrixXM());
 	}
 
 }
@@ -72,15 +73,15 @@ void GameApp::UpdateScene(float dt)
 		ImGui::Checkbox("Animate Light", &m_UpdateLight);
 		ImGui::Checkbox("Enable Normal map", &m_EnableNormalMap);
 		ImGui::Separator();
-		if (ImGui::Checkbox("Enable SSAO", &m_EnableSSAO)) 
+		if (ImGui::Checkbox("Enable SSAO", &m_EnableSSAO))
 		{
-			if (!m_EnableSSAO) 
+			if (!m_EnableSSAO)
 			{
-				m_EnableSSAO = false;
+				m_EnableDebug = false;
 			}
 			m_BasicEffect.SetSSAOEnabled(m_EnableSSAO);
 		}
-		if (m_EnableSSAO) 
+		if (m_EnableSSAO)
 		{
 			ImGui::SliderFloat("Epsilon", &m_SSAOManager.m_SurfaceEpsilon, 0.0f, 0.1f, "%.2f");
 			static float range = m_SSAOManager.m_OcclusionFadeEnd - m_SSAOManager.m_OcclusionFadeStart;
@@ -143,7 +144,7 @@ void GameApp::DrawScene()
 		m_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_pRenderTargetViews[m_FrameCount].ReleaseAndGetAddressOf());
 	}
 
-	if (m_EnableSSAO) 
+	if (m_EnableSSAO)
 	{
 		RenderSSAO();
 	}
@@ -153,17 +154,17 @@ void GameApp::DrawScene()
 
 	if (m_EnableDebug)
 	{
-		if (ImGui::Begin("Debug Buffer", &m_EnableDebug))
+		if (ImGui::Begin("SSAO Buffer", &m_EnableDebug))
 		{
 			CD3D11_VIEWPORT vp(0.0f, 0.0f, (float)m_pDebugAOTexture->GetWidth(), (float)m_pDebugAOTexture->GetHeight());
-			m_ShadowEffect.RenderDepthToTexture(
+			m_SSAOEffect.RenderAmbientOcclusionToTexture(
 				m_pd3dImmediateContext.Get(),
-				m_pShadowMapTexture->GetShaderResource(),
+				m_SSAOManager.GetAmbientOcclusionTexture(),
 				m_pDebugAOTexture->GetRenderTarget(),
 				vp);
 			ImVec2 winSize = ImGui::GetWindowSize();
-			float smaller = (std::min)(winSize.x - 20, winSize.y - 36);
-			ImGui::Image(m_pDebugAOTexture->GetShaderResource(), ImVec2(smaller, smaller));
+			float smaller = (std::min)((winSize.x - 20) / AspectRatio(), winSize.y - 36);
+			ImGui::Image(m_pDebugAOTexture->GetShaderResource(), ImVec2(smaller * AspectRatio(), smaller));
 		}
 		ImGui::End();
 	}
@@ -175,6 +176,22 @@ void GameApp::DrawScene()
 
 	HR(m_pSwapChain->Present(0, m_IsDxgiFlipModel ? DXGI_PRESENT_ALLOW_TEARING : 0));
 
+}
+
+void GameApp::RenderSSAO()
+{
+	// Pass1 绘制场景 生成法线深度图
+	m_SSAOManager.Begin(m_pd3dImmediateContext.Get(), m_pDepthTexture->GetDepthStencil(), m_pCamera->GetViewPort());
+	{
+		m_SSAOEffect.SetRenderNormalDepthMap(m_pd3dImmediateContext.Get());
+		DrawScene<SSAOEffect>(m_SSAOEffect);
+	}
+	m_SSAOManager.End(m_pd3dImmediateContext.Get());
+	// Pass2 生产AO
+	m_SSAOManager.RenderToSSAOTexture(m_pd3dImmediateContext.Get(), m_SSAOEffect, *m_pCamera);
+
+	// Pass3 混合
+	m_SSAOManager.BlurAmbientMap(m_pd3dImmediateContext.Get(), m_SSAOEffect);
 }
 
 void GameApp::RenderShadow()
@@ -192,7 +209,7 @@ void GameApp::RenderForward()
 	float black[4] = { 0.0f,0.0f,0.0f,1.0f };
 	ID3D11RenderTargetView* pRTVs[]{ m_pLitTexture->GetRenderTarget() };
 	m_pd3dImmediateContext->ClearRenderTargetView(pRTVs[0], black);
-	if (!m_EnableSSAO) 
+	if (!m_EnableSSAO)
 	{
 		m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthTexture->GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	}
@@ -241,21 +258,7 @@ void GameApp::RenderSkybox()
 	m_SkyboxEffect.SetLitTexture(nullptr);
 	m_SkyboxEffect.Apply(m_pd3dImmediateContext.Get());
 }
-void GameApp::RenderSSAO()
-{
-	// Pass1 绘制场景 生成法线深度图
-	m_SSAOManager.Begin(m_pd3dImmediateContext.Get(), m_pDepthTexture->GetDepthStencil(), m_pCamera->GetViewPort());
-	{
-		m_SSAOEffect.SetRenderNormalDepthMap(m_pd3dImmediateContext.Get());
-		DrawScene<SSAOEffect>(m_SSAOEffect);
-	}
-	m_SSAOManager.End(m_pd3dImmediateContext.Get());
-	// Pass2 生产AO
-	m_SSAOManager.RenderToSSAOTexture(m_pd3dImmediateContext.Get(), m_SSAOEffect, *m_pCamera);
 
-	// Pass3 混合
-	m_SSAOManager.BlurAmbientMap(m_pd3dImmediateContext.Get(), m_SSAOEffect);
-}
 void GameApp::DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV)
 {
 	/*
@@ -365,9 +368,9 @@ bool GameApp::InitResource()
 	{
 		Model* pModel = m_ModelManager.CreateFromGeometry("Ground", Geometry::CreatePlane(XMFLOAT2(20.0f, 30.0f), XMFLOAT2(6.0f, 9.0f)));
 		pModel->SetDebugObjectName("Ground");
-		m_TextureManager.CreateTexture("Texture\\floor.dds", false, true);
+		m_TextureManager.CreateFromFile("Texture\\floor.dds", false, true);
 		pModel->materials[0].Set<std::string>("$Diffuse", "Texture\\floor.dds");
-		m_TextureManager.CreateTexture("Texture\\floor_nmap.dds");
+		m_TextureManager.CreateFromFile("Texture\\floor_nmap.dds");
 		pModel->materials[0].Set<std::string>("$Normal", "Texture\\floor_nmap.dds");
 		pModel->materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f));
 		pModel->materials[0].Set<XMFLOAT4>("$DiffuseColor", XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -379,9 +382,9 @@ bool GameApp::InitResource()
 	{
 		Model* pModel = m_ModelManager.CreateFromGeometry("Cylinder", Geometry::CreateCylinder(0.5f, 3.0f));
 		pModel->SetDebugObjectName("Cylinder");
-		m_TextureManager.CreateTexture("Texture\\bricks.dds", false, true);
+		m_TextureManager.CreateFromFile("Texture\\bricks.dds", false, true);
 		pModel->materials[0].Set<std::string>("$Diffuse", "Texture\\bricks.dds");
-		m_TextureManager.CreateTexture("Texture\\bricks_nmap.dds");
+		m_TextureManager.CreateFromFile("Texture\\bricks_nmap.dds");
 		pModel->materials[0].Set<std::string>("$Normal", "Texture\\bricks_nmap.dds");
 		pModel->materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f));
 		pModel->materials[0].Set<XMFLOAT4>("$DiffuseColor", XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -396,7 +399,7 @@ bool GameApp::InitResource()
 	{
 		Model* pModel = m_ModelManager.CreateFromGeometry("Sphere", Geometry::CreateSphere(0.5f));
 		pModel->SetDebugObjectName("Sphere");
-		m_TextureManager.CreateTexture("Texture\\stone.dds", false, true);
+		m_TextureManager.CreateFromFile("Texture\\stone.dds", false, true);
 		pModel->materials[0].Set<std::string>("$Diffuse", "Texture\\stone.dds");
 		pModel->materials[0].Set<XMFLOAT4>("$AmbientColor", XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f));
 		pModel->materials[0].Set<XMFLOAT4>("$DiffuseColor", XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -409,23 +412,23 @@ bool GameApp::InitResource()
 		}
 	}
 	{
-		Model* pModel = m_ModelManager.CreateFromFile("Model\\tree.obj");
-		pModel->SetDebugObjectName("Tree");
+		Model* pModel = m_ModelManager.CreateFromFile("Model\\house.obj");
+		pModel->SetDebugObjectName("House");
 		m_House.SetModel(pModel);
 
-		XMMATRIX S = XMMatrixScaling(0.005f, 0.005f, 0.005f);
+		XMMATRIX S = XMMatrixScaling(0.01f, 0.01f, 0.01f);
 		BoundingBox houseBox = m_House.GetBoundingBox();
 		houseBox.Transform(houseBox, S);
 
 		Transform& houseTransform = m_House.GetTransform();
-		houseTransform.SetScale(0.005f, 0.005f, 0.005f);
+		houseTransform.SetScale(0.01f, 0.01f, 0.01f);
 		houseTransform.SetPosition(0.0f, -(houseBox.Center.y - houseBox.Extents.y + 3.0f), 0.0f);
 	}
 	{
 		Model* pModel = m_ModelManager.CreateFromGeometry("Skybox", Geometry::CreateBox());
 		pModel->SetDebugObjectName("Skybox");
 		m_Skybox.SetModel(pModel);
-		m_TextureManager.CreateTexture("Texture\\desertcube1024.dds", false, true);
+		m_TextureManager.CreateFromFile("Texture\\desertcube1024.dds", false, true);
 		pModel->materials[0].Set<std::string>("$Skybox", "Texture\\desertcube1024.dds");
 	}
 

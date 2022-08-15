@@ -123,6 +123,9 @@
     <ClCompile Include="SSAOManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ImGuiLog.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -244,6 +247,9 @@
     </ClInclude>
     <ClInclude Include="HLSL\SSAO.hlsl">
       <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiLog.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

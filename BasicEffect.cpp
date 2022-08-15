@@ -97,26 +97,42 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	D3D_SHADER_MACRO defines[] =
 	{
 		{"USE_NORMAL_MAP",""},
+		{"USE_SSAO_MAP",""},
 		{nullptr,nullptr}
 	};
 
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
 
 	// 创建顶点着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL\\Basic.hlsl", 
-		device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf());
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL\\Basic.hlsl",
+		device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 	// 创建顶点输入布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL\\Basic.hlsl", 
-		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf());
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicSsaoVS", L"HLSL\\Basic.hlsl",
+		device, "BasicVS", "vs_5_0", defines + 1));
+
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapSsaoVS", L"HLSL\\Basic.hlsl",
+		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
+
 	HR(device->CreateInputLayout(VertexPosNormalTangentTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTangentTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTangentTexLayout.GetAddressOf()));
 
+	defines[1] = D3D_SHADER_MACRO{};
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL\\Basic.hlsl",
+		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
+
+	defines[1] = { "USE_SSAO_MAP","" };
+
 	// 创建像素着色器
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL\\Basic.hlsl", 
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL\\Basic.hlsl",
 		device, "BasicPS", "ps_5_0");
+	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicSsaoPS", L"HLSL\\Basic.hlsl",
+		device, "BasicPS", "ps_5_0", defines + 1);
+	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapSsaoPS", L"HLSL\\Basic.hlsl",
+		device, "BasicPS", "ps_5_0", defines);
+	defines[1] = D3D_SHADER_MACRO{};
 	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL\\Basic.hlsl",
 		device, "BasicPS", "ps_5_0", defines);
 
@@ -129,6 +145,16 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	passDesc.nameVS = "NormalMapVS";
 	passDesc.namePS = "NormalMapPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMap", device, &passDesc));
+
+	passDesc.nameVS = "BasicSsaoVS";
+	passDesc.namePS = "BasicSsaoPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicSsao", device, &passDesc));
+	passDesc.nameVS = "NormalMapSsaoVS";
+	passDesc.namePS = "NormalMapSsaoPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMapSsao", device, &passDesc));
+
+	pImpl->m_pEffectHelper->GetEffectPass("BasicSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
+	pImpl->m_pEffectHelper->GetEffectPass("NormalMapSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
@@ -160,7 +186,7 @@ void BasicEffect::SetMaterial(const Material& material)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 	pStr = material.TryGet<std::string>("$Normal");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
@@ -200,6 +226,36 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 	return input;
 }
 
+void BasicEffect::SetRenderDefault()
+{
+	if (pImpl->m_AmbientOcclusionMapEnabled)
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("BasicSsao");
+	}
+	else
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
+	}
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	pImpl->m_NormalmapEnabled = false;
+}
+
+void BasicEffect::SetRenderWithNormalMap()
+{
+	if (pImpl->m_AmbientOcclusionMapEnabled)
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("NormalMapSsao");
+	}
+	else
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("NormalMap");
+	}
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTangentTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	pImpl->m_NormalmapEnabled = true;
+}
+
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
 {
 	XMStoreFloat4x4(&pImpl->m_World, W);
@@ -221,11 +277,6 @@ void XM_CALLCONV BasicEffect::SetShadowTransformMatrix(DirectX::FXMMATRIX S)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowTransform")->SetFloatMatrix(4, 4, (const float*)&shadowTransform);
 }
 
-void BasicEffect::SetShadowEnabled(bool enabled)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EnableShadow")->SetSInt(enabled);
-}
-
 void BasicEffect::SetDirLight(uint32_t pos, const DirectionalLight& dirLight)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
@@ -241,9 +292,9 @@ void BasicEffect::SetSpotLight(uint32_t pos, const SpotLight& spotLight)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
 }
 
-void BasicEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
+void BasicEffect::SetShadowEnabled(bool enabled)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EyePosW")->SetFloatVector(3, reinterpret_cast<const float*>(&eyePos));
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EnableShadow")->SetSInt(enabled);
 }
 
 void BasicEffect::SetReflectionEnabled(bool enabled)
@@ -281,11 +332,6 @@ void BasicEffect::SetFogRange(float fogRange)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FogRange")->SetFloat(fogRange);
 }
 
-void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
-{
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
-}
-
 void BasicEffect::SetWavesStates(bool enabled, float gridSpatialStep)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_GridSpatialStep")->SetFloat(gridSpatialStep);
@@ -312,20 +358,14 @@ void BasicEffect::SetTextureAmbientOcclusion(ID3D11ShaderResourceView* textureAm
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_AmbientOcclusionMap", textureAmbientOcclusion);
 }
 
-void BasicEffect::SetRenderDefault()
+void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
-	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	pImpl->m_NormalmapEnabled = false;
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TexCube", textureCube);
 }
 
-void BasicEffect::SetRenderWithNormalMap()
+void BasicEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("NormalMap");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTangentTexLayout;
-	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	pImpl->m_NormalmapEnabled = true;
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EyePosW")->SetFloatVector(3, reinterpret_cast<const float*>(&eyePos));
 }
 
 void BasicEffect::SetRenderTransparent()
@@ -434,15 +474,18 @@ void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)
 	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
 
 	XMMATRIX VP = V * P;
+	XMMATRIX WVP = W * V * P;
 	XMMATRIX WInvT = XMath::InverseTranspose(W);
 
 	W = XMMatrixTranspose(W);
 	VP = XMMatrixTranspose(VP);
+	WVP = XMMatrixTranspose(WVP);
 	WInvT = XMMatrixTranspose(WInvT);
 
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (FLOAT*)&W);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&WVP);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
 
 	if (pImpl->m_pCurrEffectPass)
 	{
