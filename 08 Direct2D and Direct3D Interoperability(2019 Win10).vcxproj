@@ -273,6 +273,55 @@
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSL\Tessellation.hlsli">
+      <FileType>Document</FileType>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSL\Tessellation_BezierCurve_DS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_BezierSurface_DS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_BezierSurface_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Isoline_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Point2Square_GS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_PS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Quad_DS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Quad_Even_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Quad_Integer_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Quad_Odd_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Transform_VS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Triangle_DS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_Triangle_HS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Tessellation_VS.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
