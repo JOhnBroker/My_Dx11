@@ -23,31 +23,17 @@
 #include <random>
 #include <algorithm>
 
+#include <sstream>
+
 #define BITONIC_BLOCK_SIZE 512
 
 #define TRANSPOSE_BLOCK_SIZE 16
 
-struct FragmentData
-{
-	uint32_t color;
-	float depth;
-};
-
-struct FLStaticNode
-{
-	FragmentData data;
-	uint32_t next;
-};
-
 class GameApp : public D3DApp
 {
 public:
-	// 摄像机模式
-	enum class CameraMode { FirstPerson, ThirdPerson, Free };
-	// 球体的模式
-	enum class SphereMode { None, Reflection, Refraction };
-	// 地面的模式
-	enum class GroundMode { Floor, Stones };
+	enum class TessellationMode { Triangle, Quad, BezierCurve, BezierSurface };
+	enum class PartitionMode { Integer, Odd, Even };
 
 public:
 	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight);
@@ -58,69 +44,75 @@ public:
 	void UpdateScene(float dt);
 	void DrawScene();
 
+	void UpdateTriangle();
+	void UpdateQuad();
+	void UpdateBezierCurve();
+	void UpdateBezierSurface();
+
+	void DrawTriangle();
+	void DrawQuad();
+	void DrawBezierCurve();
+	void DrawBezierSurface();
+
 	void RenderSSAO();
 	void RenderShadow();
 	void RenderForward();
 	void RenderSkybox();
 
-	template<class Effect>
-	void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})
-	{
-		// 有法线贴图
-		{
-			m_Ground.Draw(m_pd3dImmediateContext.Get(), effect);
+	//template<class Effect>
+	//void DrawScene(Effect& effect, std::function<void(Effect&, ID3D11DeviceContext*)>fun = [](Effect&, ID3D11DeviceContext*) {})
+	//{
+	//	// 有法线贴图
+	//	{
+	//		m_Ground.Draw(m_pd3dImmediateContext.Get(), effect);
+	//
+	//		for (auto& cylinder : m_Cylinders)
+	//		{
+	//			cylinder.Draw(m_pd3dImmediateContext.Get(), effect);
+	//		}
+	//	}
+	//
+	//	// 没有法线贴图
+	//	fun(effect, m_pd3dImmediateContext.Get());
+	//	// 石球
+	//	for (auto& sphere : m_Spheres)
+	//	{
+	//		sphere.Draw(m_pd3dImmediateContext.Get(), effect);
+	//	}
+	//	// 房屋
+	//	m_House.Draw(m_pd3dImmediateContext.Get(), effect);
+	//};
 
-			for (auto& cylinder : m_Cylinders)
-			{
-				cylinder.Draw(m_pd3dImmediateContext.Get(), effect);
-			}
-		}
-
-		// 没有法线贴图
-		fun(effect, m_pd3dImmediateContext.Get());
-		// 石球
-		for (auto& sphere : m_Spheres)
-		{
-			sphere.Draw(m_pd3dImmediateContext.Get(), effect);
-		}
-		// 房屋
-		m_House.Draw(m_pd3dImmediateContext.Get(), effect);
-	};
 private:
 	bool InitResource();
 	void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 
 private:
-	TextureManager m_TextureManager;
-	ModelManager m_ModelManager;
-	SSAOManager m_SSAOManager;
+	TessellationMode m_TessellationMode = TessellationMode::Triangle;
+	PartitionMode m_PartitionMode = PartitionMode::Integer;
 
-	bool m_EnableSSAO = true;
-	bool m_UpdateLight = true;
-	bool m_EnableNormalMap = true;
-	bool m_EnableDebug = true;
+	int m_ChosenBezPoint = -1;
+	ComPtr<ID3D11Buffer> m_pBezCurveVB;
+	DirectX::XMFLOAT3 m_BezPoints[10] = {};
+	float m_IsolineEdgeTess[2] = { 1.0f,64.0f };
 
-	BasicEffect m_BasicEffect;
-	SkyBoxEffect m_SkyboxEffect;
-	ShadowEffect m_ShadowEffect;
-	SSAOEffect m_SSAOEffect;
+	ComPtr<ID3D11Buffer> m_pTriangleVB;
+	float m_TriEdgeTess[3] = { 4.0f,4.0f,4.0f };
+	float m_TriInsideTess = 4.0f;
 
-	GameObject m_Ground;
-	GameObject m_Cylinders[10];
-	GameObject m_Spheres[10];
-	GameObject m_House;
-	GameObject m_Skybox;
+	ComPtr<ID3D11Buffer> m_pQuadVB;
+	float m_QuadEdgeTess[4] = { 4.0f,4.0f,4.0f,4.0f };
+	float m_QuadInsideTess[2] = { 4.0f,4.0f };
 
-	std::unique_ptr<Depth2D> m_pDepthTexture;
-	std::unique_ptr<Texture2D> m_pLitTexture;
-	std::unique_ptr<Depth2D> m_pShadowMapTexture;
-	std::unique_ptr<Texture2D> m_pDebugAOTexture;
+	ComPtr<ID3D11Buffer> m_pBezSurfaceVB;
+	float m_QuadPatchEdgeTess[4] = { 25.0f,25.0f,25.0f,25.0f };
+	float m_QuadPatchInsideTess[2] = { 25.0f,25.0f };
+	float m_Phi = 3.14159f / 4, m_Theta = 0.0f, m_Radius = 30.0f;
 
-	DirectionalLight m_DirLights[3] = {};
-	DirectX::XMFLOAT3 m_OriginalLightDirs[3] = {};
+	ComPtr<ID3D11InputLayout> m_pInputLayout;
+	ComPtr<ID3D11RasterizerState> m_pRSWireFrame;
 
-	std::shared_ptr<FirstPersonCamera> m_pCamera;
-	FirstPersonCameraController m_CameraController;
+	std::unique_ptr<EffectHelper> m_pEffectHelper;
 };
 
 #endif

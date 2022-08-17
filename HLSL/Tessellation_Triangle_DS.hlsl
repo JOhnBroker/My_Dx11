@@ -1,5 +1,6 @@
 #include "Tessellation.hlsli"
 
+[domain("tri")]
 float4 DS(TriPatchTess patchTess,
     float3 weights :SV_DomainLocation,
     const OutputPatch<HullOut, 3> tri) : SV_Position
