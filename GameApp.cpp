@@ -1,6 +1,7 @@
 #include "GameApp.h"
 #include "XUtil.h"
 #include "DXTrace.h"
+#include <DirectXColors.h>
 using namespace DirectX;
 
 GameApp::GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight)
@@ -260,7 +261,7 @@ void GameApp::UpdateQuad()
 	ImGui::SliderFloat2("QuadInsideTess", m_QuadInsideTess, 1.0f, 10.0f, "%.1f");
 
 	m_pEffectHelper->GetConstantBufferVariable("g_QuadEdgeTess")->SetFloatVector(4, m_QuadEdgeTess);
-	m_pEffectHelper->GetConstantBufferVariable("g_QuadInsideTess")->SetFloatVector(4, m_QuadInsideTess);
+    m_pEffectHelper->GetConstantBufferVariable("g_QuadInsideTess")->SetFloatVector(2, m_QuadInsideTess);
 
 }
 
@@ -836,6 +837,7 @@ bool GameApp::InitResource()
 	passDesc.nameGS = "Tessellation_Point2Square_GS";
 	passDesc.namePS = "Tessellation_PS";
 	HR(m_pEffectHelper->AddEffectPass("Tessellation_Point2Square", m_pd3dDevice.Get(), &passDesc));
+    passDesc.nameGS = "";
 
 	passDesc.nameVS = "Tessellation_VS";
 	passDesc.nameHS = "Tessellation_Isoline_HS";
@@ -845,11 +847,11 @@ bool GameApp::InitResource()
 	m_pEffectHelper->GetEffectPass("Tessellation_BezierCurve")->SetRasterizerState(m_pRSWireFrame.Get());
 
 	passDesc.nameVS = "Tessellation_VS";
-	passDesc.nameHS = "Tessellation_Triangle_HS";
-	passDesc.nameDS = "Tessellation_Triangle_DS";
-	passDesc.namePS = "Tessellation_PS";
-	HR(m_pEffectHelper->AddEffectPass("Tessellation_Triangle", m_pd3dDevice.Get(), &passDesc));
-	m_pEffectHelper->GetEffectPass("Tessellation_Triangle")->SetRasterizerState(m_pRSWireFrame.Get());
+    passDesc.nameHS = "Tessellation_Triangle_HS";
+    passDesc.nameDS = "Tessellation_Triangle_DS";
+    passDesc.namePS = "Tessellation_PS";
+    HR(m_pEffectHelper->AddEffectPass("Tessellation_Triangle", m_pd3dDevice.Get(), &passDesc));
+    m_pEffectHelper->GetEffectPass("Tessellation_Triangle")->SetRasterizerState(m_pRSWireFrame.Get());
 
 	passDesc.nameVS = "Tessellation_VS";
 	passDesc.nameHS = "Tessellation_Quad_Integer_HS";
