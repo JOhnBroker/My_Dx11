@@ -125,6 +125,19 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 	defines[1] = { "USE_SSAO_MAP","" };
 
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessVS", L"HLSL\\Basic.hlsl",
+		device, "TessVS", "vs_5_0"));
+
+	// 创建外壳着色器
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessHS", L"HLSL\\Basic.hlsl",
+		device, "TessHS", "hs_5_0"));
+
+	// 创建域着色器
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessDS", L"HLSL\\Basic.hlsl",
+		device, "TessDS", "ds_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessSsaoDS", L"HLSL\\Basic.hlsl",
+		device, "TessDS", "ds_5_0", defines + 1));
+
 	// 创建像素着色器
 	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL\\Basic.hlsl",
 		device, "BasicPS", "ps_5_0");
@@ -153,8 +166,18 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 	passDesc.namePS = "NormalMapSsaoPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMapSsao", device, &passDesc));
 
+	passDesc.nameVS = "BasicTessVS";
+	passDesc.nameHS = "BasicTessHS";
+	passDesc.nameDS = "BasicTessSsaoDS";
+	passDesc.namePS = "NormalMapSsaoPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("TessSsao", device, &passDesc));
+	passDesc.nameDS = "BasicTessDS";
+	passDesc.namePS = "NormalMapPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Tess", device, &passDesc));
+
 	pImpl->m_pEffectHelper->GetEffectPass("BasicSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
 	pImpl->m_pEffectHelper->GetEffectPass("NormalMapSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
+	pImpl->m_pEffectHelper->GetEffectPass("TessSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
@@ -256,6 +279,27 @@ void BasicEffect::SetRenderWithNormalMap()
 	pImpl->m_NormalmapEnabled = true;
 }
 
+void BasicEffect::SetRenderWithDisplacementMap()
+{
+	if (pImpl->m_AmbientOcclusionMapEnabled)
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("TessSsao");
+	}
+	else
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Tess");
+	}
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTangentTexLayout;
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+	pImpl->m_NormalmapEnabled = true;
+}
+
+void BasicEffect::SetRasterizerMode(RasterizerMode mode)
+{
+	RenderStates::RSWireframe.Get();
+	pImpl->m_pCurrEffectPass->SetRasterizerState(mode == RasterizerMode::Wireframe ? RenderStates::RSWireframe.Get() : nullptr);
+}
+
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
 {
 	XMStoreFloat4x4(&pImpl->m_World, W);
@@ -290,11 +334,6 @@ void BasicEffect::SetPointLight(uint32_t pos, const PointLight& pointLight)
 void BasicEffect::SetSpotLight(uint32_t pos, const SpotLight& spotLight)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
-}
-
-void BasicEffect::SetShadowEnabled(bool enabled)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EnableShadow")->SetSInt(enabled);
 }
 
 void BasicEffect::SetReflectionEnabled(bool enabled)
@@ -356,6 +395,19 @@ void BasicEffect::SetSSAOEnabled(bool enabled)
 void BasicEffect::SetTextureAmbientOcclusion(ID3D11ShaderResourceView* textureAmbientOcclusion)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_AmbientOcclusionMap", textureAmbientOcclusion);
+}
+
+void BasicEffect::SetHeightScale(float scale)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_HeightScale")->SetFloat(scale);
+}
+
+void BasicEffect::SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxTessDistance")->SetFloat(maxTessDistance);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinTessDistance")->SetFloat(minTessDistance);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinTessFactor")->SetFloat(minTessFactor);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxTessFactor")->SetFloat(maxTessFactor);
 }
 
 void BasicEffect::SetTextureCube(ID3D11ShaderResourceView* textureCube)

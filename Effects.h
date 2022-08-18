@@ -21,6 +21,8 @@
 
 #include <GameObject.h>
 
+enum class RasterizerMode { Solid, Wireframe };
+
 class BasicEffect : public IEffect, public IEffectTransform,
 	public IEffectMaterial, public IEffectMeshData
 {
@@ -59,6 +61,13 @@ public:
 	void SetRenderDefault();
 	// 透明混合绘制
 	void SetRenderTransparent();
+	// 带法线/位移贴图的绘制
+	void SetRenderWithDisplacementMap();
+	// 带法线贴图绘制
+	void SetRenderWithNormalMap();
+
+	// 给当前Pass设置光栅化模式
+	void SetRasterizerMode(RasterizerMode mode);
 
 	// OIT pass1
 
@@ -86,21 +95,22 @@ public:
 		const D3D11_VIEWPORT& vp);
 
 	void SetTextureDisplacement(ID3D11ShaderResourceView* textureDisplacement);
-	// 带法线贴图绘制
-	void SetRenderWithNormalMap();
 
 	// 天空盒
 	void SetTextureCube(ID3D11ShaderResourceView* textureCube);
 
 	// 阴影
 	void XM_CALLCONV SetShadowTransformMatrix(DirectX::FXMMATRIX S);
-	void SetShadowEnabled(bool enabled);
 	void SetDepthBias(float bias);
 	void SetTextureShadowMap(ID3D11ShaderResourceView* textureShadowMap);
 
 	// SSAO
 	void SetSSAOEnabled(bool enabled);
 	void SetTextureAmbientOcclusion(ID3D11ShaderResourceView* textureAmbientOcclusion);
+
+	// 曲面细分
+	void SetHeightScale(float scale);
+	void SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor);
 
 	// 绘制实例
 	void DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& buffer, const GameObject& object, uint32_t numObject);
@@ -160,6 +170,11 @@ public:
 	void SetRenderDepthOnly();
 
 	void SetRenderAlphaClip();
+
+	// 曲面细分
+	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
+	void SetHeightScale(float scale);
+	void SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor);
 
 	void RenderDepthToTexture(ID3D11DeviceContext* deviceContext,
 		ID3D11ShaderResourceView* input,
@@ -284,7 +299,7 @@ private:
 
 
 class SSAOEffect :public IEffect, public IEffectTransform,
-	public IEffectMaterial, public IEffectMeshData 
+	public IEffectMaterial, public IEffectMeshData
 {
 public:
 	SSAOEffect();
@@ -307,6 +322,16 @@ public:
 
 	// Pass1 绘制观察空间法向量和深度贴图
 	void SetRenderNormalDepthMap(bool enableAlphaClip = false);
+
+	void SetRenderNormalDepthMapWithDisplacement(bool enableAlphaClip = false);
+
+	void SetRasterizerMode(RasterizerMode mode);
+
+	// 曲面细分
+	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
+	void SetHeightScale(float scale);
+	void SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor);
+
 
 	// Pass2 绘制SSAO图
 	void SetTextureRandomVec(ID3D11ShaderResourceView* textureRandomVec);

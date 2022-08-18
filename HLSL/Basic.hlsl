@@ -27,7 +27,11 @@ cbuffer CBChangesEveryFrame : register(b2)
     matrix g_ViewProj;
     matrix g_ShadowTransform; // ShadowView * ShadowProj * T
     float3 g_EyePosW;
-    float g_Pad;
+    float g_HeightScale;
+    float g_MaxTessDistance;
+    float g_MinTessDistance;
+    float g_MaxTessFactor;
+    float g_MinTessFactor;
 }
 
 cbuffer CBDrawingStates : register(b3)
@@ -52,6 +56,14 @@ struct VertexInput
     float2 tex : TEXCOORD;
 };
 
+struct TessVertexInput
+{
+    float3 posL : POSITION;
+    float3 normalL : NORMAL;
+    float4 tangentL : TANGENT;
+    float2 tex : TEXCOORD;
+};
+
 struct VertexOutput
 {
     float4 posH : SV_POSITION;
@@ -62,9 +74,41 @@ struct VertexOutput
 #endif
     float2 tex : TEXCOORD0;
     float4 ShadowPosH : TEXCOORD1;
-#if defined USE_SSAO_MAP
     float4 SSAOPosH : TEXCOORD2;
-#endif
+};
+
+struct TessVertexOut
+{
+    float3 posW : POSITION;
+    float3 normalW : NORMAL;
+    float4 tangentW : TANGENT;
+    float2 tex : TEXCOORD0;
+    float tessFactor : TESS;
+};
+
+struct PatchTess
+{
+    float edgeTess[3] : SV_TessFactor;
+    float InsideTess : SV_InsideTessFactor;
+};
+
+struct HullOut
+{
+    float3 posW : POSITION;
+    float3 normalW : NORMAL;
+    float4 tangentW : TANGENT;
+    float2 tex : TEXCOORD;
+};
+
+struct DomainOutput
+{
+    float4 posH : SV_Position;
+    float3 posW : POSITION;
+    float3 normalW : NORMAL;
+    float4 tangentW : TANGENT;
+    float2 tex : TEXCOORD0;
+    float4 ShadowPosH : TEXCOORD1;
+    float3 SSAOPosH : TEXCOORD2;
 };
 
 VertexOutput BasicVS(VertexInput vIn)
@@ -90,6 +134,97 @@ VertexOutput BasicVS(VertexInput vIn)
     vOut.SSAOPosH = (vOut.posH + float4(vOut.posH.w, -vOut.posH.w, 0.0f, 0.0f)) * float4(0.5f, -0.5f, 1.0f, 1.0f);
 #endif
     return vOut;
+}
+
+TessVertexOut TessVS(TessVertexInput vIn)
+{
+    TessVertexOut vOut;
+    
+    vOut.posW = mul(float4(vIn.posL, 1.0f), g_World).xyz;
+    vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
+    vOut.tangentW = float4(mul(vIn.tangentL.xyz, (float3x3) g_World), vIn.tangentL.w);
+    vOut.tex = vIn.tex;
+    
+    float d = distance(vOut.posW, g_EyePosW);
+    
+    // 标准化曲面细分因子
+    // tessFactor = 
+    //   0, d < g_MinTessDistance
+    //   (g_MinTessDistance - d) / (g_MinTessDistance - g_MaxTessDistance), g_MinTessDistance <= d <= g_MaxTessDistance
+    //   1, d > g_MaxTessDistance
+    float tess = saturate((g_MinTessDistance - d) / (g_MinTessDistance - g_MaxTessDistance));
+    
+    // [0, 1] --> [g_MinTessFactor, g_MaxTessFactor]
+    vOut.tessFactor = g_MinTessFactor + tess * (g_MaxTessFactor - g_MinTessFactor);
+    
+    return vOut;
+}
+
+PatchTess PatchHS(InputPatch<TessVertexOut,3> patch,
+                    uint patchID : SV_PrimitiveID)
+{
+    PatchTess pt;
+    
+    pt.edgeTess[0] = 0.5f * (patch[1].tessFactor + patch[2].tessFactor);
+    pt.edgeTess[1] = 0.5f * (patch[2].tessFactor + patch[0].tessFactor);
+    pt.edgeTess[2] = 0.5f * (patch[0].tessFactor + patch[1].tessFactor);
+    pt.InsideTess = pt.edgeTess[0];
+    
+    return pt;
+}
+
+[domain("tri")]
+[partitioning("fractional_odd")]
+[outputtopology("triangle_cw")]
+[outputcontrolpoints(3)]
+[patchconstantfunc("PatchHS")]
+HullOut TessHS(InputPatch<TessVertexOut,3> patch,
+    uint i:SV_OutputControlPointID,
+    uint patchID : SV_PrimitiveID)
+{
+    HullOut hOut;
+    
+    hOut.posW = patch[i].posW;
+    hOut.normalW = patch[i].normalW;
+    hOut.tangentW = patch[i].tangentW;
+    hOut.tex = patch[i].tex;
+    
+    return hOut;
+}
+
+[domain("tri")]
+DomainOutput TessDS(PatchTess patchTess,
+    float3 bary : SV_DomainLocation,
+    const OutputPatch<HullOut, 3> tri)
+{
+    DomainOutput dOut;
+    
+    dOut.posW       = bary.x * tri[0].posW + bary.y * tri[1].posW + bary.z * tri[2].posW;
+    dOut.normalW    = bary.x * tri[0].normalW + bary.y * tri[1].normalW + bary.z * tri[2].normalW;
+    dOut.tangentW   = bary.x * tri[0].tangentW + bary.y * tri[1].tangentW + bary.z * tri[2].tangentW;
+    dOut.tex        = bary.x * tri[0].tex + bary.y * tri[1].tex + bary.z * tri[2].tex;
+    
+    dOut.normalW = normalize(dOut.normalW);
+    
+    // 位移映射
+    
+    const float MipInterval = 20.0f;
+    float mipLevel = clamp((distance(dOut.posW, g_EyePosW) - MipInterval) / MipInterval, 0.0f, 6.0f);
+    
+    float h = g_NormalMap.SampleLevel(g_Sam, dOut.tex, mipLevel).a;
+
+    // 沿着法向量进行偏移
+    dOut.posW += (g_HeightScale * (h - 1.0f)) * dOut.normalW;
+    
+    // 生成投影纹理坐标
+    dOut.ShadowPosH = mul(float4(dOut.posW, 1.0f), g_ViewProj);
+    
+    dOut.posH = mul(float4(dOut.posW, 1.0f), g_ViewProj);
+    
+    // 从NDC坐标[-1, 1]^2变换到纹理空间坐标[0, 1]^2
+    dOut.SSAOPosH = (dOut.posH + float4(dOut.posH.w, -dOut.posH.w, 0.0f, 0.0f)) * float4(0.5f, -0.5f, 1.0f, 1.0f);
+    
+    return dOut;
 }
 
 // 像素着色器
@@ -124,10 +259,10 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     
     float ambientAccess = 1.0f;
     
-#if defined USE_SSAO_MAP
-    pIn.SSAOPosH /= pIn.SSAOPosH.w;
-    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
-#endif
+//#if defined USE_SSAO_MAP
+//    pIn.SSAOPosH /= pIn.SSAOPosH.w;
+//    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
+//#endif
     
     // 初始化为0 
     float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);

@@ -97,6 +97,16 @@ bool SSAOEffect::InitAll(ID3D11Device* device)
 		device, "SSAO_VS", "vs_5_0"));
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\SSAO.hlsl",
 		device, "FullScreenTriangleTexcoordVS", "vs_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_TessVS", L"HLSL\\SSAO.hlsl",
+		device, "TessVS", "vs_5_0"));
+
+	// 外壳着色器
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_TessHS", L"HLSL\\SSAO.hlsl",
+		device, "TessHS", "hs_5_0"));
+
+	// 域着色器
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SSAO_TessDS", L"HLSL\\SSAO.hlsl",
+		device, "TessDS", "ds_5_0"));
 
 	// 创建像素着色器
 	D3D_SHADER_MACRO defines[]
@@ -115,7 +125,14 @@ bool SSAOEffect::InitAll(ID3D11Device* device)
 	passDesc.nameVS = "SSAO_GeometryVS";
 	passDesc.namePS = "SSAO_GeometryPS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("SSAO_Geometry", device, &passDesc));
+	passDesc.nameVS = "SSAO_TessVS";
+	passDesc.nameHS = "SSAO_TessHS";
+	passDesc.nameDS = "SSAO_TessDS";
+	passDesc.namePS = "SSAO_GeometryPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("SSAO_Tess", device, &passDesc));
 	passDesc.nameVS = "SSAO_VS";
+	passDesc.nameHS = "";
+	passDesc.nameDS = "";
 	passDesc.namePS = "SSAO_PS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("SSAO", device, &passDesc));
 	passDesc.nameVS = "FullScreenTriangleTexcoordVS";
@@ -190,6 +207,8 @@ void SSAOEffect::SetMaterial(const Material& material)
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
+	pStr = material.TryGet<std::string>("$Normal");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput SSAOEffect::GetInputData(const MeshData& meshData)
@@ -217,6 +236,37 @@ void SSAOEffect::SetRenderNormalDepthMap(bool enableAlphaClip)
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("SSAO_Geometry");
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_pCurrEffectPass->PSGetParamByName("alphaClip")->SetUInt(enableAlphaClip);
+}
+
+void SSAOEffect::SetRenderNormalDepthMapWithDisplacement(bool enableAlphaClip)
+{
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("SSAO_Tess");
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+	pImpl->m_pCurrEffectPass->PSGetParamByName("alphaClip")->SetUInt(enableAlphaClip);
+}
+
+void SSAOEffect::SetRasterizerMode(RasterizerMode mode)
+{
+	pImpl->m_pCurrEffectPass->SetRasterizerState(mode == RasterizerMode::Wireframe ? RenderStates::RSWireframe.Get() : nullptr);
+}
+
+void SSAOEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EyePosW")->SetFloatVector(3, (FLOAT*)&eyePos);
+}
+
+void SSAOEffect::SetHeightScale(float scale)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_HeightScale")->SetFloat(scale);
+}
+
+void SSAOEffect::SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxTessDistance")->SetFloat(maxTessDistance);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinTessDistance")->SetFloat(minTessDistance);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinTessFactor")->SetFloat(minTessFactor);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxTessFactor")->SetFloat(maxTessFactor);
 }
 
 void SSAOEffect::SetTextureRandomVec(ID3D11ShaderResourceView* textureRandomVec)
@@ -356,13 +406,24 @@ void SSAOEffect::Apply(ID3D11DeviceContext* deviceContext)
 	XMMATRIX WV = W * V;
 	XMMATRIX WVP = WV * P;
 	XMMATRIX WInvTV = XMath::InverseTranspose(W) * V;
+	XMMATRIX WInvT = XMath::InverseTranspose(W);
+	XMMATRIX VP = V * P;
 
+	W = XMMatrixTranspose(W);
+	V = XMMatrixTranspose(V);
+	VP = XMMatrixTranspose(VP);
 	WV = XMMatrixTranspose(WV);
 	WInvTV = XMMatrixTranspose(WInvTV);
 	WVP = XMMatrixTranspose(WVP);
+	WInvT = XMMatrixTranspose(WInvT);
+
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (const FLOAT*)&W);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldView")->SetFloatMatrix(4, 4, (const FLOAT*)&WV);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&WVP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTransposeView")->SetFloatMatrix(4, 4, (const FLOAT*)&WInvTV);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (const FLOAT*)&WInvT);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_View")->SetFloatMatrix(4, 4, (const float*)&V);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (const float*)&VP);
 
 	static const XMMATRIX T = XMMATRIX
 	{

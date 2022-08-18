@@ -6,9 +6,10 @@
 #include "FullScreenTriangle.hlsl"
 
 Texture2D g_DiffuseMap : register(t0);
-Texture2D g_NormalDepthMap : register(t1);
-Texture2D g_RandomVecMap : register(t2);
-Texture2D g_InputImage : register(t3);
+Texture2D g_NormalMap : register(t1);
+Texture2D g_NormalDepthMap : register(t2);
+Texture2D g_RandomVecMap : register(t3);
+Texture2D g_InputImage : register(t4);
 
 SamplerState g_SamLinearWrap : register(s0);
 SamplerState g_SamLinearClamp : register(s1);
@@ -19,10 +20,24 @@ SamplerState g_SamBlur : register(s4);
 cbuffer CBChangesEveryObjectDrawing : register(b0)
 {
     // SSAO_NormalDepth 
+    matrix g_World;
     matrix g_WorldView;
     matrix g_WorldViewProj;
+    matrix g_WorldInvTranspose;
     matrix g_WorldInvTransposeView;
 }
+
+cbuffer CBChangesEveryFrame : register(b1)
+{
+    matrix g_View;
+    matrix g_ViewProj;
+    float3 g_EyePosW;
+    float g_HeightScale;
+    float g_MaxTessDistance;
+    float g_MinTessDistance;
+    float g_MinTessFactor;
+    float g_MaxTessFactor;
+};
 
 cbuffer CBChangesOnResize : register(b2)
 {
@@ -59,8 +74,21 @@ struct VertexPosNormalTex
     float3 normalL : NORMAL;
     float2 tex : TEXCOORD;
 };
+struct TessVertexOut
+{
+    float3 posW : POSITION;
+    float3 normalW : NORMAL;
+    float2 tex : TEXCOORD;
+    float tessFactor : TESS;
+};
 
-struct VertexPosHVNormalTex
+struct HullOut
+{
+    float3 posW : POSITION;
+    float3 normalW : NORMAL;
+    float2 tex : TEXCOORD;
+};
+struct VertexPosHVNormalVTex
 {
     float4 posH : SV_Position;
     float3 posV : POSITION;
@@ -68,9 +96,26 @@ struct VertexPosHVNormalTex
     float2 tex : TEXCOORD0;
 };
 
-VertexPosHVNormalTex GeometryVS(VertexPosNormalTex vIn)
+// 用于SSAO
+struct VertexIn
 {
-    VertexPosHVNormalTex vOut;
+    float3 posL : POSITION;
+    float3 ToFarPlaneIndex : NORMAL; // 仅使用x分量来进行对视锥体远平面顶点的索引
+    float2 tex : TEXCOORD;
+};
+
+struct VertexOut
+{
+    float4 posH : SV_POSITION;
+    float3 ToFarPlane : TEXCOORD0; // 远平面顶点坐标
+    float2 tex : TEXCOORD1;
+};
+
+// Pass1 几何Buffer生成
+
+VertexPosHVNormalVTex GeometryVS(VertexPosNormalTex vIn)
+{
+    VertexPosHVNormalVTex vOut;
     
     vOut.posH = mul(float4(vIn.posL, 1.0f), g_WorldViewProj);
     vOut.posV = mul(float4(vIn.posL, 1.0f), g_WorldView).xyz;
@@ -80,7 +125,105 @@ VertexPosHVNormalTex GeometryVS(VertexPosNormalTex vIn)
     return vOut;
 }
 
-float4 GeometryPS(VertexPosHVNormalTex pIn, uniform bool alphaClip):SV_Target
+TessVertexOut TessVS(VertexPosNormalTex vIn)
+{
+    TessVertexOut vOut;
+    
+    vOut.posW = mul(float4(vIn.posL, 1.0f), g_World).xyz;
+    vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
+    vOut.tex = vIn.tex;
+    
+    float d = distance(vOut.posW, g_EyePosW);
+    
+    float tess = saturate((g_MinTessDistance - d) / (g_MinTessDistance - g_MaxTessDistance));
+    
+    // [0, 1] --> [g_MinTessFactor, g_MaxTessFactor]
+    vOut.tessFactor = g_MinTessFactor + tess * (g_MaxTessFactor - g_MinTessFactor);
+    
+    return vOut;
+}
+
+struct PatchTess
+{
+    float edgeTess[3] : SV_TessFactor;
+    float InsideTess : SV_InsideTessFactor;
+};
+
+PatchTess PatchHS(InputPatch<TessVertexOut, 3> patch,
+                  uint patchID : SV_PrimitiveID)
+{
+    PatchTess pt;
+	
+    // 对每条边的曲面细分因子求平均值，并选择其中一条边的作为其内部的
+    // 曲面细分因子。基于边的属性来进行曲面细分因子的计算非常重要，这
+    // 样那些与多个三角形共享的边将会拥有相同的曲面细分因子，否则会导
+    // 致间隙的产生
+    pt.edgeTess[0] = 0.5f * (patch[1].tessFactor + patch[2].tessFactor);
+    pt.edgeTess[1] = 0.5f * (patch[2].tessFactor + patch[0].tessFactor);
+    pt.edgeTess[2] = 0.5f * (patch[0].tessFactor + patch[1].tessFactor);
+    pt.InsideTess = pt.edgeTess[0];
+	
+    return pt;
+}
+
+[domain("tri")]
+[partitioning("fractional_odd")]
+[outputtopology("triangle_cw")]
+[outputcontrolpoints(3)]
+[patchconstantfunc("PatchHS")]
+HullOut TessHS(InputPatch<TessVertexOut, 3> p,
+           uint i : SV_OutputControlPointID,
+           uint patchId : SV_PrimitiveID)
+{
+    HullOut hOut;
+	
+	// 直传
+    hOut.posW = p[i].posW;
+    hOut.normalW = p[i].normalW;
+    hOut.tex = p[i].tex;
+	
+    return hOut;
+}
+
+[domain("tri")]
+VertexPosHVNormalVTex TessDS(PatchTess patchTess,
+                             float3 bary : SV_DomainLocation,
+                             const OutputPatch<HullOut, 3> tri)
+{
+    VertexPosHVNormalVTex dOut;
+    
+    // 对面片属性进行插值以生成顶点
+    float3 posW = bary.x * tri[0].posW + bary.y * tri[1].posW + bary.z * tri[2].posW;
+    float3 normalW = bary.x * tri[0].normalW + bary.y * tri[1].normalW + bary.z * tri[2].normalW;
+    dOut.tex = bary.x * tri[0].tex + bary.y * tri[1].tex + bary.z * tri[2].tex;
+    
+    // 对插值后的法向量进行标准化
+    normalW = normalize(normalW);
+    
+    // 位移映射
+    
+    // 基于摄像机到顶点的距离选取mipmap等级；特别地，对每个MipInterval单位选择下一个mipLevel
+    // 然后将mipLevel限制在[0, 6]
+    const float MipInterval = 20.0f;
+    float mipLevel = clamp((distance(posW, g_EyePosW) - MipInterval) / MipInterval, 0.0f, 6.0f);
+    
+    // 对高度图采样（存在法线贴图的alpha通道）
+    float h = g_NormalMap.SampleLevel(g_SamLinearWrap, dOut.tex, mipLevel).a;
+    
+    // 沿着法向量进行偏移
+    posW += (g_HeightScale * (h - 1.0f)) * normalW;
+    
+    // 变换到观察空间
+    dOut.posV = mul(float4(posW, 1.0f), g_View).xyz;
+    dOut.normalV = mul(normalW, (float3x3) g_View);
+    
+    // 投影到齐次裁减空间
+    dOut.posH = mul(float4(posW, 1.0f), g_ViewProj);
+    
+    return dOut;
+}
+
+float4 GeometryPS(VertexPosHVNormalVTex pIn, uniform bool alphaClip) : SV_Target
 {
     pIn.normalV = normalize(pIn.normalV);
     
