@@ -64,7 +64,7 @@ cbuffer CBChangesRarely : register(b3)
    
     int g_BlurRadius;
     float3 g_Pad;
-}
+};
 
 // Pass1 几何Buffer生成 (生成法线深度图)
 

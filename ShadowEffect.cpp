@@ -146,19 +146,34 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	return true;
 }
 
-void ShadowEffect::SetRenderDepthOnly()
+void ShadowEffect::SetRenderDepthOnly(bool enableAlphaClip)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthOnly");
+	if (enableAlphaClip) 
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
+		pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
+	}
+	else
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthOnly");
+	}
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void ShadowEffect::SetRenderAlphaClip()
+void ShadowEffect::SetRenderDepthOnlyWithDisplacement(bool enableAlphaClip)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
+	if (enableAlphaClip) 
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("TessDepthAlphaClip");
+		pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
+	}
+	else
+	{
+		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("TessDepthOnly");
+	}
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
-	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
 }
 
 void ShadowEffect::SetEyePos(const DirectX::XMFLOAT3& eyePos)
@@ -220,6 +235,8 @@ void ShadowEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 	auto pStr = material.TryGet<std::string>("$Diffuse");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+	pStr = material.TryGet<std::string>("$Normal");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)

@@ -123,9 +123,9 @@ VertexPosHTex ShadowTessDS(PatchTess patchTess,
 {
     VertexPosHTex dOut;
     
-    float3 posW = bary.x * tri[0].posW + bary.y * tri[1].posW + bary.z * tri[2].posW;
-    float3 normalW = bary.x * tri[0].normalW + bary.y * tri[1].normalW + bary.z * tri[2].normalW;
-    dOut.texCoord = bary.x * tri[0].tex + bary.y * tri[1].tex + bary.z * tri[2].tex;
+    float3 posW     = bary.x * tri[0].posW + bary.y * tri[1].posW + bary.z * tri[2].posW;
+    float3 normalW  = bary.x * tri[0].normalW + bary.y * tri[1].normalW + bary.z * tri[2].normalW;
+    dOut.texCoord   = bary.x * tri[0].tex + bary.y * tri[1].tex + bary.z * tri[2].tex;
     
     normalW = normalize(normalW);
     
@@ -141,14 +141,14 @@ VertexPosHTex ShadowTessDS(PatchTess patchTess,
     return dOut;
 }
 
-// Õâ½ö½öÓÃÓÚAlpha¼¸ºÎ²Ã¼ô£¬ÒÔ±£Ö¤ÒõÓ°µÄÏÔÊ¾ÕıÈ·¡£
-// ¶ÔÓÚ²»ĞèÒª½øĞĞÎÆÀí²ÉÑù²Ù×÷µÄ¼¸ºÎÌå¿ÉÒÔÖ±½Ó½«ÏñËØ
-// ×ÅÉ«Æ÷ÉèÎªnullptr
+// è¿™ä»…ä»…ç”¨äºAlphaå‡ ä½•è£å‰ªï¼Œä»¥ä¿è¯é˜´å½±çš„æ˜¾ç¤ºæ­£ç¡®ã€‚
+// å¯¹äºä¸éœ€è¦è¿›è¡Œçº¹ç†é‡‡æ ·æ“ä½œçš„å‡ ä½•ä½“å¯ä»¥ç›´æ¥å°†åƒç´ 
+// ç€è‰²å™¨è®¾ä¸ºnullptr
 void ShadowPS(VertexPosHTex pIn, uniform float clipValue)
 {
     float4 diffuse = g_DiffuseMap.Sample(g_Sam, pIn.texCoord);
     
-    // ²»Òª½«Í¸Ã÷ÏñËØĞ´ÈëÉî¶ÈÌùÍ¼
+    // ä¸è¦å°†é€æ˜åƒç´ å†™å…¥æ·±åº¦è´´å›¾
     clip(diffuse.a - clipValue);
 }
 

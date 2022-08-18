@@ -108,7 +108,7 @@ struct DomainOutput
     float4 tangentW : TANGENT;
     float2 tex : TEXCOORD0;
     float4 ShadowPosH : TEXCOORD1;
-    float3 SSAOPosH : TEXCOORD2;
+    float4 SSAOPosH : TEXCOORD2;
 };
 
 VertexOutput BasicVS(VertexInput vIn)
@@ -217,7 +217,7 @@ DomainOutput TessDS(PatchTess patchTess,
     dOut.posW += (g_HeightScale * (h - 1.0f)) * dOut.normalW;
     
     // 生成投影纹理坐标
-    dOut.ShadowPosH = mul(float4(dOut.posW, 1.0f), g_ViewProj);
+    dOut.ShadowPosH = mul(float4(dOut.posW, 1.0f), g_ShadowTransform);
     
     dOut.posH = mul(float4(dOut.posW, 1.0f), g_ViewProj);
     
@@ -230,19 +230,17 @@ DomainOutput TessDS(PatchTess patchTess,
 // 像素着色器
 float4 BasicPS(VertexOutput pIn) : SV_Target
 {
-    //uint texWidth, texHeight;
-    //g_DiffuseMap.GetDimensions(texWidth, texHeight);
-    //float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    //
-    //[flatten]
-    //if (texWidth > 0 && texHeight > 0)
-    //{
-    //    // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
-    //    texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
-    //    clip(texColor.a - 0.1f);
-    //}
-    float4 texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
-    clip(texColor.a - 0.1f);
+    uint texWidth, texHeight;
+    g_DiffuseMap.GetDimensions(texWidth, texHeight);
+    float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    
+    [flatten]
+    if (texWidth > 0 && texHeight > 0)
+    {
+        // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
+        texColor = g_DiffuseMap.Sample(g_Sam, pIn.tex);
+        clip(texColor.a - 0.1f);
+    }
     
     // 标准化法向量
     pIn.normalW = normalize(pIn.normalW);
@@ -258,7 +256,8 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
 #endif
     
     float ambientAccess = 1.0f;
-    
+    pIn.SSAOPosH /= pIn.SSAOPosH.w;
+    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
 //#if defined USE_SSAO_MAP
 //    pIn.SSAOPosH /= pIn.SSAOPosH.w;
 //    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;

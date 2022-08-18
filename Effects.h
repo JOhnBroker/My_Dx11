@@ -167,9 +167,9 @@ public:
 
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
-	void SetRenderDepthOnly();
+	void SetRenderDepthOnly(bool enableAlphaClip = false);
 
-	void SetRenderAlphaClip();
+	void SetRenderDepthOnlyWithDisplacement(bool enableAlphaClip = false);
 
 	// 曲面细分
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
