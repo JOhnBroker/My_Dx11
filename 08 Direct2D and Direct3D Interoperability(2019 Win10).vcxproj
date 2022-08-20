@@ -179,6 +179,8 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="Mouse.cpp" />
+    <ClCompile Include="ParticleEffect.cpp" />
+    <ClCompile Include="ParticleManager.cpp" />
     <ClCompile Include="PostProcessEffect.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="ScreenGrab11.cpp" />
@@ -218,6 +220,7 @@
     <ClInclude Include="MeshData.h" />
     <ClInclude Include="ModelManager.h" />
     <ClInclude Include="Mouse.h" />
+    <ClInclude Include="ParticleManager.h" />
     <ClInclude Include="Property.h" />
     <ClInclude Include="RenderStates.h" />
     <ClInclude Include="ScreenGrab11.h" />
@@ -239,21 +242,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\FullScreenTriangle.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <FileType>Document</FileType>
-    </ClInclude>
     <ClInclude Include="HLSL\LightHelper.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <FileType>Document</FileType>
-    </ClInclude>
-    <ClInclude Include="HLSL\Shadow.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
@@ -269,7 +258,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HLSL\SSAO.hlsl">
+    <ClInclude Include="HLSL\Fire.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Particle.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\Rain.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>

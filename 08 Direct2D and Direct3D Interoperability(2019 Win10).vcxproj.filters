@@ -126,6 +126,12 @@
     <ClCompile Include="ImGuiLog.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="ParticleManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -227,13 +233,7 @@
     <ClInclude Include="HLSL\Basic.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\FullScreenTriangle.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="HLSL\LightHelper.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\Shadow.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
     <ClInclude Include="HLSL\Skybox.hlsl">
@@ -245,11 +245,20 @@
     <ClInclude Include="SSAOManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\SSAO.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="ImGuiLog.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\Fire.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\Particle.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\Rain.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleManager.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

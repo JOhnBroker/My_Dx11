@@ -33,6 +33,7 @@ public:
 	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
+	ComPtr<ID3D11InputLayout> m_pInstancePosNormalTexLayout;
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTangentTexLayout;
 
 	bool m_NormalmapEnabled = false;
@@ -92,100 +93,57 @@ bool BasicEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
-	Microsoft::WRL::ComPtr<ID3DBlob> blob;
-
-	D3D_SHADER_MACRO defines[] =
-	{
-		{"USE_NORMAL_MAP",""},
-		{"USE_SSAO_MAP",""},
-		{nullptr,nullptr}
-	};
-
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
 
+	// 实例输入布局
+	D3D11_INPUT_ELEMENT_DESC basicInstLayout[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "World", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "World", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "World", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "World", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "WorldInvTranspose", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "WorldInvTranspose", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 80, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "WorldInvTranspose", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 96, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{ "WorldInvTranspose", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 112, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+	};
+
+	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+
 	// 创建顶点着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicVS", L"HLSL\\Basic.hlsl",
-		device, "BasicVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicInstanceVS", L"HLSL\\Basic.hlsl",
+		device, "InstanceVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 	// 创建顶点输入布局
+	HR(device->CreateInputLayout(basicInstLayout, ARRAYSIZE(basicInstLayout),
+		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pInstancePosNormalTexLayout.GetAddressOf()));
+
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicObjectVS", L"HLSL\\Basic.hlsl",
+		device, "ObjectVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicSsaoVS", L"HLSL\\Basic.hlsl",
-		device, "BasicVS", "vs_5_0", defines + 1));
-
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapSsaoVS", L"HLSL\\Basic.hlsl",
-		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
-
-	HR(device->CreateInputLayout(VertexPosNormalTangentTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTangentTex::GetInputLayout()),
-		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTangentTexLayout.GetAddressOf()));
-
-	defines[1] = D3D_SHADER_MACRO{};
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapVS", L"HLSL\\Basic.hlsl",
-		device, "BasicVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
-
-	defines[1] = { "USE_SSAO_MAP","" };
-
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessVS", L"HLSL\\Basic.hlsl",
-		device, "TessVS", "vs_5_0"));
-
-	// 创建外壳着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessHS", L"HLSL\\Basic.hlsl",
-		device, "TessHS", "hs_5_0"));
-
-	// 创建域着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessDS", L"HLSL\\Basic.hlsl",
-		device, "TessDS", "ds_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("BasicTessSsaoDS", L"HLSL\\Basic.hlsl",
-		device, "TessDS", "ds_5_0", defines + 1));
-
 	// 创建像素着色器
 	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicPS", L"HLSL\\Basic.hlsl",
-		device, "BasicPS", "ps_5_0");
-	pImpl->m_pEffectHelper->CreateShaderFromFile("BasicSsaoPS", L"HLSL\\Basic.hlsl",
-		device, "BasicPS", "ps_5_0", defines + 1);
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapSsaoPS", L"HLSL\\Basic.hlsl",
-		device, "BasicPS", "ps_5_0", defines);
-	defines[1] = D3D_SHADER_MACRO{};
-	pImpl->m_pEffectHelper->CreateShaderFromFile("NormalMapPS", L"HLSL\\Basic.hlsl",
-		device, "BasicPS", "ps_5_0", defines);
+		device, "PS", "ps_5_0");
 
 	// 创建通道
 	EffectPassDesc passDesc;
-	passDesc.nameVS = "BasicVS";
+	passDesc.nameVS = "BasicInstanceVS";
 	passDesc.namePS = "BasicPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Basic", device, &passDesc));
+	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicInstance", device, &passDesc));
 
-	passDesc.nameVS = "NormalMapVS";
-	passDesc.namePS = "NormalMapPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMap", device, &passDesc));
-
-	passDesc.nameVS = "BasicSsaoVS";
-	passDesc.namePS = "BasicSsaoPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicSsao", device, &passDesc));
-	passDesc.nameVS = "NormalMapSsaoVS";
-	passDesc.namePS = "NormalMapSsaoPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("NormalMapSsao", device, &passDesc));
-
-	passDesc.nameVS = "BasicTessVS";
-	passDesc.nameHS = "BasicTessHS";
-	passDesc.nameDS = "BasicTessSsaoDS";
-	passDesc.namePS = "NormalMapSsaoPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("TessSsao", device, &passDesc));
-	passDesc.nameDS = "BasicTessDS";
-	passDesc.namePS = "NormalMapPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Tess", device, &passDesc));
-
-	pImpl->m_pEffectHelper->GetEffectPass("BasicSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
-	pImpl->m_pEffectHelper->GetEffectPass("NormalMapSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
-	pImpl->m_pEffectHelper->GetEffectPass("TessSsao")->SetDepthStencilState(RenderStates::DSSEqual.Get(), 0);
+	passDesc.nameVS = "BasicObjectVS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("BasicObject", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "BasicEffect.VertexPosNormalTexLayout");
-	SetDebugObjectName(pImpl->m_pVertexPosNormalTangentTexLayout.Get(), "BasicEffect.VertexPosNormalTangentTexLayout");
+	SetDebugObjectName(pImpl->m_pInstancePosNormalTexLayout.Get(), "BasicEffect.InstancePosNormalTexLayout");
 #endif
 	pImpl->m_pEffectHelper->SetDebugObjectName("BasicEffect");
 
@@ -199,19 +157,13 @@ void BasicEffect::SetMaterial(const Material& material)
 	PhongMaterial phongMat{};
 	phongMat.ambient = material.Get<XMFLOAT4>("$AmbientColor");
 	phongMat.diffuse = material.Get<XMFLOAT4>("$DiffuseColor");
-	phongMat.diffuse.w = material.Has<float>("$Opacity") ? material.Get<float>("$Opacity") : 1.0f;
+	phongMat.diffuse.w = material.Get<float>("$Opacity");
 	phongMat.specular = material.Get<XMFLOAT4>("$SpecularColor");
 	phongMat.specular.w = material.Has<float>("$SpecularFactor") ? material.Get<float>("$SpecularFactor") : 1.0f;
-	if (material.Has<XMFLOAT4>("$ReflectColor"))
-	{
-		phongMat.reflect = material.Get<XMFLOAT4>("$ReflectColor");
-	}
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
     pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
-	pStr = material.TryGet<std::string>("$Normal");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
@@ -219,20 +171,6 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 	MeshDataInput input;
 	input.pInputLayout = pImpl->m_pCurrInputLayout.Get();
 	input.topology = pImpl->m_CurrTopology;
-	if (pImpl->m_NormalmapEnabled)
-	{
-		input.pVertexBuffers =
-		{
-			meshData.m_pVertices.Get(),
-			meshData.m_pNormals.Get(),
-			meshData.m_pTangents.Get(),
-			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get()
-		};
-		input.strides = { 12,12,16,8 };
-		input.offsets = { 0,0,0,0 };
-	}
-	else
-	{
 		input.pVertexBuffers =
 		{
 			meshData.m_pVertices.Get(),
@@ -240,9 +178,8 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
 			nullptr
 		};
-		input.strides = { 12,12,8,0 };
+		input.strides = { 12,12,8,128 };
 		input.offsets = { 0,0,0,0 };
-	}
 
 	input.pIndexBuffer = meshData.m_pIndices.Get();
 	input.indexCount = meshData.m_IndexCount;
@@ -251,14 +188,7 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 
 void BasicEffect::SetRenderDefault()
 {
-	if (pImpl->m_AmbientOcclusionMapEnabled)
-	{
-		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("BasicSsao");
-	}
-	else
-	{
-		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Basic");
-	}
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("BasicObject");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout;
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	pImpl->m_NormalmapEnabled = false;
@@ -491,31 +421,31 @@ void BasicEffect::SetTextureDisplacement(ID3D11ShaderResourceView* textureDispla
 
 void BasicEffect::DrawInstanced(ID3D11DeviceContext* deviceContext, Buffer& instancedBuffer, const GameObject& object, uint32_t numObject)
 {
-	//deviceContext->IASetInputLayout(pImpl->m_pInstancePosNormalTexLayout.Get());
-	//deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//auto pPass = pImpl->m_pEffectHelper->GetEffectPass("BasicInstance");
-	//
-	//XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
-	//XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
-	//XMMATRIX VP = V * P;
-	//VP = XMMatrixTranspose(VP);
-	//pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
-	//
-	//const Model* pModel = object.GetModel();
-	//size_t sz = pModel->meshdatas.size();
-	//for (size_t i = 0; i < sz; ++i)
-	//{
-	//	SetMaterial(pModel->materials[pModel->meshdatas[i].m_MaterialIndex]);
-	//	pPass->Apply(deviceContext);
-	//
-	//	MeshDataInput input = GetInputData(pModel->meshdatas[i]);
-	//	input.pVertexBuffers.back() = instancedBuffer.GetBuffer();
-	//	deviceContext->IASetVertexBuffers(0, (uint32_t)input.pVertexBuffers.size(),
-	//		input.pVertexBuffers.data(), input.strides.data(), input.offsets.data());
-	//	deviceContext->IASetIndexBuffer(input.pIndexBuffer, input.indexCount > 65535 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
-	//
-	//	deviceContext->DrawIndexedInstanced(input.indexCount, numObject, 0, 0, 0);
-	//}
+	deviceContext->IASetInputLayout(pImpl->m_pInstancePosNormalTexLayout.Get());
+	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	auto pPass = pImpl->m_pEffectHelper->GetEffectPass("BasicInstance");
+
+	XMMATRIX V = XMLoadFloat4x4(&pImpl->m_View);
+	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
+	XMMATRIX VP = V * P;
+	VP = XMMatrixTranspose(VP);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
+
+	const Model* pModel = object.GetModel();
+	size_t sz = pModel->meshdatas.size();
+	for (size_t i = 0; i < sz; ++i)
+	{
+		SetMaterial(pModel->materials[pModel->meshdatas[i].m_MaterialIndex]);
+		pPass->Apply(deviceContext);
+
+		MeshDataInput input = GetInputData(pModel->meshdatas[i]);
+		input.pVertexBuffers.back() = instancedBuffer.GetBuffer();
+		deviceContext->IASetVertexBuffers(0, (uint32_t)input.pVertexBuffers.size(),
+			input.pVertexBuffers.data(), input.strides.data(), input.offsets.data());
+		deviceContext->IASetIndexBuffer(input.pIndexBuffer, input.indexCount > 65535 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
+
+		deviceContext->DrawIndexedInstanced(input.indexCount, numObject, 0, 0, 0);
+	}
 }
 
 void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)
@@ -535,7 +465,6 @@ void BasicEffect::Apply(ID3D11DeviceContext* deviceContext)
 
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (const FLOAT*)&W);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&VP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&WVP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (const FLOAT*)&WInvT);
 
 	if (pImpl->m_pCurrEffectPass)

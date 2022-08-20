@@ -3,18 +3,14 @@
 
 #include "LightHelper.hlsl"
 
-Texture2D g_DiffuseMap : register(t0);  // 物体纹理
-Texture2D g_NormalMap : register(t1);   // 法线贴图
-Texture2D g_ShadowMap : register(t2);   // 阴影贴图
-Texture2D g_AmbientOcclusionMap : register(t3);
-SamplerState g_Sam : register(s0); // 线性过滤+Wrap采样器
-SamplerComparisonState g_SamShadow : register(s1); // 点过滤+Clamp采样器
+Texture2D g_DiffuseMap : register(t0);
+SamplerState g_Sam : register(s0);
 
-cbuffer CBChangesEveryDrawing : register(b0)
+
+cbuffer CBChangesEveryInstanceDrawing : register(b0)
 {
     matrix g_World;
     matrix g_WorldInvTranspose;
-    matrix g_WorldViewProj;
 }
 
 cbuffer CBChangesEveryObjectDrawing : register(b1)
@@ -22,21 +18,20 @@ cbuffer CBChangesEveryObjectDrawing : register(b1)
     Material g_Material;
 }
 
-cbuffer CBChangesEveryFrame : register(b2)
+cbuffer CBDrawingStates : register(b2)
 {
-    matrix g_ViewProj;
-    matrix g_ShadowTransform; // ShadowView * ShadowProj * T
-    float3 g_EyePosW;
-    float g_HeightScale;
-    float g_MaxTessDistance;
-    float g_MinTessDistance;
-    float g_MaxTessFactor;
-    float g_MinTessFactor;
+    float4 g_FogColor;
+    int g_FogEnabled;
+    float g_FogStart;
+    float g_FogRange;
+    int g_Pad;
 }
 
-cbuffer CBDrawingStates : register(b3)
-{    
-    float g_DepthBias; 
+cbuffer CBChangesEveryFrame : register(b3)
+{
+    matrix g_ViewProj;
+    float3 g_EyePosW;
+    float g_Pad2;
 }
 
 cbuffer CBChangesRarely : register(b4)
@@ -46,195 +41,68 @@ cbuffer CBChangesRarely : register(b4)
     SpotLight g_SpotLight[5];
 }
 
-struct VertexInput
+struct VertexPosNormalTex
 {
     float3 posL : POSITION;
     float3 normalL : NORMAL;
-#if defined USE_NORMAL_MAP
-    float4 tangentL :TANGENT;
-#endif
     float2 tex : TEXCOORD;
 };
 
-struct TessVertexInput
-{
-    float3 posL : POSITION;
-    float3 normalL : NORMAL;
-    float4 tangentL : TANGENT;
-    float2 tex : TEXCOORD;
-};
-
-struct VertexOutput
+struct VertexPosHWNormalTex
 {
     float4 posH : SV_POSITION;
     float3 posW : POSITION; // 在世界中的位置
     float3 normalW : NORMAL; // 法向量在世界中的方向
-#if defined USE_NORMAL_MAP
-    float4 tangentW :TANGENT;
-#endif
-    float2 tex : TEXCOORD0;
-    float4 ShadowPosH : TEXCOORD1;
-    float4 SSAOPosH : TEXCOORD2;
-};
-
-struct TessVertexOut
-{
-    float3 posW : POSITION;
-    float3 normalW : NORMAL;
-    float4 tangentW : TANGENT;
-    float2 tex : TEXCOORD0;
-    float tessFactor : TESS;
-};
-
-struct PatchTess
-{
-    float edgeTess[3] : SV_TessFactor;
-    float InsideTess : SV_InsideTessFactor;
-};
-
-struct HullOut
-{
-    float3 posW : POSITION;
-    float3 normalW : NORMAL;
-    float4 tangentW : TANGENT;
     float2 tex : TEXCOORD;
 };
 
-struct DomainOutput
+struct VertexPosHTex
 {
-    float4 posH : SV_Position;
-    float3 posW : POSITION;
-    float3 normalW : NORMAL;
-    float4 tangentW : TANGENT;
-    float2 tex : TEXCOORD0;
-    float4 ShadowPosH : TEXCOORD1;
-    float4 SSAOPosH : TEXCOORD2;
+    float4 posH : SV_POSITION;
+    float2 tex : TEXCOORD;
 };
 
-VertexOutput BasicVS(VertexInput vIn)
+struct InstancePosNormalTex
 {
-    VertexOutput vOut;
+    float3 posL : POSITION;
+    float3 normalL : NORMAL;
+    float2 tex : TEXCOORD;
+    matrix world : World;
+    matrix worldInvTranspose : WorldInvTranspose;
+};
+
+
+VertexPosHWNormalTex ObjectVS(VertexPosNormalTex vIn)
+{
+    VertexPosHWNormalTex vOut;
+    
     vector posW = mul(float4(vIn.posL, 1.0f), g_World);
-    
+
     vOut.posW = posW.xyz;
-    vOut.posH = mul(float4(vIn.posL, 1.0f), g_WorldViewProj);
+    vOut.posH = mul(posW, g_ViewProj);
     vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
-#if defined USE_NORMAL_MAP
-    vOut.tangentW = float4(mul(vIn.tangentL.xyz, (float3x3) g_World), vIn.tangentL.w);
-#endif
     vOut.tex = vIn.tex;
-    vOut.ShadowPosH = mul(posW, g_ShadowTransform);
-#if defined USE_SSAO_MAP
-    // 从NDC坐标[-1, 1]^2变换到纹理空间坐标[0, 1]^2
-    // u = 0.5x + 0.5
-    // v = -0.5y + 0.5
-    // ((xw, yw, zw, w) + (w, -w, 0, 0)) * (0.5, -0.5, 1, 1) = ((0.5x + 0.5)w, (-0.5y + 0.5)w, zw, w)
-    //                                                      = (uw, vw, zw, w)
-    //                                                      =>  (u, v, z, 1)
-    vOut.SSAOPosH = (vOut.posH + float4(vOut.posH.w, -vOut.posH.w, 0.0f, 0.0f)) * float4(0.5f, -0.5f, 1.0f, 1.0f);
-#endif
     return vOut;
 }
 
-TessVertexOut TessVS(TessVertexInput vIn)
+VertexPosHWNormalTex InstanceVS(InstancePosNormalTex vIn)
 {
-    TessVertexOut vOut;
+    VertexPosHWNormalTex vOut;
     
-    vOut.posW = mul(float4(vIn.posL, 1.0f), g_World).xyz;
-    vOut.normalW = mul(vIn.normalL, (float3x3) g_WorldInvTranspose);
-    vOut.tangentW = float4(mul(vIn.tangentL.xyz, (float3x3) g_World), vIn.tangentL.w);
+    vector posW = mul(float4(vIn.posL, 1.0f), vIn.world);
+
+    vOut.posW = posW.xyz;
+    vOut.posH = mul(posW, g_ViewProj);
+    vOut.normalW = mul(vIn.normalL, (float3x3) vIn.worldInvTranspose);
     vOut.tex = vIn.tex;
-    
-    float d = distance(vOut.posW, g_EyePosW);
-    
-    // 标准化曲面细分因子
-    // tessFactor = 
-    //   0, d < g_MinTessDistance
-    //   (g_MinTessDistance - d) / (g_MinTessDistance - g_MaxTessDistance), g_MinTessDistance <= d <= g_MaxTessDistance
-    //   1, d > g_MaxTessDistance
-    float tess = saturate((g_MinTessDistance - d) / (g_MinTessDistance - g_MaxTessDistance));
-    
-    // [0, 1] --> [g_MinTessFactor, g_MaxTessFactor]
-    vOut.tessFactor = g_MinTessFactor + tess * (g_MaxTessFactor - g_MinTessFactor);
-    
     return vOut;
 }
 
-PatchTess PatchHS(InputPatch<TessVertexOut,3> patch,
-                    uint patchID : SV_PrimitiveID)
-{
-    PatchTess pt;
-    
-    pt.edgeTess[0] = 0.5f * (patch[1].tessFactor + patch[2].tessFactor);
-    pt.edgeTess[1] = 0.5f * (patch[2].tessFactor + patch[0].tessFactor);
-    pt.edgeTess[2] = 0.5f * (patch[0].tessFactor + patch[1].tessFactor);
-    pt.InsideTess = pt.edgeTess[0];
-    
-    return pt;
-}
-
-[domain("tri")]
-[partitioning("fractional_odd")]
-[outputtopology("triangle_cw")]
-[outputcontrolpoints(3)]
-[patchconstantfunc("PatchHS")]
-HullOut TessHS(InputPatch<TessVertexOut,3> patch,
-    uint i:SV_OutputControlPointID,
-    uint patchID : SV_PrimitiveID)
-{
-    HullOut hOut;
-    
-    hOut.posW = patch[i].posW;
-    hOut.normalW = patch[i].normalW;
-    hOut.tangentW = patch[i].tangentW;
-    hOut.tex = patch[i].tex;
-    
-    return hOut;
-}
-
-[domain("tri")]
-DomainOutput TessDS(PatchTess patchTess,
-    float3 bary : SV_DomainLocation,
-    const OutputPatch<HullOut, 3> tri)
-{
-    DomainOutput dOut;
-    
-    dOut.posW       = bary.x * tri[0].posW + bary.y * tri[1].posW + bary.z * tri[2].posW;
-    dOut.normalW    = bary.x * tri[0].normalW + bary.y * tri[1].normalW + bary.z * tri[2].normalW;
-    dOut.tangentW   = bary.x * tri[0].tangentW + bary.y * tri[1].tangentW + bary.z * tri[2].tangentW;
-    dOut.tex        = bary.x * tri[0].tex + bary.y * tri[1].tex + bary.z * tri[2].tex;
-    
-    dOut.normalW = normalize(dOut.normalW);
-    
-    // 位移映射
-    
-    const float MipInterval = 20.0f;
-    float mipLevel = clamp((distance(dOut.posW, g_EyePosW) - MipInterval) / MipInterval, 0.0f, 6.0f);
-    
-    float h = g_NormalMap.SampleLevel(g_Sam, dOut.tex, mipLevel).a;
-
-    // 沿着法向量进行偏移
-    dOut.posW += (g_HeightScale * (h - 1.0f)) * dOut.normalW;
-    
-    // 生成投影纹理坐标
-    dOut.ShadowPosH = mul(float4(dOut.posW, 1.0f), g_ShadowTransform);
-    
-    dOut.posH = mul(float4(dOut.posW, 1.0f), g_ViewProj);
-    
-    // 从NDC坐标[-1, 1]^2变换到纹理空间坐标[0, 1]^2
-    dOut.SSAOPosH = (dOut.posH + float4(dOut.posH.w, -dOut.posH.w, 0.0f, 0.0f)) * float4(0.5f, -0.5f, 1.0f, 1.0f);
-    
-    return dOut;
-}
-
-// 像素着色器
-float4 BasicPS(VertexOutput pIn) : SV_Target
+float4 PS(VertexPosHWNormalTex pIn) : SV_Target
 {
     uint texWidth, texHeight;
     g_DiffuseMap.GetDimensions(texWidth, texHeight);
     float4 texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    
-    [flatten]
     if (texWidth > 0 && texHeight > 0)
     {
         // 提前进行Alpha裁剪，对不符合要求的像素可以避免后续运算
@@ -248,21 +116,7 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     // 求出顶点指向眼睛的向量，以及顶点与眼睛的距离
     float3 toEyeW = normalize(g_EyePosW - pIn.posW);
     float distToEye = distance(g_EyePosW, pIn.posW);
-    
-#if defined USE_NORMAL_MAP
-    pIn.tangentW = normalize(pIn.tangentW);
-    float3 normalMapSample = g_NormalMap.Sample(g_Sam, pIn.tex).rgb;
-    pIn.normalW = NormalSampleToWorldSpace(normalMapSample, pIn.normalW, pIn.tangentW);
-#endif
-    
-    float ambientAccess = 1.0f;
-    pIn.SSAOPosH /= pIn.SSAOPosH.w;
-    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
-//#if defined USE_SSAO_MAP
-//    pIn.SSAOPosH /= pIn.SSAOPosH.w;
-//    ambientAccess = g_AmbientOcclusionMap.SampleLevel(g_Sam, pIn.SSAOPosH.xy, 0.0f).r;
-//#endif
-    
+
     // 初始化为0 
     float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -270,22 +124,17 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
     float4 A = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 D = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 S = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    int i = 0;
-    
-    float shadow[5] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
-    
-    //shadow[0] = CalcShadowFactor(g_Sam, g_ShadowMap, pIn.ShadowPosH, g_DepthBias);
-    shadow[0] = CalcShadowFactor(g_SamShadow, g_ShadowMap, pIn.ShadowPosH, g_DepthBias);
-    
+    int i;
+
     [unroll]
     for (i = 0; i < 5; ++i)
     {
         ComputeDirectionalLight(g_Material, g_DirLight[i], pIn.normalW, toEyeW, A, D, S);
-        ambient += ambientAccess * A;
-        diffuse += shadow[i] * D;
-        spec += shadow[i] * S;
+        ambient += A;
+        diffuse += D;
+        spec += S;
     }
-    
+        
     [unroll]
     for (i = 0; i < 5; ++i)
     {
@@ -303,10 +152,23 @@ float4 BasicPS(VertexOutput pIn) : SV_Target
         diffuse += D;
         spec += S;
     }
-    
+  
     float4 litColor = texColor * (ambient + diffuse) + spec;
+    
+    // 雾效部分
+    [flatten]
+    if (g_FogEnabled)
+    {
+        // 限定在0.0f到1.0f范围
+        float fogLerp = saturate((distToEye - g_FogStart) / g_FogRange);
+        // 根据雾色和光照颜色进行线性插值
+        litColor = lerp(litColor, g_FogColor, fogLerp);
+    }
+
     litColor.a = texColor.a * g_Material.diffuse.a;
     return litColor;
 }
+
+
 
 #endif
