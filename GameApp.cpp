@@ -280,6 +280,7 @@ void GameApp::DrawScene()
 	m_SkyboxEffect.Apply(m_pd3dImmediateContext.Get());
 
 	m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthTexture->GetDepthStencil());
+	//m_pd3dImmediateContext->RSSetState(RenderStates::RSNoCull.Get());
 	m_Fire.Draw(m_pd3dImmediateContext.Get(), m_FireEffect);
 	m_Rain.Draw(m_pd3dImmediateContext.Get(), m_RainEffect);
 

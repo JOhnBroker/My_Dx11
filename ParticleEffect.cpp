@@ -62,7 +62,7 @@ bool ParticleEffect::InitAll(ID3D11Device* device, std::wstring_view filename)
 		{"VELOCITY",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0 },
 		{"SIZE",0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0 },
 		{"AGE",0,DXGI_FORMAT_R32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0 },
-		{"TYPE",0,DXGI_FORMAT_R32_UINT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0 }
+        {"TYPE", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
 	const D3D11_SO_DECLARATION_ENTRY outputLayout[5] =
@@ -75,7 +75,7 @@ bool ParticleEffect::InitAll(ID3D11Device* device, std::wstring_view filename)
 	};
 
 	fs::path cacheDir = "HLSL\\Cache";
-	bool overWrite = false;
+	bool overWrite = true;
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(cacheDir.c_str(), overWrite);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
@@ -220,7 +220,7 @@ void ParticleEffect::SetAliveTime(float t)
 
 void ParticleEffect::SetAcceleration(const DirectX::XMFLOAT3& accel)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_AccelW")->SetFloatVector(3, reinterpret_cast<const FLOAT*>(&accel));
+    pImpl->m_pEffectHelper->GetConstantBufferVariable("g_AccelW")->SetFloatVector(3, reinterpret_cast<const float*>(&accel)); 
 }
 
 void ParticleEffect::SetTextureInput(ID3D11ShaderResourceView* textureInput)

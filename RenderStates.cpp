@@ -49,29 +49,29 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// 线框模式
 	rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
 	rasterizerDesc.CullMode = D3D11_CULL_NONE;
-	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.DepthClipEnable = true;
+	//rasterizerDesc.FrontCounterClockwise = false;
+	//rasterizerDesc.DepthClipEnable = true;
 	HR(device->CreateRasterizerState(&rasterizerDesc, RSWireframe.GetAddressOf()));
 
 	// 无背面剔除模式
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.DepthClipEnable = true;
+	//rasterizerDesc.DepthClipEnable = true;
 	HR(device->CreateRasterizerState(&rasterizerDesc, RSNoCull.GetAddressOf()));
 
 	// 顺时针剔除模式
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FrontCounterClockwise = true;
-	rasterizerDesc.DepthClipEnable = true;
+	//rasterizerDesc.DepthClipEnable = true;
 	HR(device->CreateRasterizerState(&rasterizerDesc, RSCullClockWise.GetAddressOf()));
 
 	// 深度偏移模式
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.DepthClipEnable = true;
+	//rasterizerDesc.DepthClipEnable = true;
 	rasterizerDesc.DepthBias = 0;
 	rasterizerDesc.DepthBiasClamp = 0.0f;
 	rasterizerDesc.SlopeScaledDepthBias = 1.0f;			// 斜率为1.0f
@@ -144,16 +144,16 @@ void RenderStates::InitAll(ID3D11Device* device)
 
 	// Alpha-To-Coverage 模式
 	blendDesc.AlphaToCoverageEnable = true;
-	blendDesc.IndependentBlendEnable = false;
-	rtDesc.BlendEnable = false;
-	rtDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	//blendDesc.IndependentBlendEnable = false;
+	//rtDesc.BlendEnable = false;
+	//rtDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	HR(device->CreateBlendState(&blendDesc, BSAlphaToCoverage.GetAddressOf()));
 
 	// 透明混合模式
 	// Color = SrcAlpha * SrcColor + (1 - SrcAlpha) * DestColor 
 	// Alpha = SrcAlpha
 	blendDesc.AlphaToCoverageEnable = false;
-	blendDesc.IndependentBlendEnable = false;
+	//blendDesc.IndependentBlendEnable = false;
 	rtDesc.BlendEnable = true;
 	rtDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
 	rtDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
@@ -177,14 +177,13 @@ void RenderStates::InitAll(ID3D11Device* device)
 	// 带Alpha权重的加法混合模式
 	// Color = SrcAlpha * SrcColor + DestColor
 	// Alpha = SrcAlpha
-	rtDesc.BlendEnable = false;
+	//rtDesc.BlendEnable = false;
 	rtDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
 	rtDesc.DestBlend = D3D11_BLEND_ONE;
 	rtDesc.BlendOp = D3D11_BLEND_OP_ADD;
 	rtDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
 	rtDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
 	rtDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	rtDesc.RenderTargetWriteMask = 0;
 	HR(device->CreateBlendState(&blendDesc, BSAlphaWeightedAdditive.GetAddressOf()));
 
 	// ******************
@@ -239,8 +238,8 @@ void RenderStates::InitAll(ID3D11Device* device)
 	dsDesc.DepthEnable = false;
 
 	dsDesc.StencilEnable = true;
-	dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-	dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+	//dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	//dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
 	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
 	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
@@ -260,7 +259,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	SetDebugObjectName(RSCullClockWise.Get(), "RSCullClockWise");
 	SetDebugObjectName(RSNoCull.Get(), "RSNoCull");
 	SetDebugObjectName(RSWireframe.Get(), "RSWireframe");
-	//SetDebugObjectName(RSShadow.Get(), "RSShadow");
+	SetDebugObjectName(RSShadow.Get(), "RSShadow");
 
 	SetDebugObjectName(SSPointClamp.Get(), "SSPointClamp");
 	SetDebugObjectName(SSLinearWrap.Get(), "SSLinearWrap");
@@ -270,7 +269,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	SetDebugObjectName(SSAnistropicClamp4x.Get(), "SSAnistropicClamp4x");
 	SetDebugObjectName(SSAnistropicClamp8x.Get(), "SSAnistropicClamp8x");
 	SetDebugObjectName(SSAnistropicClamp16x.Get(), "SSAnistropicClamp16x");
-	//SetDebugObjectName(SSShadowPCF.Get(), "SSShadowPCF");
+	SetDebugObjectName(SSShadowPCF.Get(), "SSShadowPCF");
 
 	SetDebugObjectName(BSAlphaToCoverage.Get(), "BSAlphaToCoverage");
 	SetDebugObjectName(BSTransparent.Get(), "BSTransparent");

@@ -80,7 +80,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 
-	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
+	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\", true);
 
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\Skybox.hlsl", device,
 		"SkyboxVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
