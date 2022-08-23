@@ -235,36 +235,25 @@
     <ClInclude Include="XUtil.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HLSL\Basic.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    <ClInclude Include="HLSL\36\BasicDeferred.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\LightHelper.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    <ClInclude Include="HLSL\36\ConstantBuffers.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\Skybox.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    <ClInclude Include="HLSL\36\Forward.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="HLSL\Fire.hlsl">
+    <ClInclude Include="HLSL\36\FullScreenTriangle.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\Particle.hlsl">
+    <ClInclude Include="HLSL\36\GBuffer.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\Rain.hlsl">
+    <ClInclude Include="HLSL\36\Rendering.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\Skybox.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>

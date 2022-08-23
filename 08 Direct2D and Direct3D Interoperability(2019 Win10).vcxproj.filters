@@ -230,15 +230,6 @@
     <ClInclude Include="ScreenGrab11.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\Basic.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\LightHelper.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\Skybox.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="Waves.h">
       <Filter>Common</Filter>
     </ClInclude>
@@ -248,17 +239,29 @@
     <ClInclude Include="ImGuiLog.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\Fire.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\Particle.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\Rain.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="ParticleManager.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\BasicDeferred.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\ConstantBuffers.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\Forward.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\FullScreenTriangle.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\GBuffer.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\Rendering.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\Skybox.hlsl">
+      <Filter>着色器</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
