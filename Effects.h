@@ -479,7 +479,7 @@ public:
 
 	void SetLightBuffer(ID3D11ShaderResourceView* lightBuffer);
 	void SetLightingOnly(bool enable);
-	void SetFaceNormal(bool enable);
+	void SetFaceNormals(bool enable);
 	void SetVisualizeLightCount(bool enable);
 
 	void SetRenderDefault();
@@ -520,7 +520,7 @@ public:
 
 	void SetMsaaSamples(UINT msaaSamples);
 	void SetLightingOnly(bool enable);
-	void SetFaceNormal(bool enable);
+	void SetFaceNormals(bool enable);
 	void SetVisualizeLightCount(bool enable);
 	void SetVisualizeShadingFreq(bool enable);
 

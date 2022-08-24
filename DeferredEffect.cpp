@@ -1,4 +1,4 @@
-﻿#include "Effects.h"
+#include "Effects.h"
 #include <XUtil.h>
 #include <RenderStates.h>
 #include <EffectHelper.h>
@@ -187,7 +187,7 @@ void DeferredEffect::SetLightingOnly(bool enable)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_LightingOnly")->SetUInt(enable);
 }
 
-void DeferredEffect::SetFaceNormal(bool enable)
+void DeferredEffect::SetFaceNormals(bool enable)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FaceNormals")->SetUInt(enable);
 }

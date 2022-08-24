@@ -1,4 +1,4 @@
-﻿#include "Effects.h"
+#include "Effects.h"
 #include <XUtil.h>
 #include <RenderStates.h>
 #include <EffectHelper.h>
@@ -123,7 +123,7 @@ void ForwardEffect::SetLightingOnly(bool enable)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_LightingOnly")->SetUInt(enable);
 }
 
-void ForwardEffect::SetFaceNormal(bool enable)
+void ForwardEffect::SetFaceNormals(bool enable)
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FaceNormals")->SetUInt(enable);
 }
