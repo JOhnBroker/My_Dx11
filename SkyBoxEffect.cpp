@@ -29,6 +29,7 @@ public:
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTex;
 
 	XMFLOAT4X4 m_View, m_Proj;
+	UINT m_MsaaLevels = 1;
 };
 
 namespace
@@ -78,25 +79,40 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 		throw std::exception("RenderStates need to be initialized first!");
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
-	Microsoft::WRL::ComPtr<ID3DBlob> blob;
-
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\", true);
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\Skybox.hlsl", device,
-		"SkyboxVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
+	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+	D3D_SHADER_MACRO defines[] = {
+		{"MSAA_SAMPLES","1"},
+		{nullptr,nullptr}
+	};
+
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\36\\Skybox.hlsl", device,
+		"SkyboxVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTex.GetAddressOf()));
 
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxPS", L"HLSL\\Skybox.hlsl", device,
-		"SkyboxPS", "ps_5_0"));
-
-	EffectPassDesc passDesc;
-	passDesc.nameVS = "SkyboxVS";
-	passDesc.namePS = "SkyboxPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Skybox", device, &passDesc));
+	int msaaSamples = 1;
+	while (msaaSamples <= 8)
 	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("Skybox");
-		pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
+		std::string msaaSamplesStr = std::to_string(msaaSamples);
+		defines[0].Definition = msaaSamplesStr.c_str();
+		std::string shaderName = "Skybox_" + msaaSamplesStr + "xMSAA_PS";
+		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\Skybox.hlsl", device,
+			"SkyboxPS", "ps_5_0", defines));
+
+		std::string passName = "Skybox_" + msaaSamplesStr + "xMSAA";
+
+		EffectPassDesc passDesc;
+		passDesc.nameVS = "SkyboxVS";
+		passDesc.namePS = shaderName.c_str();
+		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
+		{
+			auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+			pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
+		}
+
+		msaaSamples <<= 1;
 	}
 
 	//passDesc.nameVS = "SkyboxGSVS";
@@ -108,7 +124,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	//	pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 	//	pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	//}
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerDiffuse", RenderStates::SSLinearWrap.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicClamp16x.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -161,8 +177,9 @@ MeshDataInput SkyBoxEffect::GetInputData(const MeshData& meshData)
 
 void SkyBoxEffect::SetRenderDefault()
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Skybox");
-	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTex;
+	std::string passName = "Skybox_" + std::to_string(pImpl->m_MsaaLevels) + "xMSAA";
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTex.Get();
 	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
@@ -181,6 +198,11 @@ void SkyBoxEffect::SetDepthTexture(ID3D11ShaderResourceView* depthTexture)
 void SkyBoxEffect::SetLitTexture(ID3D11ShaderResourceView* litTexture)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_LitTexture", litTexture);
+}
+
+void SkyBoxEffect::SetMsaaSamples(UINT msaaSamples)
+{
+	pImpl->m_MsaaLevels = msaaSamples;
 }
 
 void SkyBoxEffect::SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx)

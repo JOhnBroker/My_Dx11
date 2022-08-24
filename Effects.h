@@ -220,6 +220,8 @@ public:
 	// 设置场景渲染图
 	void SetLitTexture(ID3D11ShaderResourceView* litTexture);
 
+	void SetMsaaSamples(UINT msaaSamples);
+
 	void SetViewProjMatrixs(DirectX::FXMMATRIX VP, int idx);
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
@@ -384,7 +386,7 @@ private:
 	std::unique_ptr<Impl> pImpl;
 };
 
-class ParticleEffect :public IEffect 
+class ParticleEffect :public IEffect
 {
 public:
 	struct VertexParticle
@@ -450,5 +452,93 @@ private:
 	class Impl;
 	std::unique_ptr<Impl> pImpl;
 };
+
+class ForwardEffect :public IEffect, public IEffectTransform,
+	public IEffectMaterial, public IEffectMeshData
+{
+public:
+	ForwardEffect();
+	virtual ~ForwardEffect() override;
+
+	ForwardEffect(ForwardEffect&& moveFrom) noexcept;
+	ForwardEffect& operator=(ForwardEffect&& moveFrom) noexcept;
+
+	static ForwardEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	// IEffectTransform
+
+	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
+	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
+	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
+
+	void SetMaterial(const Material& material) override;
+
+	MeshDataInput GetInputData(const MeshData& meshData) override;
+
+	void SetLightBuffer(ID3D11ShaderResourceView* lightBuffer);
+	void SetLightingOnly(bool enable);
+	void SetFaceNormal(bool enable);
+	void SetVisualizeLightCount(bool enable);
+
+	void SetRenderDefault();
+
+	void SetRanderPreZPass();
+
+	void Apply(ID3D11DeviceContext* deviceContext) override;
+
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+
+};
+
+class DeferredEffect :public IEffect, public IEffectTransform,
+	public IEffectMaterial, public IEffectMeshData
+{
+public:
+	DeferredEffect();
+	virtual ~DeferredEffect() override;
+
+	DeferredEffect(DeferredEffect&& moveFrom) noexcept;
+	DeferredEffect& operator=(DeferredEffect&& moveFrom) noexcept;
+
+	static DeferredEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	// IEffectTransform
+
+	void XM_CALLCONV SetWorldMatrix(DirectX::FXMMATRIX W) override;
+	void XM_CALLCONV SetViewMatrix(DirectX::FXMMATRIX V) override;
+	void XM_CALLCONV SetProjMatrix(DirectX::FXMMATRIX P) override;
+
+	void SetMaterial(const Material& material) override;
+
+	MeshDataInput GetInputData(const MeshData& meshData) override;
+
+	void SetMsaaSamples(UINT msaaSamples);
+	void SetLightingOnly(bool enable);
+	void SetFaceNormal(bool enable);
+	void SetVisualizeLightCount(bool enable);
+	void SetVisualizeShadingFreq(bool enable);
+
+	void SetCameraNearFar(float nearZ, float farZ);
+
+	void SetRenderGBuffer();
+
+	void DebugNormalGBuffer(ID3D11DeviceContext* deviceContext, ID3D11RenderTargetView* rtv, ID3D11ShaderResourceView* normalGBuffer, D3D11_VIEWPORT viewport);
+	void DebugPosZGradGBuffer(ID3D11DeviceContext* deviceContext, ID3D11RenderTargetView* rtv, ID3D11ShaderResourceView* posZGradGBuffer, D3D11_VIEWPORT viewport);
+	void ComputeLightingDefault(ID3D11DeviceContext* deviceContext, ID3D11RenderTargetView* litBufferRTV, ID3D11DepthStencilView* depthBufferReadOnlyDSV, ID3D11ShaderResourceView* lightBufferSRV, ID3D11ShaderResourceView* GBuffers[4], D3D11_VIEWPORT viewport);
+
+	void Apply(ID3D11DeviceContext* deviceContext) override;
+
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+
+};
+
 
 #endif

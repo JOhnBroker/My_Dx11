@@ -132,6 +132,12 @@
     <ClCompile Include="ParticleEffect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="DeferredEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ForwardEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
