@@ -163,7 +163,7 @@ void BasicEffect::SetMaterial(const Material& material)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Material")->SetRaw(&phongMat);
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-    pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
@@ -171,15 +171,15 @@ MeshDataInput BasicEffect::GetInputData(const MeshData& meshData)
 	MeshDataInput input;
 	input.pInputLayout = pImpl->m_pCurrInputLayout.Get();
 	input.topology = pImpl->m_CurrTopology;
-		input.pVertexBuffers =
-		{
-			meshData.m_pVertices.Get(),
-			meshData.m_pNormals.Get(),
-			meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
-			nullptr
-		};
-		input.strides = { 12,12,8,128 };
-		input.offsets = { 0,0,0,0 };
+	input.pVertexBuffers =
+	{
+		meshData.m_pVertices.Get(),
+		meshData.m_pNormals.Get(),
+		meshData.m_pTexcoordArrays.empty() ? nullptr : meshData.m_pTexcoordArrays[0].Get(),
+		nullptr
+	};
+	input.strides = { 12,12,8,128 };
+	input.offsets = { 0,0,0,0 };
 
 	input.pIndexBuffer = meshData.m_pIndices.Get();
 	input.indexCount = meshData.m_IndexCount;
@@ -226,7 +226,7 @@ void BasicEffect::SetRenderWithDisplacementMap()
 
 void BasicEffect::SetRasterizerMode(RasterizerMode mode)
 {
-    pImpl->m_pCurrEffectPass->SetRasterizerState(mode == RasterizerMode::Wireframe ? RenderStates::RSWireframe.Get() : nullptr);
+	pImpl->m_pCurrEffectPass->SetRasterizerState(mode == RasterizerMode::Wireframe ? RenderStates::RSWireframe.Get() : nullptr);
 }
 
 void XM_CALLCONV BasicEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
@@ -250,20 +250,20 @@ void XM_CALLCONV BasicEffect::SetShadowTransformMatrix(DirectX::FXMMATRIX S)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowTransform")->SetFloatMatrix(4, 4, (const float*)&shadowTransform);
 }
 
-void BasicEffect::SetDirLight(uint32_t pos, const DirectionalLight& dirLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
-}
-
-void BasicEffect::SetPointLight(uint32_t pos, const PointLight& pointLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PointLight")->SetRaw(&pointLight, sizeof(pointLight) * pos, sizeof(pointLight));
-}
-
-void BasicEffect::SetSpotLight(uint32_t pos, const SpotLight& spotLight)
-{
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
-}
+//void BasicEffect::SetDirLight(uint32_t pos, const DirectionalLight& dirLight)
+//{
+//	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_DirLight")->SetRaw(&dirLight, sizeof(dirLight) * pos, sizeof(dirLight));
+//}
+//
+//void BasicEffect::SetPointLight(uint32_t pos, const PointLight& pointLight)
+//{
+//	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PointLight")->SetRaw(&pointLight, sizeof(pointLight) * pos, sizeof(pointLight));
+//}
+//
+//void BasicEffect::SetSpotLight(uint32_t pos, const SpotLight& spotLight)
+//{
+//	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_SpotLight")->SetRaw(&spotLight, sizeof(spotLight) * pos, sizeof(spotLight));
+//}
 
 void BasicEffect::SetReflectionEnabled(bool enabled)
 {

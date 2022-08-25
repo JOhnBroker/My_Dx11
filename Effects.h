@@ -14,11 +14,9 @@
 #include <IEffect.h>
 #include <Material.h>
 #include <MeshData.h>
-#include <LightHelper.h>
+//#include <LightHelper.h>
 #include <RenderStates.h>
-
 #include <Buffer.h>
-
 #include <GameObject.h>
 
 enum class RasterizerMode { Solid, Wireframe };
@@ -121,9 +119,9 @@ public:
 
 	// 设置其它参数
 
-	void SetDirLight(uint32_t pos, const DirectionalLight& dirLight);
-	void SetPointLight(uint32_t pos, const PointLight& pointLight);
-	void SetSpotLight(uint32_t pos, const SpotLight& spotLight);
+	//void SetDirLight(uint32_t pos, const DirectionalLight& dirLight);
+	//void SetPointLight(uint32_t pos, const PointLight& pointLight);
+	//void SetSpotLight(uint32_t pos, const SpotLight& spotLight);
 
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 
@@ -484,7 +482,7 @@ public:
 
 	void SetRenderDefault();
 
-	void SetRanderPreZPass();
+	void SetRenderPreZPass();
 
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 

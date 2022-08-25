@@ -72,7 +72,7 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
 
-	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache");
+	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache", true);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 
@@ -86,6 +86,10 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ForwardPS", L"HLSL\\36\\Forward.hlsl",
 		device, "ForwardPS", "ps_5_0"));
 
+	// |-Default Pass
+	//     VS: GeometryVS
+	//     PS: ForwardPS
+	//     DepthStencilState: GreaterEqual
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "GeometryVS";
 	passDesc.namePS = "ForwardPS";
@@ -95,6 +99,11 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 		// 注意：反向Z => GREATER_EQUAL测试
 		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
 	}
+
+	// |-PreZ Pass
+	// |   VS: GeometryVS
+	// |   PS: nullptr
+	// |   DepthStencilState: GreaterEqual
 	passDesc.namePS = "";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("PreZ", device, &passDesc));
 	{
@@ -102,7 +111,7 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 		// 注意：反向Z => GREATER_EQUAL测试
 		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
 	}
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicClamp16x.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -140,7 +149,7 @@ void ForwardEffect::SetRenderDefault()
 	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void ForwardEffect::SetRanderPreZPass()
+void ForwardEffect::SetRenderPreZPass()
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("PreZ");
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();

@@ -24,7 +24,7 @@ public:
 	std::unique_ptr<EffectHelper> m_pEffectHelper;
 	std::shared_ptr<IEffectPass> m_pCurrEffectPass;
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
-	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTex;
 
@@ -90,7 +90,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("SkyboxVS", L"HLSL\\36\\Skybox.hlsl", device,
 		"SkyboxVS", "vs_5_0", defines, blob.ReleaseAndGetAddressOf()));
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
-		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTex.GetAddressOf()));
+		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTex.ReleaseAndGetAddressOf()));
 
 	int msaaSamples = 1;
 	while (msaaSamples <= 8)
@@ -124,7 +124,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	//	pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 	//	pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	//}
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicClamp16x.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -153,8 +153,8 @@ void XM_CALLCONV SkyBoxEffect::SetProjMatrix(DirectX::FXMMATRIX P)
 void SkyBoxEffect::SetMaterial(const Material& material)
 {
 	TextureManager& tm = TextureManager::Get();
-	const std::string& str = material.Get<std::string>("$Skybox");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_SkyboxTexture", tm.GetTexture(str));
+	auto pStr = material.TryGet<std::string>("$Skybox");
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_SkyboxTexture", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput SkyBoxEffect::GetInputData(const MeshData& meshData)

@@ -14,17 +14,6 @@
 #include <Collision.h>
 #include <ModelManager.h>
 #include <TextureManager.h>
-#include <SSAOManager.h>
-#include <ParticleManager.h>
-#include <Waves.h>
-
-#include <ScreenGrab11.h>
-#include <wincodec.h>
-
-#include <random>
-#include <algorithm>
-
-#include <sstream>
 
 #define BITONIC_BLOCK_SIZE 512
 #define TRANSPOSE_BLOCK_SIZE 16
@@ -37,7 +26,7 @@ struct PointLight
 	float attenuationEnd;
 };
 
-struct PointLightInitData 
+struct PointLightInitData
 {
 	float radius;
 	float angle;
@@ -122,7 +111,7 @@ private:
 	bool m_FaceNormals = false;
 	bool m_VisualizeLightCount = false;
 	bool m_VisualizeShadingFreq = false;
-	bool m_ClearGBuffers = false;
+	bool m_ClearGBuffers = true;
 	float m_LightHeightScale = 0.25f;
 
 	// 资源
@@ -133,7 +122,7 @@ private:
 	std::unique_ptr<Texture2DMS> m_pLitBuffer;
 	std::unique_ptr<Depth2DMS> m_pDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> m_pDepthBufferReadOnlyDSV;
-	std::vector<std::unique_ptr<Texture2DMS>> m_pGBuffer;
+	std::vector<std::unique_ptr<Texture2DMS>> m_pGBuffers;
 	std::unique_ptr<Texture2D> m_pDebugNormalGBuffer;
 	std::unique_ptr<Texture2D> m_pDebugPosZGradGBuffer;
 	std::unique_ptr<Texture2D> m_pDebugAlbedoGBuffer;

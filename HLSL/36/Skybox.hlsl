@@ -11,7 +11,7 @@
 // 后处理, 天空盒等
 // 使用天空盒几何体渲染
 //--------------------------------------------------------------------------------------
-TextureCube<float4> g_SkyboxTextuer : register(t5);
+TextureCube<float4> g_SkyboxTexture : register(t5);
 Texture2DMS<float, MSAA_SAMPLES> g_DepthTexture : register(t6);
 // 常规多重采样的场景渲染的纹理
 Texture2DMS<float4, MSAA_SAMPLES> g_LitTexture : register(t7);
@@ -57,9 +57,9 @@ float4 SkyboxPS(SkyboxVSOut input) : SV_Target
     }
     
     [branch]
-    if (sampleIndex > 0)
+    if (skyboxSamples > 0)
     {
-        float3 skybox = g_SkyboxTextuer.Sample(g_Sam, input.skyboxCoord).xyz;
+        float3 skybox = g_SkyboxTexture.Sample(g_Sam, input.skyboxCoord).xyz;
         lit += skyboxSamples * skybox;
     }
     return float4(lit * rcp((float) MSAA_SAMPLES), 1.0f);

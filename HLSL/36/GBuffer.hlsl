@@ -10,9 +10,9 @@
 // GBuffer、相关常用工具和结构
 struct GBuffer
 {
-    float4 normal_specular;
-    float4 albedo;
-    float2 posZGrad;    // ( d(x+1,y)-d(x,y), d(x,y+1)-d(x,y) )
+    float4 normal_specular : SV_Target0;
+    float4 albedo : SV_Target1;
+    float2 posZGrad : SV_Target2; // ( d(x+1,y)-d(x,y), d(x,y+1)-d(x,y) )
 };
 
 // 上述GBuffer加上深度缓冲区(最后一个元素)  t1-t4 
@@ -28,7 +28,7 @@ float2 EncodeSphereMap(float3 normal)
 float3 DecodeSphereMap(float2 encode)
 {
     float4 nn = float4(encode, 1, -1);
-    float l = dot(nn.xyz, nn.xyw);
+    float l = dot(nn.xyz, -nn.xyw);
     nn.z = l;
     nn.xy *= sqrt(l);
     return nn.xyz * 2 + float3(0, 0, -1);
@@ -76,7 +76,7 @@ SurfaceData ComputeSurfaceDataFromGBufferSample(uint2 posViewport, uint sampleIn
     data.albedo = rawData.albedo;
     
     data.specularAmount = rawData.normal_specular.z;
-    data.specularAmount = rawData.normal_specular.w;
+    data.specularPower = rawData.normal_specular.w;
     
     return data;
 }
@@ -104,7 +104,7 @@ bool RequiresPerSampleShading(SurfaceData surface[MSAA_SAMPLES])
         perSample = perSample || 
             abs(surface[i].posV.z - surface[0].posV.z) > maxZDelta;
         perSample = perSample ||
-            dot(surface[i].posV, surface[0].posV) < minNormalDot;
+            dot(surface[i].normalV, surface[0].normalV) < minNormalDot;
     }
     
     return perSample;
@@ -130,7 +130,7 @@ void RequiresPerSampleShadingPS(float4 posViewPort : SV_Position)
 void GBufferPS(VertexPosHVNormalVTex input, out GBuffer outputGBuffer)
 {
     SurfaceData surface = ComputeSurfaceDataFromGeometry(input);
-    outputGBuffer.normal_specular = float4(EncodeSphereMap(input.normalV),
+    outputGBuffer.normal_specular = float4(EncodeSphereMap(surface.normalV),
                                             surface.specularAmount,
                                             surface.specularPower);
     outputGBuffer.albedo = surface.albedo;
@@ -143,7 +143,7 @@ float4 DebugNormalPS(float4 posViewport : SV_Position) : SV_Target
 {
     float4 normal_specular = g_GBufferTextures[0].Load(posViewport.xy, 0).xyzw;
     float3 normalV = DecodeSphereMap(normal_specular.xy);
-    float3 normalW = mul(float4(normalV, 1.0f), g_InvView).xyz;
+    float3 normalW = mul(float4(normalV, 0.0f), g_InvView).xyz;
     
     // 由于渲染目标为sRGB，这里去除伽马校正来观察原始法线贴图
     // [-1, 1] => [0, 1]

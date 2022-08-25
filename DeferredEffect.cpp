@@ -70,7 +70,7 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 		throw std::exception("RenderStates need to be initialized first!");
 
 	pImpl->m_pEffectHelper = std::make_unique<EffectHelper>();
-	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache");
+	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache", true);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 	D3D_SHADER_MACRO defines[] = {
@@ -111,6 +111,10 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderNames[5], L"HLSL\\36\\GBuffer.hlsl",
 			device, "DebugPosZGradPS", "ps_5_0", defines));
 
+		// |-GBuffer Pass 几何阶段
+		// |   VS: GeometryVS
+		// |   PS: GBufferPS
+		// |   DepthStencilState: GreaterEqual
 		EffectPassDesc passDesc;
 		passDesc.nameVS = "GeometryVS";
 		passDesc.namePS = shaderNames[0].c_str();
@@ -130,6 +134,10 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
 		}
 
+		// |-Lighting Basic MaskStencil 用模板记录边缘数据
+		// |   VS: FullScreenTriangleVS
+		// |   PS: RequiresPerSampleShadingPS
+		// |   DepthStencilState: WriteStencil(1)
 		passDesc.nameVS = "FullScreenTriangleVS";
 		passDesc.namePS = shaderNames[1].c_str();
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[1], device, &passDesc));
@@ -138,6 +146,11 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			pPass->SetDepthStencilState(RenderStates::DSSWriteStencil.Get(), 1);
 		}
 
+		// |-Lighting Basic Deferred PerPixel 逐像素处理，不使用MSAA
+		// |   VS: FullScreenTriangleVS
+		// |   PS: BasicDeferredPS
+		// |   DepthStencilState: EqualStencil(0)
+		// |   BlendState: Additive
 		passDesc.nameVS = "FullScreenTriangleVS";
 		passDesc.namePS = shaderNames[2].c_str();
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[2], device, &passDesc));
@@ -147,12 +160,17 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			pPass->SetBlendState(RenderStates::BSAdditive.Get(), nullptr, 0xFFFFFFFF);
 		}
 
+		// |-Lighting Basic Deferred PerSample 逐样本，使用MSAA
+		// |   VS: FullScreenTriangleVS
+		// |   PS: BasicDeferredPerSamplePS
+		// |   DepthStencilState: EqualStencil(0)
+		// |   BlendState: Additive
 		passDesc.nameVS = "FullScreenTriangleVS";
 		passDesc.namePS = shaderNames[3].c_str();
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[3], device, &passDesc));
 		{
 			auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passNames[3]);
-			pPass->SetDepthStencilState(RenderStates::DSSEqualStencil.Get(), 0);
+			pPass->SetDepthStencilState(RenderStates::DSSEqualStencil.Get(), 1);
 			pPass->SetBlendState(RenderStates::BSAdditive.Get(), nullptr, 0xFFFFFFFF);
 		}
 
@@ -166,7 +184,7 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 		msaaSamples <<= 1;
 	}
 
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicClamp16x.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -296,7 +314,7 @@ void DeferredEffect::ComputeLightingDefault(ID3D11DeviceContext* deviceContext,
 		deviceContext->Draw(3, 0);
 	}
 	// 通过模板测试来绘制逐像素着色的区域
-	ID3D11RenderTargetView* pRTVs[] = { litBufferRTV };
+	ID3D11RenderTargetView* pRTVs[1] = { litBufferRTV };
 	deviceContext->OMSetRenderTargets(1, pRTVs, depthBufferReadOnlyDSV);
 
 	pImpl->m_pEffectHelper->GetEffectPass(passStrs[1])->Apply(deviceContext);
@@ -310,9 +328,9 @@ void DeferredEffect::ComputeLightingDefault(ID3D11DeviceContext* deviceContext,
 	}
 
 	deviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-	ID3D11ShaderResourceView* nullSRV[8]{};
-	deviceContext->VSSetShaderResources(0, 8, nullSRV);
-	deviceContext->PSSetShaderResources(0, 8, nullSRV);
+	ID3D11ShaderResourceView* nullSRVs[8]{};
+	deviceContext->VSSetShaderResources(0, 8, nullSRVs);
+	deviceContext->PSSetShaderResources(0, 8, nullSRVs);
 }
 
 void XM_CALLCONV DeferredEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
