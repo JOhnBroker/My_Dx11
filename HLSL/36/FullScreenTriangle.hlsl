@@ -8,7 +8,7 @@ float4 FullScreenTriangleVS(uint vertexID : SV_VertexID) : SV_Position
     return float4(xy, 1.0f, 1.0f);
 }
 
-void FullScreenTrianglePS(uint vertexID : SV_VertexID, 
+void FullScreenTriangleTexcoordVS(uint vertexID : SV_VertexID, 
                         out float4 posH : SV_Position, 
                         out float2 texcoord : TEXCOORD)
 {

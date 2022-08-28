@@ -14,6 +14,7 @@ cbuffer CBChangesEveryInstanceDrawing : register(b0)
 cbuffer CBPerFrame : register(b1)
 {
     float4 g_CameraNearFar;
+    uint4 g_FramebufferDimensions;
     uint g_LightingOnly;
     uint g_FaceNormals;
     uint g_VisualizeLightCount;

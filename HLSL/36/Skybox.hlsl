@@ -1,20 +1,23 @@
-#ifndef SKYBOX_HLSL
-#define SKYBOX_HLSL
+#ifndef SKYBOX_TONE_MAP_HLSL
+#define SKYBOX_TONE_MAP_HLSL
 
 #include "GBuffer.hlsl"
+#include "FramebufferFlat.hlsl"
 
 #ifndef MSAA_SAMPLES
 #define MSAA_SAMPLES 1
 #endif 
 
 //--------------------------------------------------------------------------------------
-// ºó´¦Àí, Ìì¿ÕºĞµÈ
-// Ê¹ÓÃÌì¿ÕºĞ¼¸ºÎÌåäÖÈ¾
+// åå¤„ç†, å¤©ç©ºç›’ç­‰
+// ä½¿ç”¨å¤©ç©ºç›’å‡ ä½•ä½“æ¸²æŸ“
 //--------------------------------------------------------------------------------------
 TextureCube<float4> g_SkyboxTexture : register(t5);
 Texture2DMS<float, MSAA_SAMPLES> g_DepthTexture : register(t6);
-// ³£¹æ¶àÖØ²ÉÑùµÄ³¡¾°äÖÈ¾µÄÎÆÀí
+// å¸¸è§„å¤šé‡é‡‡æ ·çš„åœºæ™¯æ¸²æŸ“çš„çº¹ç†
 Texture2DMS<float4, MSAA_SAMPLES> g_LitTexture : register(t7);
+// è®¡ç®—ç€è‰²å™¨ä¸èƒ½å†™å…¥å¤šé‡é‡‡æ ·UAVï¼Œæ•…ä½¿ç”¨1Dè¿ç»­æ•°ç»„è¡¨ç¤º
+StructuredBuffer<uint2> g_FlatLitTexture : register(t8);
 
 struct SkyboxVSOut
 {
@@ -26,7 +29,7 @@ SkyboxVSOut SkyboxVS(VertexPosNormalTex input)
 {
     SkyboxVSOut output;
     
-    // Reversed - Z ,ËùÒÔÉî¶ÈÉèÎª0.0fÎª×î´óÉî¶È
+    // Reversed - Z ,æ‰€ä»¥æ·±åº¦è®¾ä¸º0.0fä¸ºæœ€å¤§æ·±åº¦
     output.posViewport = mul(float4(input.posL, 0.0f), g_ViewProj).xyww;
     output.skyboxCoord = input.posL;
     
@@ -35,6 +38,10 @@ SkyboxVSOut SkyboxVS(VertexPosNormalTex input)
 
 float4 SkyboxPS(SkyboxVSOut input) : SV_Target
 {
+    uint2 dims;
+    g_FlatLitTexture.GetDimensions(dims.x, dims.y);
+    bool useFlatLitBuffer = dims.x > 0;
+    
     uint2 coords = input.posViewport.xy;
     
     float3 lit = float3(0.0f, 0.0f, 0.0f);
@@ -52,7 +59,17 @@ float4 SkyboxPS(SkyboxVSOut input) : SV_Target
         }
         else
         {
-            lit += g_LitTexture.Load(coords, sampleIndex).xyz;
+            float3 sampleLit;
+            [branch]
+            if (useFlatLitBuffer)
+            {
+                sampleLit = UnpackRGBA16(g_FlatLitTexture[GetFramebufferSampleAddress(coords, sampleIndex)]).xyz;
+            }
+            else
+            {
+                sampleLit = g_LitTexture.Load(coords, sampleIndex).xyz;
+            }
+            lit += sampleLit;
         }
     }
     

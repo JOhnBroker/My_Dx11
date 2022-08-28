@@ -5,7 +5,7 @@
 #include <DXTrace.h>
 #include <Vertex.h>
 #include <TextureManager.h>
-
+#include "HLSL/36/ShaderDefines.h"
 using namespace DirectX;
 
 class ForwardEffect::Impl
@@ -25,6 +25,8 @@ public:
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 
 	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
+
+	UINT m_MsaaSamples = 1;
 };
 
 namespace {
@@ -59,7 +61,7 @@ ForwardEffect& ForwardEffect::operator=(ForwardEffect&& moveFrom) noexcept
 ForwardEffect& ForwardEffect::Get()
 {
 	if (!g_pInstance)
-		throw std::exception("ForwardEffect need an instance!");
+        throw std::exception("ForwardEffect needs an instance!");
 	return *g_pInstance;
 }
 
@@ -75,6 +77,10 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache", true);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+	D3D_SHADER_MACRO defines[] = {
+	   {"MSAA_SAMPLES", "1"},
+	   {nullptr, nullptr}
+	};
 
 	// 顶点着色器
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("GeometryVS", L"HLSL\\36\\Forward.hlsl",
@@ -85,6 +91,8 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	// 像素着色器
 	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ForwardPS", L"HLSL\\36\\Forward.hlsl",
 		device, "ForwardPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ForwardPlusPS", L"HLSL\\36\\Forward.hlsl",
+		device, "ForwardPlusPS", "ps_5_0"));
 
 	// |-Default Pass
 	//     VS: GeometryVS
@@ -96,6 +104,18 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	HR(pImpl->m_pEffectHelper->AddEffectPass("Forward", device, &passDesc));
 	{
 		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("Forward");
+		// 注意：反向Z => GREATER_EQUAL测试
+		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
+	}
+
+	// |-Default Pass
+	//     VS: GeometryVS
+	//     PS: ForwardPlusPS
+	//     DepthStencilState: GreaterEqual
+	passDesc.namePS = "ForwardPlusPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("ForwardPlus", device, &passDesc));
+	{
+		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("ForwardPlus");
 		// 注意：反向Z => GREATER_EQUAL测试
 		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
 	}
@@ -113,6 +133,25 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	}
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
 
+	// 创建计算着色器与通道
+	UINT msaaSamples = 1;
+	passDesc.nameVS = "";
+	passDesc.namePS = "";
+	while (msaaSamples <= 8) 
+	{
+		std::string msaaSamplesStr = std::to_string(msaaSamples);
+		defines[0].Definition = msaaSamplesStr.c_str();
+		std::string shaderName = "ComputeShaderTileForward_" + msaaSamplesStr + "xMSAA_CS";
+		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\ComputeShaderTile.hlsl",
+			device, "ComputeShaderTileForwardCS", "cs_5_0", defines));
+		
+		passDesc.nameCS = shaderName.c_str();
+		std::string passName = "ComputeShaderTileForward_" + std::to_string(msaaSamples) + "xMSAA";
+		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
+
+		msaaSamples <<= 1;
+	}
+
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "ForwardEffect.VertexPosNormalTexLayout");
@@ -125,6 +164,17 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 void ForwardEffect::SetLightBuffer(ID3D11ShaderResourceView* lightBuffer)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBuffer);
+}
+
+void ForwardEffect::SetTileBuffer(ID3D11ShaderResourceView* tileBuffer)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_Tilebuffer", tileBuffer);
+}
+
+void ForwardEffect::SetCameraNearFar(float nearZ, float farZ)
+{
+	float nearFar[4] = { nearZ,farZ };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CameraNearFar")->SetFloatVector(4, nearFar);
 }
 
 void ForwardEffect::SetLightingOnly(bool enable)
@@ -156,6 +206,44 @@ void ForwardEffect::SetRenderPreZPass()
 	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
+void ForwardEffect::ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext,
+	ID3D11UnorderedAccessView* tileInfoBufferUAV,
+	ID3D11ShaderResourceView* lightBufferSRV,
+	ID3D11ShaderResourceView* depthBufferSRV)
+{
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> pTex;
+	depthBufferSRV->GetResource(reinterpret_cast<ID3D11Resource**>(pTex.GetAddressOf()));
+	D3D11_TEXTURE2D_DESC texDesc;
+	pTex->GetDesc(&texDesc);
+
+	UINT dims[2] = { texDesc.Width,texDesc.Height };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FramebufferDimensions")->SetUIntVector(2, dims);
+	pImpl->m_pEffectHelper->SetUnorderedAccessByName("g_TilebufferRW", tileInfoBufferUAV, 0);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBufferSRV);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[3]", depthBufferSRV);
+
+	std::string passName = "ComputeShaderTileForward_" + std::to_string(pImpl->m_MsaaSamples) + "xMSAA";
+	auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+	pPass->Apply(deviceContext);
+	
+	// 调度
+	pPass->Dispatch(deviceContext, texDesc.Width, texDesc.Height);
+
+	tileInfoBufferUAV = nullptr;
+	deviceContext->CSSetUnorderedAccessViews(pImpl->m_pEffectHelper->MapUnorderedAccessSlot("g_TilebufferRW"), 1, &tileInfoBufferUAV, nullptr);
+	lightBufferSRV = nullptr;
+	deviceContext->CSSetShaderResources(pImpl->m_pEffectHelper->MapShaderResourceSlot("g_light"), 1, &lightBufferSRV);
+	deviceContext->CSSetShaderResources(pImpl->m_pEffectHelper->MapShaderResourceSlot("g_GBufferTextures[3]"), 1, &lightBufferSRV);
+	pPass->Apply(deviceContext);
+}
+
+void ForwardEffect::SetRenderWithTiledLightCulling()
+{
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("ForwardPlus");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
+	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
 void XM_CALLCONV ForwardEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
 {
 	XMStoreFloat4x4(&pImpl->m_World, W);
@@ -176,7 +264,7 @@ void ForwardEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureDiffuse", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 }
 
 MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
@@ -196,6 +284,11 @@ MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
 	input.indexCount = meshData.m_IndexCount;
 
 	return input;
+}
+
+void ForwardEffect::SetMsaaSamples(UINT msaaSamples)
+{
+	pImpl->m_MsaaSamples = msaaSamples;
 }
 
 void ForwardEffect::Apply(ID3D11DeviceContext* deviceContext)

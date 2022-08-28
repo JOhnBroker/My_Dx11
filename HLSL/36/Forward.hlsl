@@ -2,8 +2,9 @@
 #define FORWARD_HLSL
 
 #include "Rendering.hlsl"
+#include "ForwardTileInfo.hlsl"
 
-// ¼ÆËãµã¹âÔ´×ÅÉ«
+// è®¡ç®—ç‚¹å…‰æºç€è‰²
 float4 ForwardPS(VertexPosHVNormalVTex input) : SV_Target
 {
     uint totalLights, dummy;
@@ -29,7 +30,7 @@ float4 ForwardPS(VertexPosHVNormalVTex input) : SV_Target
     return float4(litColor, 1.0f);
 }
 
-// Ö»½øĞĞalpha²âÊÔ£¬²»ÉÏÉ«¡£ÓÃÓÚpre-z pass
+// åªè¿›è¡Œalphaæµ‹è¯•ï¼Œä¸ä¸Šè‰²ã€‚ç”¨äºpre-z pass
 void ForwardAlphaTestOnlyPS(VertexPosHVNormalVTex input)
 {
     SurfaceData surface = ComputeSurfaceDataFromGeometry(input);
@@ -46,6 +47,33 @@ float4 ForwardAlphaTestPS(VertexPosHVNormalVTex input) : SV_Target
     
     // Otherwise run the normal shader
     return ForwardPS(input);
+}
+
+StructuredBuffer<TileInfo> g_Tilebuffer : register(t9);
+
+// è®¡ç®—ç‚¹å…‰æºç€è‰² 
+float4 ForwardPlusPS(VertexPosHVNormalVTex input) : SV_Target
+{
+    uint dispatchWidth = (g_FramebufferDimensions.x + COMPUTE_SHADER_TILE_GROUP_DIM - 1) / COMPUTE_SHADER_TILE_GROUP_DIM;
+    uint tilebufferIndex = (uint) input.posH.y / COMPUTE_SHADER_TILE_GROUP_DIM * dispatchWidth +
+                            (uint) input.posH.x / COMPUTE_SHADER_TILE_GROUP_DIM;
+    float3 litColor = float3(0.0f, 0.0f, 0.0f);
+    uint numLights = g_Tilebuffer[tilebufferIndex].tileNumLights;
+    [branch]
+    if (g_VisualizeLightCount)
+    {
+        litColor = (float(numLights) * rcp(255.0f)).xxx;
+    }
+    else
+    {
+        SurfaceData surface = ComputeSurfaceDataFromGeometry(input);
+        for (uint lightIndex = 0; lightIndex < numLights; ++lightIndex)
+        {
+            PointLight light = g_light[g_Tilebuffer[tilebufferIndex].tileLightIndices[lightIndex]];
+            AccumulateColor(surface, light, litColor);
+        }
+    }
+    return float4(litColor, 1.0f);
 }
 
 #endif

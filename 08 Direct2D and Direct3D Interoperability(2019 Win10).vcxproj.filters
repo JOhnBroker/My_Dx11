@@ -269,5 +269,14 @@
     <ClInclude Include="HLSL\36\Skybox.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
+    <ClInclude Include="HLSL\36\ComputeShaderTile.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\ForwardTileInfo.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\FramebufferFlat.hlsl">
+      <Filter>着色器</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

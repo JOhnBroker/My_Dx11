@@ -4,15 +4,15 @@
 #include "FullScreenTriangle.hlsl"
 #include "ConstantBuffers.hlsl"
 
-// ¹¤¾ßº¯Êı
+// å·¥å…·å‡½æ•°
 float linstep(float min_value, float max_value, float value)
 {
     return saturate((value - min_value) / (max_value - min_value));
 }
 
-// ¼¸ºÎ½×¶Î
+// å‡ ä½•é˜¶æ®µ
 
-Texture2D g_DiffuseMap : register(t0);
+Texture2D g_TextureDiffuse : register(t0);
 SamplerState g_Sam : register(s0);
 
 struct VertexPosNormalTex
@@ -63,16 +63,20 @@ SurfaceData ComputeSurfaceDataFromGeometry(VertexPosHVNormalVTex input)
     SurfaceData surface;
     surface.posV = input.posV;
     
-    // ÓÒ/ÏÂÏàÁÚÏñËØÓëµ±Ç°ÏñËØµÄÎ»ÖÃ²î
+    // å³/ä¸‹ç›¸é‚»åƒç´ ä¸å½“å‰åƒç´ çš„ä½ç½®å·®
     surface.posV_DX = ddx_coarse(surface.posV);
     surface.posV_DY = ddy_coarse(surface.posV);
     
-    // ¸Ã±íÃæ·¨Ïß¿ÉÓÃÓÚÌæ´úÌá¹©µÄ·¨Ïß
-    float3 faceNormal = ComputeFaceNormal(surface.posV);
+    // è¯¥è¡¨é¢æ³•çº¿å¯ç”¨äºæ›¿ä»£æä¾›çš„æ³•çº¿
+    float3 faceNormal = ComputeFaceNormal(input.posV);
     surface.normalV = normalize(g_FaceNormals ? faceNormal : input.normalV);
     
-    surface.albedo = g_DiffuseMap.Sample(g_Sam, input.texCoord);
+    surface.albedo = g_TextureDiffuse.Sample(g_Sam, input.texCoord);
     surface.albedo.rgb = g_LightingOnly ? float3(1.0f, 1.0f, 1.0f) : surface.albedo.rgb;
+    
+    uint2 textureDim;
+    g_TextureDiffuse.GetDimensions(textureDim.x, textureDim.y);
+    surface.albedo = (textureDim.x == 0U ? float4(1.0f, 1.0f, 1.0f, 1.0f) : surface.albedo);
     
     surface.specularAmount = 0.9f;
     surface.specularPower = 25.0f;
@@ -80,7 +84,7 @@ SurfaceData ComputeSurfaceDataFromGeometry(VertexPosHVNormalVTex input)
     return surface;
 }
 
-// ¹âÕÕ½×¶Î
+// å…‰ç…§é˜¶æ®µ
 
 struct PointLight
 {
@@ -92,7 +96,7 @@ struct PointLight
 
 StructuredBuffer<PointLight> g_light : register(t5);
 
-// ÕâÀï·Ö³Édiffuse/specularÏî·½±ãÑÓ³Ù¹âÕÕÊ¹ÓÃ
+// è¿™é‡Œåˆ†æˆdiffuse/specularé¡¹æ–¹ä¾¿å»¶è¿Ÿå…‰ç…§ä½¿ç”¨
 void AccumulatePhong(float3 normal, float3 lightDir, float3 viewDir, float3 lightContrib, float specularPower,
                     inout float3 litDiffuse, inout float3 litSpecular)
 {

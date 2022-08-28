@@ -5,7 +5,7 @@
 #include <DXTrace.h>
 #include <Vertex.h>
 #include <TextureManager.h>
-
+#include "HLSL/36/ShaderDefines.h"
 using namespace DirectX;
 
 class DeferredEffect::Impl
@@ -95,8 +95,9 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			"RequiresPerSampleShading_" + msaaSamplesStr + "xMSAA_PS",
 			"BasicDeferred_" + msaaSamplesStr + "xMSAA_PS",
 			"BasicDeferredPerSample_" + msaaSamplesStr + "xMSAA_PS",
-			"DebugNormal" + msaaSamplesStr + "xMSAA_PS",
-			"DebugPosZGrad" + msaaSamplesStr + "xMSAA_PS"
+            "DebugNormal_" + msaaSamplesStr + "xMSAA_PS",
+            "DebugPosZGrad_" + msaaSamplesStr + "xMSAA_PS",
+			"ComputeShaderTileDeferred_" + msaaSamplesStr + "xMSAA_CS"
 		};
 		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderNames[0], L"HLSL\\36\\GBuffer.hlsl",
 			device, "GBufferPS", "ps_5_0", defines));
@@ -110,6 +111,9 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			device, "DebugNormalPS", "ps_5_0", defines));
 		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderNames[5], L"HLSL\\36\\GBuffer.hlsl",
 			device, "DebugPosZGradPS", "ps_5_0", defines));
+		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderNames[6], L"HLSL\\36\\ComputeShaderTile.hlsl",
+			device, "ComputeShaderTileDeferredCS", "cs_5_0", defines));
+
 
 		// |-GBuffer Pass 几何阶段
 		// |   VS: GeometryVS
@@ -125,7 +129,8 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 			"Lighting_Basic_Deferred_PerPixel_" + msaaSamplesStr + "xMSAA",
 			"Lighting_Basic_Deferred_PerSample_" + msaaSamplesStr + "xMSAA",
 			"DebugNormal_" + msaaSamplesStr + "xMSAA",
-			"DebugPosZGrad_" + msaaSamplesStr + "xMSAA"
+			"DebugPosZGrad_" + msaaSamplesStr + "xMSAA",
+			"ComputeShaderTileDeferred_" + msaaSamplesStr + "xMSAA"
 		};
 
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[0], device, &passDesc));
@@ -180,6 +185,11 @@ bool DeferredEffect::InitAll(ID3D11Device* device)
 		passDesc.nameVS = "FullScreenTriangleVS";
 		passDesc.namePS = shaderNames[5].c_str();
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[5], device, &passDesc));
+
+		passDesc.nameVS = "";
+		passDesc.namePS = "";
+		passDesc.nameCS = shaderNames[6].c_str();
+		HR(pImpl->m_pEffectHelper->AddEffectPass(passNames[6], device, &passDesc));
 
 		msaaSamples <<= 1;
 	}
@@ -253,8 +263,8 @@ void DeferredEffect::DebugNormalGBuffer(ID3D11DeviceContext* deviceContext,
 
 	// 清空
 	deviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-	normalGBuffer = nullptr;
-	deviceContext->PSSetShaderResources(pImpl->m_pEffectHelper->MapShaderResourceSlot("g_GBufferTextures[0]"), 1, &normalGBuffer);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[0]", nullptr);
+	pPass->Apply(deviceContext);
 }
 
 void DeferredEffect::DebugPosZGradGBuffer(ID3D11DeviceContext* deviceContext,
@@ -333,6 +343,45 @@ void DeferredEffect::ComputeLightingDefault(ID3D11DeviceContext* deviceContext,
 	deviceContext->PSSetShaderResources(0, 8, nullSRVs);
 }
 
+void DeferredEffect::ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext
+	, ID3D11UnorderedAccessView* litFlatBufferUAV, 
+	ID3D11ShaderResourceView* lightBufferSRV, 
+	ID3D11ShaderResourceView* GBuffers[4])
+{
+	// 不需要清空操作，我们写入所有的像素
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> pTex;
+	GBuffers[0]->GetResource(reinterpret_cast<ID3D11Resource**>(pTex.GetAddressOf()));
+	D3D11_TEXTURE2D_DESC texDesc;
+	pTex->GetDesc(&texDesc);
+
+	UINT dims[2] = { texDesc.Width,texDesc.Height };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FramebufferDimensions")->SetUIntVector(2, dims);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[0]", GBuffers[0]);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[1]", GBuffers[1]);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[2]", GBuffers[2]);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[3]", GBuffers[3]);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBufferSRV);
+	pImpl->m_pEffectHelper->SetUnorderedAccessByName("g_Framebuffer", litFlatBufferUAV, 0);
+
+	std::string passName = "ComputeShaderTileDeferred_" + std::to_string(pImpl->m_MsaaSamples) + "xMSAA";
+	auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+	pPass->Apply(deviceContext);
+	pPass->Dispatch(deviceContext, texDesc.Width, texDesc.Height);
+
+	int slot = pImpl->m_pEffectHelper->MapUnorderedAccessSlot("g_Framebuffer");
+	litFlatBufferUAV = nullptr;
+	deviceContext->CSSetUnorderedAccessViews(slot, 1, &litFlatBufferUAV, nullptr);
+
+	slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_light");
+	lightBufferSRV = nullptr;
+	deviceContext->CSSetShaderResources(slot, 1, &lightBufferSRV);
+
+	ID3D11ShaderResourceView* nullSRVs[4] = {};
+	slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_GBufferTextures[0]");
+	deviceContext->CSSetShaderResources(slot, 4, nullSRVs);
+
+}
+
 void XM_CALLCONV DeferredEffect::SetWorldMatrix(DirectX::FXMMATRIX W)
 {
 	XMStoreFloat4x4(&pImpl->m_World, W);
@@ -353,7 +402,7 @@ void DeferredEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureDiffuse", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 }
 
 MeshDataInput DeferredEffect::GetInputData(const MeshData& meshData)

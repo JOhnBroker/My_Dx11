@@ -25,9 +25,9 @@ float2 EncodeSphereMap(float3 normal)
 }
 
 // 法线解码
-float3 DecodeSphereMap(float2 encode)
+float3 DecodeSphereMap(float2 encoded)
 {
-    float4 nn = float4(encode, 1, -1);
+    float4 nn = float4(encoded, 1, -1);
     float l = dot(nn.xyz, -nn.xyw);
     nn.z = l;
     nn.xy *= sqrt(l);
@@ -96,7 +96,7 @@ bool RequiresPerSampleShading(SurfaceData surface[MSAA_SAMPLES])
     bool perSample = false;
     
     const float maxZDelta = abs(surface[0].posV_DX.z) + abs(surface[0].posV_DY.z);
-    const float minNormalDot = 0.99f;
+    const float minNormalDot = 0.99f; // 允许大约8度的法线角度差异
     
     [unroll]
     for (uint i = 1; i < MSAA_SAMPLES; ++i)

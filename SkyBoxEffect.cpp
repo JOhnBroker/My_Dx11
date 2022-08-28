@@ -106,9 +106,9 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 		EffectPassDesc passDesc;
 		passDesc.nameVS = "SkyboxVS";
 		passDesc.namePS = shaderName.c_str();
-		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
+		HR(pImpl->m_pEffectHelper->AddEffectPass(passName.c_str(), device, &passDesc));
 		{
-			auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+			auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName.c_str());
 			pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 		}
 
@@ -124,7 +124,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	//	pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 	//	pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	//}
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -198,6 +198,13 @@ void SkyBoxEffect::SetDepthTexture(ID3D11ShaderResourceView* depthTexture)
 void SkyBoxEffect::SetLitTexture(ID3D11ShaderResourceView* litTexture)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_LitTexture", litTexture);
+}
+
+void SkyBoxEffect::SetFlatLitTexture(ID3D11ShaderResourceView* flatLitTexture, UINT width, UINT height)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_FlatLitTexture", flatLitTexture);
+	UINT wh[2] = { width,height };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FramebufferDimensions")->SetUIntVector(2, wh);
 }
 
 void SkyBoxEffect::SetMsaaSamples(UINT msaaSamples)

@@ -259,6 +259,17 @@
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSL\36\ComputeShaderTile.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\ForwardTileInfo.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\FramebufferFlat.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
