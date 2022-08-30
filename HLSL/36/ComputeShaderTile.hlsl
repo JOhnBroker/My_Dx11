@@ -356,11 +356,11 @@ void PointLightCullingForwardCS(uint3 groupId : SV_GroupID,
     uint2 globalCoords = dispatchThreadId.xy;
     float minZSample = g_CameraNearFar.y;
     float maxZSample = g_CameraNearFar.x;
-    const float invDepthRange = 31.0f / (gs_MaxZ - gs_MinZ);
-    uint currDepthMask = 0;
+    float msaaDepthMask[MSAA_SAMPLES];
+    uint sample = 0;
     
     [unroll]
-    for (uint sample = 0; sample < MSAA_SAMPLES; ++sample)
+    for (sample = 0; sample < MSAA_SAMPLES; ++sample)
     {
         float zBuffer = g_GBufferTextures[3].Load(globalCoords, sample);
         float viewSpaceZ = g_Proj._m32 / (zBuffer - g_Proj._m22);
@@ -371,8 +371,7 @@ void PointLightCullingForwardCS(uint3 groupId : SV_GroupID,
         [flatten]
         if (validPixel)
         {
-            uint bitPlace = max(0.0f, min(31.0f, (viewSpaceZ - gs_MinZ) * invDepthRange));
-            currDepthMask |= 1 << bitPlace;
+            msaaDepthMask[sample] = viewSpaceZ;
             minZSample = min(minZSample, viewSpaceZ);
             maxZSample = max(maxZSample, viewSpaceZ);
         }
@@ -402,6 +401,15 @@ void PointLightCullingForwardCS(uint3 groupId : SV_GroupID,
     
     // 2.5D Culling
     // 将minTileZ 到maxTileZ 之间划分为32部分[0-31]，当存在当前深度时，则将对应为设置为1 
+    
+    const float invDepthRange = 31.0f / (gs_MaxZ - gs_MinZ);
+    uint currDepthMask = 0;
+    [unroll]
+    for (sample = 0; sample < MSAA_SAMPLES; ++sample)
+    {
+        uint bitPlace = max(0.0f, min(31.0f, msaaDepthMask[sample] * invDepthRange));
+        currDepthMask |= 1 << bitPlace;
+    }
     InterlockedOr(gs_DepthMask, currDepthMask);
     
     GroupMemoryBarrierWithGroupSync();
