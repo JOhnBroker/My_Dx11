@@ -164,154 +164,154 @@ using namespace Microsoft::WRL;
 
 enum ShaderFlag
 {
-    PixelShader = 0x1,
-    VertexShader = 0x2,
-    GeometryShader = 0x4,
-    HullShader = 0x8,
-    DomainShader = 0x10,
-    ComputeShader =0x20
+	PixelShader = 0x1,
+	VertexShader = 0x2,
+	GeometryShader = 0x4,
+	HullShader = 0x8,
+	DomainShader = 0x10,
+	ComputeShader = 0x20
 };
 
 // 着色器资源
 struct ShaderResource
 {
-    std::string name;
-    D3D11_SRV_DIMENSION dim;
-    ComPtr<ID3D11ShaderResourceView>pSRV;
+	std::string name;
+	D3D11_SRV_DIMENSION dim;
+	ComPtr<ID3D11ShaderResourceView>pSRV;
 };
 
 // 可读写资源
 struct RWResource
 {
-    std::string name;
-    D3D11_UAV_DIMENSION dim;
-    ComPtr<ID3D11UnorderedAccessView> pUAV;
-    uint32_t initialCount;
-    bool enableCounter;
-    bool firstInit;     // 防止重复清零
+	std::string name;
+	D3D11_UAV_DIMENSION dim;
+	ComPtr<ID3D11UnorderedAccessView> pUAV;
+	uint32_t initialCount;
+	bool enableCounter;
+	bool firstInit;     // 防止重复清零
 };
 
 // 采样器状态
 struct SamplerState
 {
-    std::string name;
-    ComPtr<ID3D11SamplerState> pSS;
+	std::string name;
+	ComPtr<ID3D11SamplerState> pSS;
 };
 
 // 内部使用的常量缓冲区数据
 struct CBufferData
 {
-    BOOL isDirty = false;
-    ComPtr<ID3D11Buffer> cBuffer;
-    std::vector<uint8_t> cbufferData;
-    std::string cbufferName;
-    uint32_t startSlot = 0;
+	BOOL isDirty = false;
+	ComPtr<ID3D11Buffer> cBuffer;
+	std::vector<uint8_t> cbufferData;
+	std::string cbufferName;
+	uint32_t startSlot = 0;
 
-    CBufferData() = default;
-    CBufferData(const std::string& name, uint32_t startSlot, uint32_t byteWidth, BYTE* initData = nullptr) :
-        cbufferData(byteWidth), cbufferName(name), startSlot(startSlot) 
-    {
-        if (initData) 
-        {
-            memcpy_s(cbufferData.data(), byteWidth, initData, byteWidth);
-        }
-    }
+	CBufferData() = default;
+	CBufferData(const std::string& name, uint32_t startSlot, uint32_t byteWidth, BYTE* initData = nullptr) :
+		cbufferData(byteWidth), cbufferName(name), startSlot(startSlot)
+	{
+		if (initData)
+		{
+			memcpy_s(cbufferData.data(), byteWidth, initData, byteWidth);
+		}
+	}
 
-    HRESULT CreateBuffer(ID3D11Device* device) 
-    {
-        if(cBuffer != nullptr)
-        {
-            return S_OK;
-        }
-        D3D11_BUFFER_DESC cbd;
-        ZeroMemory(&cbd, sizeof(cbd));
-        cbd.Usage = D3D11_USAGE_DYNAMIC;
-        cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        cbd.ByteWidth = (uint32_t)cbufferData.size();
-        return device->CreateBuffer(&cbd, nullptr, cBuffer.GetAddressOf());
-    }
+	HRESULT CreateBuffer(ID3D11Device* device)
+	{
+		if (cBuffer != nullptr)
+		{
+			return S_OK;
+		}
+		D3D11_BUFFER_DESC cbd;
+		ZeroMemory(&cbd, sizeof(cbd));
+		cbd.Usage = D3D11_USAGE_DYNAMIC;
+		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		cbd.ByteWidth = (uint32_t)cbufferData.size();
+		return device->CreateBuffer(&cbd, nullptr, cBuffer.GetAddressOf());
+	}
 
-    void UpdateBuffer(ID3D11DeviceContext* deviceContext) 
-    {
-        if (isDirty) 
-        {
-            isDirty = false;
-            D3D11_MAPPED_SUBRESOURCE mappedData;
-            deviceContext->Map(cBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
-            memcpy_s(mappedData.pData, cbufferData.size(), cbufferData.data(), cbufferData.size());
-            deviceContext->Unmap(cBuffer.Get(), 0);
-        }
-    }
+	void UpdateBuffer(ID3D11DeviceContext* deviceContext)
+	{
+		if (isDirty)
+		{
+			isDirty = false;
+			D3D11_MAPPED_SUBRESOURCE mappedData;
+			deviceContext->Map(cBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
+			memcpy_s(mappedData.pData, cbufferData.size(), cbufferData.data(), cbufferData.size());
+			deviceContext->Unmap(cBuffer.Get(), 0);
+		}
+	}
 
-    void BindVS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->VSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindVS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->VSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 
-    void BindHS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->HSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindHS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->HSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 
-    void BindDS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->DSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindDS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->DSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 
-    void BindGS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->GSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindGS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->GSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 
-    void BindCS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->CSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindCS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->CSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 
-    void BindPS(ID3D11DeviceContext* deviceContext)
-    {
-        deviceContext->PSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
-    }
+	void BindPS(ID3D11DeviceContext* deviceContext)
+	{
+		deviceContext->PSSetConstantBuffers(startSlot, 1, cBuffer.GetAddressOf());
+	}
 };
 
 struct ConstantBufferVariable :public IEffectConstantBufferVariable
 {
-    ConstantBufferVariable() = default;
-    ~ConstantBufferVariable() override {}
-    ConstantBufferVariable(std::string_view name_, uint32_t offset, uint32_t size, CBufferData* pData)
-        :name(name_), startByteOffset(offset), byteWidth(size), pCBufferData(pData) 
-    {
-    }
+	ConstantBufferVariable() = default;
+	~ConstantBufferVariable() override {}
+	ConstantBufferVariable(std::string_view name_, uint32_t offset, uint32_t size, CBufferData* pData)
+		:name(name_), startByteOffset(offset), byteWidth(size), pCBufferData(pData)
+	{
+	}
 
-    void SetUInt(uint32_t val) override 
-    {
-        SetRaw(&val, 0, 4);
-    }
+	void SetUInt(uint32_t val) override
+	{
+		SetRaw(&val, 0, 4);
+	}
 
-    void SetSInt(int val) override 
-    {
-        SetRaw(&val, 0, 4);
-    }
+	void SetSInt(int val) override
+	{
+		SetRaw(&val, 0, 4);
+	}
 
-    void SetFloat(float val) override 
-    {
-        SetRaw(&val, 0, 4);
-    }
+	void SetFloat(float val) override
+	{
+		SetRaw(&val, 0, 4);
+	}
 
-    void SetUIntVector(uint32_t numComponents, const uint32_t data[4]) override 
-    {
-        if (numComponents > 4) 
-        {
-            numComponents = 4;
-        }
-        uint32_t byteCount = numComponents * sizeof(uint32_t);
-        if (byteCount > byteWidth) 
-        {
-            byteCount = byteWidth;
-        }
-        SetRaw(data, 0, byteCount);
-    }
+	void SetUIntVector(uint32_t numComponents, const uint32_t data[4]) override
+	{
+		if (numComponents > 4)
+		{
+			numComponents = 4;
+		}
+		uint32_t byteCount = numComponents * sizeof(uint32_t);
+		if (byteCount > byteWidth)
+		{
+			byteCount = byteWidth;
+		}
+		SetRaw(data, 0, byteCount);
+	}
 
 	void SetSIntVector(uint32_t numComponents, const int data[4]) override
 	{
@@ -333,10 +333,10 @@ struct ConstantBufferVariable :public IEffectConstantBufferVariable
 		SetRaw(data, 0, byteCount);
 	}
 
-    void SetUIntMatrix(uint32_t rows, uint32_t cols, const uint32_t* noPadData) override 
-    {
-        SetMatrixInBytes(rows, cols, reinterpret_cast<const BYTE*>(noPadData));
-    }
+	void SetUIntMatrix(uint32_t rows, uint32_t cols, const uint32_t* noPadData) override
+	{
+		SetMatrixInBytes(rows, cols, reinterpret_cast<const BYTE*>(noPadData));
+	}
 
 	void SetSIntMatrix(uint32_t rows, uint32_t cols, const int* noPadData) override
 	{
@@ -348,59 +348,59 @@ struct ConstantBufferVariable :public IEffectConstantBufferVariable
 		SetMatrixInBytes(rows, cols, reinterpret_cast<const BYTE*>(noPadData));
 	}
 
-    void SetRaw(const void* data, uint32_t byteOffset = 0, uint32_t byteCount = 0xFFFFFFFF)override
-    {
-        if (!data || byteOffset > byteWidth) 
-        {
-            return;
-        }
-        if (byteOffset + byteCount > byteWidth) 
-        {
-            byteCount = byteWidth - byteOffset;
-        }
-        // 
-        if (memcmp(pCBufferData->cbufferData.data() + startByteOffset + byteOffset, data, byteCount)) 
-        {
-            memcpy_s(pCBufferData->cbufferData.data() + startByteOffset + byteOffset, byteCount, data, byteCount);
-            pCBufferData->isDirty = true;
-        }
-    }
+	void SetRaw(const void* data, uint32_t byteOffset = 0, uint32_t byteCount = 0xFFFFFFFF)override
+	{
+		if (!data || byteOffset > byteWidth)
+		{
+			return;
+		}
+		if (byteOffset + byteCount > byteWidth)
+		{
+			byteCount = byteWidth - byteOffset;
+		}
+		// 
+		if (memcmp(pCBufferData->cbufferData.data() + startByteOffset + byteOffset, data, byteCount))
+		{
+			memcpy_s(pCBufferData->cbufferData.data() + startByteOffset + byteOffset, byteCount, data, byteCount);
+			pCBufferData->isDirty = true;
+		}
+	}
 
-    struct PropertyFunctor 
-    {
-        PropertyFunctor(ConstantBufferVariable& _cbv) :cbv(_cbv) {}
-        void operator()(int val) { cbv.SetSInt(val); }
-        void operator()(uint32_t val) { cbv.SetUInt(val); }
-        void operator()(float val) { cbv.SetFloat(val); }
-        void operator()(const DirectX::XMFLOAT2& val) { cbv.SetFloatVector(2,reinterpret_cast<const float*>(&val)); }
-        void operator()(const DirectX::XMFLOAT3& val) { cbv.SetFloatVector(3,reinterpret_cast<const float*>(&val)); }
-        void operator()(const DirectX::XMFLOAT4& val) { cbv.SetFloatVector(4,reinterpret_cast<const float*>(&val)); }
-        void operator()(const DirectX::XMFLOAT4X4& val) { cbv.SetFloatMatrix(4, 4, reinterpret_cast<const float*>(&val)); }
-        void operator()(const std::vector<float>& val) { cbv.SetRaw(val.data()); }
-        void operator()(const std::vector<DirectX::XMFLOAT4>& val) { cbv.SetRaw(val.data()); }
-        void operator()(const std::vector<DirectX::XMFLOAT4X4>& val) { cbv.SetRaw(val.data()); }
-        void operator()(const std::string& val) {}
-        ConstantBufferVariable& cbv;
-    };
+	struct PropertyFunctor
+	{
+		PropertyFunctor(ConstantBufferVariable& _cbv) :cbv(_cbv) {}
+		void operator()(int val) { cbv.SetSInt(val); }
+		void operator()(uint32_t val) { cbv.SetUInt(val); }
+		void operator()(float val) { cbv.SetFloat(val); }
+		void operator()(const DirectX::XMFLOAT2& val) { cbv.SetFloatVector(2, reinterpret_cast<const float*>(&val)); }
+		void operator()(const DirectX::XMFLOAT3& val) { cbv.SetFloatVector(3, reinterpret_cast<const float*>(&val)); }
+		void operator()(const DirectX::XMFLOAT4& val) { cbv.SetFloatVector(4, reinterpret_cast<const float*>(&val)); }
+		void operator()(const DirectX::XMFLOAT4X4& val) { cbv.SetFloatMatrix(4, 4, reinterpret_cast<const float*>(&val)); }
+		void operator()(const std::vector<float>& val) { cbv.SetRaw(val.data()); }
+		void operator()(const std::vector<DirectX::XMFLOAT4>& val) { cbv.SetRaw(val.data()); }
+		void operator()(const std::vector<DirectX::XMFLOAT4X4>& val) { cbv.SetRaw(val.data()); }
+		void operator()(const std::string& val) {}
+		ConstantBufferVariable& cbv;
+	};
 
-    void Set(const Property& prop)override
-    {
-        std::visit(PropertyFunctor(*this), prop);
-    }
+	void Set(const Property& prop)override
+	{
+		std::visit(PropertyFunctor(*this), prop);
+	}
 
-    HRESULT GetRaw(void* pOutput, uint32_t byteOffset = 0, uint32_t byteCount = 0xFFFFFFFF)override 
-    {
-        if (byteOffset > byteWidth || byteCount > byteWidth - byteOffset) 
-        {
-            return E_BOUNDS;
-        }
-        if (!pOutput) 
-        {
-            return E_INVALIDARG;
-        }
-        memcpy_s(pOutput, byteCount, pCBufferData->cbufferData.data() + startByteOffset + byteOffset, byteCount);
-        return S_OK;
-    }
+	HRESULT GetRaw(void* pOutput, uint32_t byteOffset = 0, uint32_t byteCount = 0xFFFFFFFF)override
+	{
+		if (byteOffset > byteWidth || byteCount > byteWidth - byteOffset)
+		{
+			return E_BOUNDS;
+		}
+		if (!pOutput)
+		{
+			return E_INVALIDARG;
+		}
+		memcpy_s(pOutput, byteCount, pCBufferData->cbufferData.data() + startByteOffset + byteOffset, byteCount);
+		return S_OK;
+	}
 
 	void SetMatrixInBytes(uint32_t rows, uint32_t cols, const BYTE* noPadData)
 	{
@@ -505,34 +505,34 @@ struct ComputeShaderInfo
 	std::unordered_map<size_t, std::shared_ptr<ConstantBufferVariable>> params;
 };
 
-struct EffectPass :public IEffectPass 
+struct EffectPass :public IEffectPass
 {
-    EffectPass(
-        EffectHelper* _pEffectHelper,
-        std::string_view _passName,
-        std::unordered_map<uint32_t, CBufferData>& _cBuffers,
-        std::unordered_map<uint32_t, ShaderResource>& _shaderResources,
-        std::unordered_map<uint32_t, SamplerState>& _samplers,
-        std::unordered_map<uint32_t, RWResource>& _rwResources)
-        : pEffectHelper(_pEffectHelper), passName(_passName), cBuffers(_cBuffers), shaderResources(_shaderResources),
-        samplers(_samplers), rwResources(_rwResources)
-    {
-    }
-    ~EffectPass() override {}
+	EffectPass(
+		EffectHelper* _pEffectHelper,
+		std::string_view _passName,
+		std::unordered_map<uint32_t, CBufferData>& _cBuffers,
+		std::unordered_map<uint32_t, ShaderResource>& _shaderResources,
+		std::unordered_map<uint32_t, SamplerState>& _samplers,
+		std::unordered_map<uint32_t, RWResource>& _rwResources)
+		: pEffectHelper(_pEffectHelper), passName(_passName), cBuffers(_cBuffers), shaderResources(_shaderResources),
+		samplers(_samplers), rwResources(_rwResources)
+	{
+	}
+	~EffectPass() override {}
 
-    void SetRasterizerState(ID3D11RasterizerState* pRS)  override;
-    void SetBlendState(ID3D11BlendState* pBS, const float blendFactor[4], uint32_t sampleMask) override;
-    void SetDepthStencilState(ID3D11DepthStencilState* pDSS, uint32_t stencilRef)  override;
-    std::shared_ptr<IEffectConstantBufferVariable> VSGetParamByName(std::string_view paramName) override;
-    std::shared_ptr<IEffectConstantBufferVariable> DSGetParamByName(std::string_view paramName) override;
-    std::shared_ptr<IEffectConstantBufferVariable> HSGetParamByName(std::string_view paramName) override;
-    std::shared_ptr<IEffectConstantBufferVariable> GSGetParamByName(std::string_view paramName) override;
-    std::shared_ptr<IEffectConstantBufferVariable> PSGetParamByName(std::string_view paramName) override;
-    std::shared_ptr<IEffectConstantBufferVariable> CSGetParamByName(std::string_view paramName) override;
-    EffectHelper* GetEffectHelper() override;
-    const std::string& GetPassName() override;
+	void SetRasterizerState(ID3D11RasterizerState* pRS)  override;
+	void SetBlendState(ID3D11BlendState* pBS, const float blendFactor[4], uint32_t sampleMask) override;
+	void SetDepthStencilState(ID3D11DepthStencilState* pDSS, uint32_t stencilRef)  override;
+	std::shared_ptr<IEffectConstantBufferVariable> VSGetParamByName(std::string_view paramName) override;
+	std::shared_ptr<IEffectConstantBufferVariable> DSGetParamByName(std::string_view paramName) override;
+	std::shared_ptr<IEffectConstantBufferVariable> HSGetParamByName(std::string_view paramName) override;
+	std::shared_ptr<IEffectConstantBufferVariable> GSGetParamByName(std::string_view paramName) override;
+	std::shared_ptr<IEffectConstantBufferVariable> PSGetParamByName(std::string_view paramName) override;
+	std::shared_ptr<IEffectConstantBufferVariable> CSGetParamByName(std::string_view paramName) override;
+	EffectHelper* GetEffectHelper() override;
+	const std::string& GetPassName() override;
 
-    void Apply(ID3D11DeviceContext* deviceContext) override;
+	void Apply(ID3D11DeviceContext* deviceContext) override;
 	void Dispatch(ID3D11DeviceContext* deviceContext, uint32_t threadX = 1, uint32_t threadY = 1, uint32_t threadZ = 1) override;
 
 	EffectHelper* pEffectHelper = nullptr;
@@ -613,21 +613,21 @@ public:
 
 HRESULT EffectHelper::Impl::UpdateShaderReflection(std::string_view name, ID3D11Device* device, ID3D11ShaderReflection* pShaderReflection, uint32_t shaderFlag)
 {
-    HRESULT hr;
-    D3D11_SHADER_DESC sd;
-    hr = pShaderReflection->GetDesc(&sd);
-    if (FAILED(hr)) return hr;
+	HRESULT hr;
+	D3D11_SHADER_DESC sd;
+	hr = pShaderReflection->GetDesc(&sd);
+	if (FAILED(hr)) return hr;
 
-    size_t nameID = StringToID(name);
+	size_t nameID = StringToID(name);
 
-    if (shaderFlag == ComputeShader) 
-    {
-        // 获取线程组维度
-        pShaderReflection->GetThreadGroupSize(
-            &m_ComputeShaders[nameID]->threadGroupSizeX,
-            &m_ComputeShaders[nameID]->threadGroupSizeY,
-            &m_ComputeShaders[nameID]->threadGroupSizeZ);
-    }
+	if (shaderFlag == ComputeShader)
+	{
+		// 获取线程组维度
+		pShaderReflection->GetThreadGroupSize(
+			&m_ComputeShaders[nameID]->threadGroupSizeX,
+			&m_ComputeShaders[nameID]->threadGroupSizeY,
+			&m_ComputeShaders[nameID]->threadGroupSizeZ);
+	}
 
 	for (uint32_t i = 0;; ++i)
 	{
@@ -821,7 +821,7 @@ void EffectHelper::Impl::Clear()
 	m_ComputeShaders.clear();
 }
 
-HRESULT EffectHelper::Impl::CreateShaderFromBlob(std::string_view name, ID3D11Device* device, uint32_t shaderFlag, 
+HRESULT EffectHelper::Impl::CreateShaderFromBlob(std::string_view name, ID3D11Device* device, uint32_t shaderFlag,
 	ID3DBlob* blob)
 {
 	HRESULT hr = 0;
@@ -847,7 +847,7 @@ HRESULT EffectHelper::Impl::CreateShaderFromBlob(std::string_view name, ID3D11De
 }
 
 EffectHelper::EffectHelper()
-    : pImpl(std::make_unique<EffectHelper::Impl>())
+	: pImpl(std::make_unique<EffectHelper::Impl>())
 {
 }
 
@@ -857,7 +857,7 @@ EffectHelper::~EffectHelper()
 
 HRESULT EffectHelper::AddShader(std::string_view name, ID3D11Device* device, ID3DBlob* blob)
 {
-	if (name.empty() || device == nullptr || blob == nullptr) 
+	if (name.empty() || device == nullptr || blob == nullptr)
 	{
 		return E_INVALIDARG;
 	}
@@ -867,7 +867,7 @@ HRESULT EffectHelper::AddShader(std::string_view name, ID3D11Device* device, ID3
 	hr = D3DReflect(blob->GetBufferPointer(), blob->GetBufferSize(), __uuidof(ID3D11ShaderReflection),
 		reinterpret_cast<void**>(pShaderReflection.GetAddressOf()));
 	if (FAILED(hr)) return hr;
-	
+
 	// 获取着色器类型
 	D3D11_SHADER_DESC sd;
 	pShaderReflection->GetDesc(&sd);
@@ -876,7 +876,7 @@ HRESULT EffectHelper::AddShader(std::string_view name, ID3D11Device* device, ID3
 	// 创建着色器
 	hr = pImpl->CreateShaderFromBlob(name, device, shaderFlag, blob);
 	if (FAILED(hr)) return hr;
-	
+
 	// 建立着色器反射
 	return pImpl->UpdateShaderReflection(name, device, pShaderReflection.Get(), shaderFlag);
 }
@@ -885,7 +885,7 @@ void EffectHelper::SetBinaryCacheDirectory(std::wstring_view cacheDir, bool forc
 {
 	pImpl->m_CacheDir = cacheDir;
 	pImpl->m_ForceWrite = forceWrite;
-	if (!pImpl->m_CacheDir.empty()) 
+	if (!pImpl->m_CacheDir.empty())
 	{
 		CreateDirectoryW(cacheDir.data(), nullptr);
 	}
@@ -897,15 +897,15 @@ HRESULT EffectHelper::CreateShaderFromFile(std::string_view shaderName, std::wst
 	ID3DBlob* pBlobIn = nullptr;
 	ID3DBlob* pBlobOut = nullptr;
 	// 如果开启着色器字节码文件缓存路径 且 关闭强制覆盖，则优先尝试读取${cacheDir}/${shaderName}.cso并添加
-	if (!pImpl->m_CacheDir.empty() && !pImpl->m_ForceWrite) 
+	if (!pImpl->m_CacheDir.empty() && !pImpl->m_ForceWrite)
 	{
 		std::filesystem::path cacheFilename = pImpl->m_CacheDir / (UTF8ToWString(shaderName) + L".cso");
 		std::wstring wstr = cacheFilename.generic_wstring();
 		HRESULT hr = D3DReadFileToBlob(wstr.c_str(), &pBlobOut);
-		if (SUCCEEDED(hr)) 
+		if (SUCCEEDED(hr))
 		{
 			hr = AddShader(shaderName, device, pBlobOut);
-			if (ppShaderByteCode) 
+			if (ppShaderByteCode)
 			{
 				*ppShaderByteCode = pBlobOut;
 			}
@@ -1409,8 +1409,6 @@ void EffectPass::Apply(ID3D11DeviceContext* deviceContext)
 	{
 		deviceContext->CSSetShader(nullptr, nullptr, 0);
 	}
-
-
 
 	// 设置渲染状态	
 	deviceContext->RSSetState(pRasterizerState.Get());

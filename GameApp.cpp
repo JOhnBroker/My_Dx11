@@ -94,6 +94,7 @@ void GameApp::UpdateScene(float dt)
 			"Forward: No Culling",
 			"Forward: Pre-Z No Culling",
 			"Forward+: Compute Shader Tile",
+			"Forward+: Compute Shader 2.5DTile",
 			"Deferred: No Culling",
 			"Deferred: Compute Shader Tile"
 		};
@@ -198,9 +199,9 @@ void GameApp::DrawScene()
 	//场景渲染
 	if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_NONE)
 		RenderForward(false);
-	else if (m_LightCullTechnique <= LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE)
+	else if (m_LightCullTechnique <= LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_2_5D)
 		RenderForward(true);
-	else 
+	else
 	{
 		RenderGBuffer();
 		m_GpuTimer_Lighting.Start();
@@ -224,7 +225,8 @@ void GameApp::DrawScene()
 		ImGui::Text("GPU Profile");
 		double total_time = 0.0f;
 		if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_PREZ_NONE ||
-			m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE)
+			m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE ||
+			m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_2_5D)
 		{
 			m_GpuTimer_PreZ.TryGetTime(nullptr);
 			ImGui::Text("PreZ Pass: %.3f ms", m_GpuTimer_PreZ.AverageTime() * 1000);
@@ -237,7 +239,8 @@ void GameApp::DrawScene()
 			ImGui::Text("Geometry Pass: %.3f ms", m_GpuTimer_Geometry.AverageTime() * 1000);
 			total_time += m_GpuTimer_Geometry.AverageTime();
 		}
-		if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE) 
+		if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE ||
+			m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_2_5D)
 		{
 			m_GpuTimer_LightCulling.TryGetTime(nullptr);
 			ImGui::Text("Light Culling Pass: %.3f ms", m_GpuTimer_LightCulling.AverageTime() * 1000);
@@ -600,10 +603,20 @@ void GameApp::RenderForward(bool doPreZ)
 		m_GpuTimer_PreZ.Stop();
 	}
 	// 光源裁剪阶段
-	if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE) 
+	if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE)
 	{
 		m_GpuTimer_LightCulling.Start();
 		m_ForwardEffect.ComputeTiledLightCulling(m_pd3dImmediateContext.Get(),
+			m_pTileBuffer->GetUnorderedAccess(),
+			m_pLightBuffer->GetShaderResource(),
+			m_pGBufferSRVs[3]);
+
+		m_GpuTimer_LightCulling.Stop();
+	}
+	else if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_2_5D)
+	{
+		m_GpuTimer_LightCulling.Start();
+		m_ForwardEffect.Compute2Point5LightCulling(m_pd3dImmediateContext.Get(),
 			m_pTileBuffer->GetUnorderedAccess(),
 			m_pLightBuffer->GetShaderResource(),
 			m_pGBufferSRVs[3]);
@@ -616,7 +629,7 @@ void GameApp::RenderForward(bool doPreZ)
 	{
 		ID3D11RenderTargetView* pRTVs[1] = { m_pLitBuffer->GetRenderTarget() };
 		m_pd3dImmediateContext->OMSetRenderTargets(1, pRTVs, m_pDepthBuffer->GetDepthStencil());
-		if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE) 
+		if (m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE || m_LightCullTechnique == LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_2_5D)
 		{
 			m_ForwardEffect.SetTileBuffer(m_pTileBuffer->GetShaderResource());
 			m_ForwardEffect.SetRenderWithTiledLightCulling();

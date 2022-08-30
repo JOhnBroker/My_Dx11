@@ -69,8 +69,12 @@ float4 ForwardPlusPS(VertexPosHVNormalVTex input) : SV_Target
         SurfaceData surface = ComputeSurfaceDataFromGeometry(input);
         for (uint lightIndex = 0; lightIndex < numLights; ++lightIndex)
         {
-            PointLight light = g_light[g_Tilebuffer[tilebufferIndex].tileLightIndices[lightIndex]];
-            AccumulateColor(surface, light, litColor);
+            uint listIndex = g_Tilebuffer[tilebufferIndex].tileLightIndices[lightIndex];
+            if (listIndex != 0xFFFF)
+            {
+                PointLight light = g_light[listIndex];
+                AccumulateColor(surface, light, litColor);
+            }
         }
     }
     return float4(litColor, 1.0f);

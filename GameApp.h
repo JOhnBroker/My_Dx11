@@ -49,12 +49,13 @@ public:
 		CULL_FORWARD_NONE = 0,					// 前向渲染，无光照裁剪
 		CULL_FORWARD_PREZ_NONE,					// 前向渲染，预写入深度，无光照裁剪
 		CULL_FORWARD_COMPUTE_SHADER_TILE,		// 前向渲染，预写入深度，Tile-Based 光照裁剪
+		CULL_FORWARD_COMPUTE_SHADER_2_5D,		// 前向渲染，预写入深度，Tile-Based 2.5D光照裁剪
 		CULL_DEFERRED_NONE,						// 传统延迟渲染
 		CULL_DEFERRED_COMPUTE_SHADER_TILE		// Tile-Based 延迟渲染
 	};
 
 public:
-    GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth = 1280, int initHeight = 720);
+	GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth = 1280, int initHeight = 720);
 	~GameApp();
 
 	bool Init();
@@ -114,7 +115,7 @@ private:
 	GpuTimer m_GpuTimer_Skybox;
 
 	// 设置
-	LightCullTechnique m_LightCullTechnique = LightCullTechnique::CULL_DEFERRED_COMPUTE_SHADER_TILE;
+	LightCullTechnique m_LightCullTechnique = LightCullTechnique::CULL_FORWARD_COMPUTE_SHADER_TILE;
 	bool m_AnimateLights = false;
 	bool m_LightingOnly = false;
 	bool m_FaceNormals = false;

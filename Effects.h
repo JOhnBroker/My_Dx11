@@ -481,17 +481,21 @@ public:
 	void SetLightBuffer(ID3D11ShaderResourceView* lightBuffer);
 	void SetTileBuffer(ID3D11ShaderResourceView* tileBuffer);
 	void SetCameraNearFar(float nearZ, float farZ);
-	
+
 	void SetLightingOnly(bool enable);
 	void SetFaceNormals(bool enable);
 	void SetVisualizeLightCount(bool enable);
-	
+
 	// 默认状态来绘制
 	void SetRenderDefault();
 	// 进行 Pre-Z 通道绘制
 	void SetRenderPreZPass();
 	// 执行分块光照裁剪
 	void ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext,
+		ID3D11UnorderedAccessView* tileInfoBufferUAV,
+		ID3D11ShaderResourceView* lightBufferSRV,
+		ID3D11ShaderResourceView* depthBufferSRV);
+	void Compute2Point5LightCulling(ID3D11DeviceContext* deviceContext,
 		ID3D11UnorderedAccessView* tileInfoBufferUAV,
 		ID3D11ShaderResourceView* lightBufferSRV,
 		ID3D11ShaderResourceView* depthBufferSRV);
@@ -538,7 +542,7 @@ public:
 	void SetVisualizeShadingFreq(bool enable);
 
 	void SetCameraNearFar(float nearZ, float farZ);
-	
+
 	// 绘制G缓冲区
 	void SetRenderGBuffer();
 	// 将法线G-Buffer 渲染到目标纹理
@@ -549,7 +553,7 @@ public:
 	void ComputeLightingDefault(ID3D11DeviceContext* deviceContext, ID3D11RenderTargetView* litBufferRTV, ID3D11DepthStencilView* depthBufferReadOnlyDSV, ID3D11ShaderResourceView* lightBufferSRV, ID3D11ShaderResourceView* GBuffers[4], D3D11_VIEWPORT viewport);
 	// 执行分块光照裁剪
 	void ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext, ID3D11UnorderedAccessView* litFlatBufferUAV, ID3D11ShaderResourceView* lightBufferSRV, ID3D11ShaderResourceView* GBuffers[4]);
-	
+
 	void Apply(ID3D11DeviceContext* deviceContext) override;
 
 private:

@@ -61,7 +61,7 @@ ForwardEffect& ForwardEffect::operator=(ForwardEffect&& moveFrom) noexcept
 ForwardEffect& ForwardEffect::Get()
 {
 	if (!g_pInstance)
-        throw std::exception("ForwardEffect needs an instance!");
+		throw std::exception("ForwardEffect needs an instance!");
 	return *g_pInstance;
 }
 
@@ -137,16 +137,33 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	UINT msaaSamples = 1;
 	passDesc.nameVS = "";
 	passDesc.namePS = "";
-	while (msaaSamples <= 8) 
+	while (msaaSamples <= 8)
 	{
 		std::string msaaSamplesStr = std::to_string(msaaSamples);
 		defines[0].Definition = msaaSamplesStr.c_str();
 		std::string shaderName = "ComputeShaderTileForward_" + msaaSamplesStr + "xMSAA_CS";
 		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\ComputeShaderTile.hlsl",
 			device, "ComputeShaderTileForwardCS", "cs_5_0", defines));
-		
+
 		passDesc.nameCS = shaderName.c_str();
 		std::string passName = "ComputeShaderTileForward_" + std::to_string(msaaSamples) + "xMSAA";
+		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
+
+		msaaSamples <<= 1;
+	}
+
+	msaaSamples = 1;
+
+	while (msaaSamples <= 8)
+	{
+		std::string msaaSamplesStr = std::to_string(msaaSamples);
+		defines[0].Definition = msaaSamplesStr.c_str();
+		std::string shaderName = "PointLightCullingForward_" + msaaSamplesStr + "xMSAA_CS";
+		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\ComputeShaderTile.hlsl",
+			device, "PointLightCullingForwardCS", "cs_5_0", defines));
+
+		passDesc.nameCS = shaderName.c_str();
+		std::string passName = "PointLightCullingForward_" + std::to_string(msaaSamples) + "xMSAA";
 		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
 
 		msaaSamples <<= 1;
@@ -225,15 +242,55 @@ void ForwardEffect::ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext,
 	std::string passName = "ComputeShaderTileForward_" + std::to_string(pImpl->m_MsaaSamples) + "xMSAA";
 	auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
 	pPass->Apply(deviceContext);
-	
+
+	// 调度
+	pPass->Dispatch(deviceContext, texDesc.Width, texDesc.Height);
+
+	//ID3D11UnorderedAccessView* nullUAV = nullptr;
+	//ID3D11ShaderResourceView* nullSRV = nullptr;
+	//int slot = pImpl->m_pEffectHelper->MapUnorderedAccessSlot("g_TilebufferRW");
+	//deviceContext->CSSetUnorderedAccessViews(slot, 1, &nullUAV, nullptr);
+	//slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_light");
+	//deviceContext->CSSetShaderResources(slot, 1, &nullSRV);
+	//slot = pImpl->m_pEffectHelper->MapShaderResourceSlot("g_GBufferTextures[3]");
+	//deviceContext->CSSetShaderResources(slot, 1, &nullSRV);
+	tileInfoBufferUAV = nullptr;
+	lightBufferSRV = nullptr;
+	pImpl->m_pEffectHelper->SetUnorderedAccessByName("g_TilebufferRW", tileInfoBufferUAV, 0);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBufferSRV);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[3]", lightBufferSRV);
+	pPass->Apply(deviceContext);
+}
+
+void ForwardEffect::Compute2Point5LightCulling(
+	ID3D11DeviceContext* deviceContext,
+	ID3D11UnorderedAccessView* tileInfoBufferUAV,
+	ID3D11ShaderResourceView* lightBufferSRV,
+	ID3D11ShaderResourceView* depthBufferSRV)
+{
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> pTex;
+	depthBufferSRV->GetResource(reinterpret_cast<ID3D11Resource**>(pTex.GetAddressOf()));
+	D3D11_TEXTURE2D_DESC texDesc;
+	pTex->GetDesc(&texDesc);
+
+	UINT dims[2] = { texDesc.Width,texDesc.Height };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_FramebufferDimensions")->SetUIntVector(2, dims);
+	pImpl->m_pEffectHelper->SetUnorderedAccessByName("g_TilebufferRW", tileInfoBufferUAV, 0);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBufferSRV);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[3]", depthBufferSRV);
+
+	std::string passName = "PointLightCullingForward_" + std::to_string(pImpl->m_MsaaSamples) + "xMSAA";
+	auto pPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+	pPass->Apply(deviceContext);
+
 	// 调度
 	pPass->Dispatch(deviceContext, texDesc.Width, texDesc.Height);
 
 	tileInfoBufferUAV = nullptr;
-	deviceContext->CSSetUnorderedAccessViews(pImpl->m_pEffectHelper->MapUnorderedAccessSlot("g_TilebufferRW"), 1, &tileInfoBufferUAV, nullptr);
 	lightBufferSRV = nullptr;
-	deviceContext->CSSetShaderResources(pImpl->m_pEffectHelper->MapShaderResourceSlot("g_light"), 1, &lightBufferSRV);
-	deviceContext->CSSetShaderResources(pImpl->m_pEffectHelper->MapShaderResourceSlot("g_GBufferTextures[3]"), 1, &lightBufferSRV);
+	pImpl->m_pEffectHelper->SetUnorderedAccessByName("g_TilebufferRW", tileInfoBufferUAV, 0);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_light", lightBufferSRV);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_GBufferTextures[3]", lightBufferSRV);
 	pPass->Apply(deviceContext);
 }
 
