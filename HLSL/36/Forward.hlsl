@@ -62,7 +62,25 @@ float4 ForwardPlusPS(VertexPosHVNormalVTex input) : SV_Target
     [branch]
     if (g_VisualizeLightCount)
     {
-        litColor = (float(numLights) * rcp(255.0f)).xxx;
+        
+        const float3 mapTex[] =
+        {
+            float3(0, 0, 0),
+		    float3(0, 0, 1),
+		    float3(0, 1, 1),
+		    float3(0, 1, 0),
+		    float3(1, 1, 0),
+		    float3(1, 0, 0),
+        };
+        const uint mapTexLen = 5;
+        const uint maxHeat = 100;
+        float p = saturate((float) numLights / maxHeat);
+        float l = p * mapTexLen;
+        float3 a = mapTex[floor(l)];
+        float3 b = mapTex[ceil(l)];
+        float4 heatmap = float4(lerp(a, b, l - floor(l)), p);
+        litColor = heatmap;
+        //litColor = (float(numLights) * rcp(255.0f)).xxx;
     }
     else
     {
@@ -70,11 +88,8 @@ float4 ForwardPlusPS(VertexPosHVNormalVTex input) : SV_Target
         for (uint lightIndex = 0; lightIndex < numLights; ++lightIndex)
         {
             uint listIndex = g_Tilebuffer[tilebufferIndex].tileLightIndices[lightIndex];
-            if (listIndex != 0xFFFF)
-            {
-                PointLight light = g_light[listIndex];
-                AccumulateColor(surface, light, litColor);
-            }
+            PointLight light = g_light[listIndex];
+            AccumulateColor(surface, light, litColor);
         }
     }
     return float4(litColor, 1.0f);

@@ -148,7 +148,7 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 
 void ShadowEffect::SetRenderDepthOnly(bool enableAlphaClip)
 {
-	if (enableAlphaClip) 
+	if (enableAlphaClip)
 	{
 		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip");
 		pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
@@ -163,7 +163,7 @@ void ShadowEffect::SetRenderDepthOnly(bool enableAlphaClip)
 
 void ShadowEffect::SetRenderDepthOnlyWithDisplacement(bool enableAlphaClip)
 {
-	if (enableAlphaClip) 
+	if (enableAlphaClip)
 	{
 		pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("TessDepthAlphaClip");
 		pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(0.1f);
@@ -256,6 +256,14 @@ MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)
 	input.indexCount = meshData.m_IndexCount;
 
 	return input;
+}
+
+void ShadowEffect::SetRenderDefault()
+{
+}
+
+void ShadowEffect::SetRenderAlphaClip(float alphaClipValue)
+{
 }
 
 void ShadowEffect::Apply(ID3D11DeviceContext* deviceContext)

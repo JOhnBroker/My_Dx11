@@ -27,6 +27,12 @@ public:
 	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
 
 	UINT m_MsaaSamples = 1;
+	int m_CascadeLevel = 0;
+	int m_DerivativeOffset = 0;
+	int m_CascadeBlend = 0;
+	int m_CascadeSelection = 0;
+	int m_PCFKernelSize = 1;
+	int m_ShadowSize = 1024;
 };
 
 namespace {
@@ -76,10 +82,16 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache", true);
 
+	// 为了对每个着色器编译出最优版本，需要对同一个文件编译出64种版本的着色器。
+
+	const char* numStrs[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 	D3D_SHADER_MACRO defines[] = {
-	   {"MSAA_SAMPLES", "1"},
-	   {nullptr, nullptr}
+		{ "CASCADE_COUNT_FLAG", "1" },
+		{ "USE_DERIVATIVES_FOR_DEPTH_OFFSET_FLAG", "0" },
+		{ "BLEND_BETWEEN_CASCADE_LAYERS_FLAG", "0" },
+		{ "SELECT_CASCADE_BY_INTERVAL_FLAG", "0" },
+		{ nullptr, nullptr }
 	};
 
 	// 顶点着色器
@@ -209,16 +221,23 @@ void ForwardEffect::SetVisualizeLightCount(bool enable)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_VisualizeLightCount")->SetUInt(enable);
 }
 
-void ForwardEffect::SetRenderDefault()
+void ForwardEffect::SetRenderDefault(bool reversedZ)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Forward");
+	std::string passName = "0000_Forward";
+	passName[0] = '0' + pImpl->m_CascadeLevel;
+	passName[1] = '0' + pImpl->m_DerivativeOffset;
+	passName[2] = '0' + pImpl->m_CascadeBlend;
+	passName[3] = '0' + pImpl->m_CascadeSelection;
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
+	pImpl->m_pCurrEffectPass->SetDepthStencilState(reversedZ ? RenderStates::DSSGreaterEqual.Get() : nullptr, 0);
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
 	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void ForwardEffect::SetRenderPreZPass()
+void ForwardEffect::SetRenderPreZPass(bool reversedZ)
 {
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("PreZ");
+	pImpl->m_pCurrEffectPass->SetDepthStencilState(reversedZ ? RenderStates::DSSGreaterEqual.Get() : nullptr, 0);
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
 	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
@@ -343,6 +362,91 @@ MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
 	return input;
 }
 
+void ForwardEffect::SetCascadeLevels(int cascadeLevels)
+{
+	pImpl->m_CascadeLevel = cascadeLevels;
+}
+
+void ForwardEffect::SetPCFDerivativeOffsetEnabled(bool enable)
+{
+	pImpl->m_DerivativeOffset = enable;
+}
+
+void ForwardEffect::SetCascadeBlendEnabled(bool enable)
+{
+	pImpl->m_CascadeBlend = enable;
+}
+
+void  ForwardEffect::SetCascadeIntervalSelectionEnabled(bool enable)
+{
+	pImpl->m_CascadeSelection = enable;
+}
+
+void  ForwardEffect::SetCascadeVisulization(bool enable)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_VisualizeCascades")->SetSInt(enable);
+}
+
+void  ForwardEffect::SetCascadeOffsets(const DirectX::XMFLOAT4 offsets[8])
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeOffset")->SetRaw(offsets);
+}
+
+void  ForwardEffect::SetCascadeScales(const DirectX::XMFLOAT4 scales[8])
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeScale")->SetRaw(scales);
+}
+
+void  ForwardEffect::SetCascadeFrustumsEyeSpaceDepths(const float depths[8])
+{
+	float depthsArray[8][4] = { {depths[0]},{depths[1]},{depths[2]},{depths[3]},
+		{depths[4]},{depths[5]},{depths[6]},{depths[7]} };
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeFrustumsEyeSpaceDepthsFloat")->SetRaw(depths);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeFrustumsEyeSpaceDepthsFloat4")->SetRaw(depthsArray);
+}
+
+void  ForwardEffect::SetCascadeBlendArea(float blendArea)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeBlendArea")->SetFloat(blendArea);
+}
+
+void  ForwardEffect::SetPCFKernelSize(int size)
+{
+	int start = -size / 2;
+	int end = size - start;
+	pImpl->m_PCFKernelSize = size;
+	float padding = (size / 2) / (float)pImpl->m_ShadowSize;
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PCFBlurForLoopStart")->SetSInt(start);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PCFBlurForLoopEnd")->SetSInt(end);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinBorderPadding")->SetFloat(padding);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxBorderPadding")->SetFloat(1.0f - padding);
+}
+
+void  ForwardEffect::SetPCFDepthOffset(float bias)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowBias")->SetFloat(bias);
+}
+
+void  ForwardEffect::SetShadowSize(int size)
+{
+	pImpl->m_ShadowSize = size;
+	float padding = (pImpl->m_PCFKernelSize / 2) / (float)size;
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexelSize")->SetFloat(1.0f / size);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinBorderPadding")->SetFloat(padding);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxBorderPadding")->SetFloat(1.0f - padding);
+}
+
+void XM_CALLCONV ForwardEffect::SetShadowViewMatrix(DirectX::FXMMATRIX ShadowView)
+{
+	XMMATRIX ShadowViewT = XMMatrixTranspose(ShadowView);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowView")->SetFloatMatrix(4, 4, (const float*)&ShadowView);
+
+}
+void  ForwardEffect::SetShadowTextureArray(ID3D11ShaderResourceView* shadow)
+{
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_ShadowMap", shadow);
+}
+
 void ForwardEffect::SetMsaaSamples(UINT msaaSamples)
 {
 	pImpl->m_MsaaSamples = msaaSamples;
@@ -356,20 +460,17 @@ void ForwardEffect::Apply(ID3D11DeviceContext* deviceContext)
 
 	XMMATRIX WV = W * V;
 	XMMATRIX WVP = WV * P;
-	XMMATRIX WInvTV = XMath::InverseTranspose(W) * V;
-	XMMATRIX VP = V * P;
+	XMMATRIX WInvT = XMath::InverseTranspose(W);
 
 	WV = XMMatrixTranspose(WV);
 	WVP = XMMatrixTranspose(WVP);
-	WInvTV = XMMatrixTranspose(WInvTV);
-	P = XMMatrixTranspose(P);
-	VP = XMMatrixTranspose(VP);
+	WInvT = XMMatrixTranspose(WInvT);
+	W = XMMatrixTranspose(W);
 
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTransposeView")->SetFloatMatrix(4, 4, (FLOAT*)&WInvTV);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspos")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&WVP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldView")->SetFloatMatrix(4, 4, (FLOAT*)&WV);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&VP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_Proj")->SetFloatMatrix(4, 4, (FLOAT*)&P);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (FLOAT*)&W);
 
 	if (pImpl->m_pCurrEffectPass)
 		pImpl->m_pCurrEffectPass->Apply(deviceContext);

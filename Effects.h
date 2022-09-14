@@ -165,6 +165,9 @@ public:
 
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
+	void SetRenderDefault();
+	void SetRenderAlphaClip(float alphaClipValue);
+
 	void SetRenderDepthOnly(bool enableAlphaClip = false);
 
 	void SetRenderDepthOnlyWithDisplacement(bool enableAlphaClip = false);
@@ -476,6 +479,27 @@ public:
 
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
+	// CSM
+	void SetCascadeLevels(int cascadeLevels);
+	void SetPCFDerivativeOffsetEnabled(bool enable);
+	void SetCascadeBlendEnabled(bool enable);
+	void SetCascadeIntervalSelectionEnabled(bool enable);
+
+	void SetCascadeVisulization(bool enable);
+	void SetCascadeOffsets(const DirectX::XMFLOAT4 offsets[8]);
+	void SetCascadeScales(const DirectX::XMFLOAT4 scales[8]);
+	void SetCascadeFrustumsEyeSpaceDepths(const float depths[8]);
+	void SetCascadeBlendArea(float blendArea);
+
+	void SetPCFKernelSize(int size);
+	void SetPCFDepthOffset(float bias);
+
+	void SetShadowSize(int size);
+	void XM_CALLCONV SetShadowViewMatrix(DirectX::FXMMATRIX ShadowView);
+	void SetShadowTextureArray(ID3D11ShaderResourceView* shadow);
+
+	// Forward
+
 	void SetMsaaSamples(UINT msaaSamples);
 
 	void SetLightBuffer(ID3D11ShaderResourceView* lightBuffer);
@@ -487,9 +511,9 @@ public:
 	void SetVisualizeLightCount(bool enable);
 
 	// 默认状态来绘制
-	void SetRenderDefault();
+	void SetRenderDefault(bool reversedZ);
 	// 进行 Pre-Z 通道绘制
-	void SetRenderPreZPass();
+	void SetRenderPreZPass(bool reversedZ);
 	// 执行分块光照裁剪
 	void ComputeTiledLightCulling(ID3D11DeviceContext* deviceContext,
 		ID3D11UnorderedAccessView* tileInfoBufferUAV,

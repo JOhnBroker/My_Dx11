@@ -163,6 +163,7 @@
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
+    <ClCompile Include="CascadedShadowManager.cpp" />
     <ClCompile Include="Collision.cpp" />
     <ClCompile Include="d3dApp.cpp" />
     <ClCompile Include="DDSTextureLoader11.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraController.h" />
+    <ClInclude Include="CascadedShadowManager.h" />
     <ClInclude Include="Collision.h" />
     <ClInclude Include="d3dApp.h" />
     <ClInclude Include="D3DFormat.h" />
@@ -237,19 +239,10 @@
     <ClInclude Include="XUtil.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HLSL\36\BasicDeferred.hlsl">
-      <FileType>Document</FileType>
-    </ClInclude>
     <ClInclude Include="HLSL\36\ConstantBuffers.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\36\Forward.hlsl">
-      <FileType>Document</FileType>
-    </ClInclude>
     <ClInclude Include="HLSL\36\FullScreenTriangle.hlsl">
-      <FileType>Document</FileType>
-    </ClInclude>
-    <ClInclude Include="HLSL\36\GBuffer.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
     <ClInclude Include="HLSL\36\Rendering.hlsl">
@@ -260,13 +253,12 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HLSL\36\ComputeShaderTile.hlsl">
+    <ClInclude Include="HLSL\36\CascadedShadow.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="HLSL\36\ForwardTileInfo.hlsl">
-      <FileType>Document</FileType>
-    </ClInclude>
-    <ClInclude Include="HLSL\36\FramebufferFlat.hlsl">
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSL\36\Shadow.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>

@@ -138,6 +138,9 @@
     <ClCompile Include="ForwardEffect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CascadedShadowManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -248,19 +251,10 @@
     <ClInclude Include="ParticleManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\36\BasicDeferred.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="HLSL\36\ConstantBuffers.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\36\Forward.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
     <ClInclude Include="HLSL\36\FullScreenTriangle.hlsl">
-      <Filter>着色器</Filter>
-    </ClInclude>
-    <ClInclude Include="HLSL\36\GBuffer.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
     <ClInclude Include="HLSL\36\Rendering.hlsl">
@@ -269,14 +263,14 @@
     <ClInclude Include="HLSL\36\Skybox.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\36\ComputeShaderTile.hlsl">
+    <ClInclude Include="HLSL\36\CascadedShadow.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\36\ForwardTileInfo.hlsl">
+    <ClInclude Include="HLSL\36\Shadow.hlsl">
       <Filter>着色器</Filter>
     </ClInclude>
-    <ClInclude Include="HLSL\36\FramebufferFlat.hlsl">
-      <Filter>着色器</Filter>
+    <ClInclude Include="CascadedShadowManager.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
