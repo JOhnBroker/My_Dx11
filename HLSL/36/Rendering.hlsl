@@ -55,7 +55,7 @@ float4 ForwardPS(VertexOut input) : SV_Target
     float4 visualizeCascadeColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
     if (g_VisualizeCascades)
     {
-        visualizeCascadeColor = GetCascadeColorMultipler(cascadeIndex, nextCascadeIndex, blendAmount);
+        visualizeCascadeColor = GetCascadeColorMultipler(cascadeIndex, nextCascadeIndex, saturate(blendAmount));
     }
     
     //

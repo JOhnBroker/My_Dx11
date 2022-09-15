@@ -36,9 +36,9 @@ void CascadedShadowManager::UpdateFrame(const Camera& viewerCamera, const Camera
 		if (m_SelectedCascadesFit == FitProjection::FitProjection_ToCascade)
 		{
 			if (cascadeIndex == 0)
-				frustumIntervalBegin = 0.f;
+				frustumIntervalBegin = 0.0f;
 			else
-				frustumIntervalBegin = m_CascadePartitionPercentage[cascadeIndex - 1];
+				frustumIntervalBegin = m_CascadePartitionsPercentage[cascadeIndex - 1];
 		}
 		else
 		{
@@ -46,7 +46,7 @@ void CascadedShadowManager::UpdateFrame(const Camera& viewerCamera, const Camera
 			frustumIntervalBegin = 0.0f;
 		}
 		// 算出视锥体Z区间
-		frustumIntervalEnd = m_CascadePartitionPercentage[cascadeIndex];
+		frustumIntervalEnd = m_CascadePartitionsPercentage[cascadeIndex];
 		frustumIntervalBegin = frustumIntervalBegin * cameraNearFarRange;
 		frustumIntervalEnd = frustumIntervalEnd * cameraNearFarRange;
 
@@ -93,7 +93,7 @@ void CascadedShadowManager::UpdateFrame(const Camera& viewerCamera, const Camera
 			XMVECTORF32 scaleDurtoBlurVec = { {scaleDurtoBlur,scaleDurtoBlur,0.0f,0.0f} };
 
 			XMVECTOR borderOffsetVec = lightCameraOrthographicMaxVec - lightCameraOrthographicMinVec;
-			borderOffsetVec *= g_XMOneHalf;
+            borderOffsetVec *= g_XMOneHalf.v;
 			borderOffsetVec *= scaleDurtoBlurVec.v;
 			lightCameraOrthographicMaxVec += borderOffsetVec;
 			lightCameraOrthographicMinVec -= borderOffsetVec;
@@ -127,7 +127,7 @@ void CascadedShadowManager::UpdateFrame(const Camera& viewerCamera, const Camera
 			for (int i = 0; i < 8; ++i)
 			{
 				XMVECTOR v = XMLoadFloat3(corners + i);
-				sceneAABBPointsLightSpace[i] = XMVector4Transform(v, LightView);
+                sceneAABBPointsLightSpace[i] = XMVector3Transform(v, LightView);
 			}
 		}
 		if (m_SelectedNearFarFit == FitNearFar::FitNearFar_ZeroOne)
@@ -160,7 +160,7 @@ void CascadedShadowManager::UpdateFrame(const Camera& viewerCamera, const Camera
 
 		XMStoreFloat4x4(m_ShadowProj + cascadeIndex, XMMatrixOrthographicOffCenterLH(
 			XMVectorGetX(lightCameraOrthographicMinVec), XMVectorGetX(lightCameraOrthographicMaxVec),
-			XMVectorGetY(lightCameraOrthographicMinVec), XMVectorGetY(lightCameraOrthographicMinVec),
+			XMVectorGetY(lightCameraOrthographicMinVec), XMVectorGetY(lightCameraOrthographicMaxVec),
 			nearPlane, farPlane));
 
 		// 创建最终的正交投影AABB
@@ -254,8 +254,8 @@ void XM_CALLCONV CascadedShadowManager::ComputeNearAndFar(float& outNearPlane, f
 					{
 					case 0: triPointPassCollision[triVtxIdx] = (XMVectorGetX(triangleList[triIdx].point[triVtxIdx]) > minX); break;
 					case 1: triPointPassCollision[triVtxIdx] = (XMVectorGetX(triangleList[triIdx].point[triVtxIdx]) < maxX); break;
-					case 2: triPointPassCollision[triVtxIdx] = (XMVectorGetX(triangleList[triIdx].point[triVtxIdx]) > minY); break;
-					case 3: triPointPassCollision[triVtxIdx] = (XMVectorGetX(triangleList[triIdx].point[triVtxIdx]) < maxY); break;
+                    case 2: triPointPassCollision[triVtxIdx] = (XMVectorGetY(triangleList[triIdx].point[triVtxIdx]) > minY); break;
+                    case 3: triPointPassCollision[triVtxIdx] = (XMVectorGetY(triangleList[triIdx].point[triVtxIdx]) < maxY); break;
 					default: break;
 					}
 					insideVertexCount += triPointPassCollision[triVtxIdx];
@@ -295,7 +295,7 @@ void XM_CALLCONV CascadedShadowManager::ComputeNearAndFar(float& outNearPlane, f
 					v0v2Vec = distAlong_v0v2 * v0v2Vec + triangleList[triIdx].point[0];
 
 					triangleList[triIdx].point[1] = v0v2Vec;
-					triangleList[triIdx].point[0] = v0v1Vec;
+                    triangleList[triIdx].point[2] = v0v1Vec;
 				}
 				else if (insideVertexCount == 2)
 				{

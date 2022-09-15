@@ -31,7 +31,7 @@
 Texture2DArray g_ShadowMap : register(t10);
 SamplerComparisonState g_SamShadow : register(s10);
 
-static const float4 s_CascadeColorMultiplier[8] =
+static const float4 s_CascadeColorsMultiplier[8] =
 {
     float4(1.5f, 0.0f, 0.0f, 1.0f),
     float4(0.0f, 1.5f, 0.0f, 1.0f),
@@ -47,8 +47,8 @@ static const float4 s_CascadeColorMultiplier[8] =
 // 为阴影空间的texels计算对应光照空间
 //--------------------------------------------------------------------------------------
 void CalculateRightAndUpTexelDepthDeltas(float3 shadowTexDDX, float3 shadowTexDDY,
-                                        out float upTexDepthWeight,
-                                        out float rightTexDepthWeight)
+                                         out float upTextDepthWeight,
+                                         out float rightTextDepthWeight)
 {
     float2x2 matScreenToShadow = float2x2(shadowTexDDX.xy, shadowTexDDY.xy);
     float det = determinant(matScreenToShadow);
@@ -62,12 +62,12 @@ void CalculateRightAndUpTexelDepthDeltas(float3 shadowTexDDX, float3 shadowTexDD
     float2 rightTexelDepthRatio = mul(rightShadowTexelLocation, matShadowToScreen);
     float2 upTexelDepthRatio = mul(upShadowTexelLocation, matShadowToScreen);
 
-    upTexDepthWeight =
-        upTexelDepthRatio.x * shadowTexDDX.z +
-        upTexelDepthRatio.y * shadowTexDDY.z;
-    rightTexDepthWeight =
-        rightTexelDepthRatio.x * shadowTexDDX.z +
-        rightTexelDepthRatio.y * shadowTexDDY.z;
+    upTextDepthWeight =
+        upTexelDepthRatio.x * shadowTexDDX.z 
+        + upTexelDepthRatio.y * shadowTexDDY.z;
+    rightTextDepthWeight =
+        rightTexelDepthRatio.x * shadowTexDDX.z 
+        + rightTexelDepthRatio.y * shadowTexDDY.z;
 }
 
 //--------------------------------------------------------------------------------------
@@ -155,8 +155,8 @@ float4 GetCascadeColorMultipler(int currentCascadeIndex,
                                 int nextCascadeIndex,
                                 float blendBetweenCascadesAmount)
 {
-    return lerp(s_CascadeColorMultiplier[currentCascadeIndex],
-                s_CascadeColorMultiplier[nextCascadeIndex], 
+    return lerp(s_CascadeColorsMultiplier[nextCascadeIndex], 
+                s_CascadeColorsMultiplier[currentCascadeIndex], 
                 blendBetweenCascadesAmount);
 }
 
@@ -213,7 +213,7 @@ float CalculateCascadedShadow(float4 shadowMapTexCoordViewSpace,
                                     CASCADE_COUNT_FLAG > 7),
                             cmpVec2);
             index = min(index, CASCADE_COUNT_FLAG - 1);
-            currentCascadeIndex = index;
+            currentCascadeIndex = (int) index;
         }
         shadowMapTexCoord = shadowMapTexCoordViewSpace * g_CascadeScale[currentCascadeIndex] + g_CascadeOffset[currentCascadeIndex];
     }
@@ -253,7 +253,7 @@ float CalculateCascadedShadow(float4 shadowMapTexCoordViewSpace,
         CalculateRightAndUpTexelDepthDeltas(shadowMapTexCoordDDX, shadowMapTexCoordDDY,
                                             upTextDepthWeight, rightTextDepthWeight);
     }
-    visualizeCascadeColor = s_CascadeColorMultiplier[currentCascadeIndex];
+    visualizeCascadeColor = s_CascadeColorsMultiplier[currentCascadeIndex];
     percentLit = CalculatePCFPercentLit(currentCascadeIndex, shadowMapTexCoord,
                                 rightTextDepthWeight, upTextDepthWeight, blurSize);
     
@@ -295,7 +295,7 @@ float CalculateCascadedShadow(float4 shadowMapTexCoordViewSpace,
                     CalculateRightAndUpTexelDepthDeltas(shadowMapTexCoordDDX, shadowMapTexCoordDDY,
                                                         upTextDepthWeight_blend, rightTextDepthWeight_blend);
                 }
-                percentLit_blend = CalculatePCFPercentLit(nextCascadeIndex, shadowMapTexCoord,
+                percentLit_blend = CalculatePCFPercentLit(nextCascadeIndex, shadowMapTexCoord_blend,
                                                         rightTextDepthWeight_blend, upTextDepthWeight_blend, blurSize);
             
                 percentLit = lerp(percentLit_blend, percentLit, blendBetweenCascadesAmount);

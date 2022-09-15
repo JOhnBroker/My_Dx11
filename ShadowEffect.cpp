@@ -24,7 +24,7 @@ public:
 
 	std::shared_ptr<IEffectPass> m_pCurrEffectPass;
 	ComPtr<ID3D11InputLayout> m_pCurrInputLayout;
-	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	D3D11_PRIMITIVE_TOPOLOGY m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 	ComPtr<ID3D11InputLayout> m_pVertexPosNormalTexLayout;
 
@@ -85,55 +85,35 @@ bool ShadowEffect::InitAll(ID3D11Device* device)
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache\\");
 
 	// 创建顶点着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowVS", L"HLSL\\Shadow.hlsl",
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowVS", L"HLSL\\36\\Shadow.hlsl",
 		device, "ShadowVS", "vs_5_0", nullptr, blob.ReleaseAndGetAddressOf()));
 
 	// 创建顶点布局
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.GetAddressOf()));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\Shadow.hlsl",
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("FullScreenTriangleTexcoordVS", L"HLSL\\36\\Shadow.hlsl",
 		device, "FullScreenTriangleTexcoordVS", "vs_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowTessVS", L"HLSL\\Shadow.hlsl",
-		device, "ShadowTessVS", "vs_5_0"));
-
-	// 外壳着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowTessHS", L"HLSL\\Shadow.hlsl",
-		device, "ShadowTessHS", "hs_5_0"));
-
-	// 域着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowTessDS", L"HLSL\\Shadow.hlsl",
-		device, "ShadowTessDS", "ds_5_0"));
 
 	// 创建像素着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\Shadow.hlsl",
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ShadowPS", L"HLSL\\36\\Shadow.hlsl",
 		device, "ShadowPS", "ps_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugShadowPS", L"HLSL\\Shadow.hlsl",
-		device, "DebugShadowPS", "ps_5_0"));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("DebugPS", L"HLSL\\36\\Shadow.hlsl",
+		device, "DebugPS", "ps_5_0"));
 
 	// 创建通道Pass
 	EffectPassDesc passDesc;
 	passDesc.nameVS = "ShadowVS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("DepthOnly", device, &passDesc));
-	pImpl->m_pEffectHelper->GetEffectPass("DepthOnly")->SetRasterizerState(RenderStates::RSShadow.Get());
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Shadow", device, &passDesc));
+	pImpl->m_pEffectHelper->GetEffectPass("Shadow")->SetRasterizerState(RenderStates::RSShadow.Get());
 
 	passDesc.namePS = "ShadowPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("DepthAlphaClip", device, &passDesc));
-	pImpl->m_pEffectHelper->GetEffectPass("DepthAlphaClip")->SetRasterizerState(RenderStates::RSShadow.Get());
-
-	passDesc.nameVS = "ShadowTessVS";
-	passDesc.nameHS = "ShadowTessHS";
-	passDesc.nameDS = "ShadowTessDS";
-	passDesc.namePS = "";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("TessDepthOnly", device, &passDesc));
-	pImpl->m_pEffectHelper->GetEffectPass("TessDepthOnly")->SetRasterizerState(RenderStates::RSShadow.Get());
-
-	passDesc.namePS = "ShadowPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("TessDepthAlphaClip", device, &passDesc));
-	pImpl->m_pEffectHelper->GetEffectPass("TessDepthAlphaClip")->SetRasterizerState(RenderStates::RSShadow.Get());
+	HR(pImpl->m_pEffectHelper->AddEffectPass("ShadowAlphaClip", device, &passDesc));
+	pImpl->m_pEffectHelper->GetEffectPass("ShadowAlphaClip")->SetRasterizerState(RenderStates::RSNoCull.Get());
+	pImpl->m_pEffectHelper->GetEffectPass("ShadowAlphaClip")->SetRasterizerState(RenderStates::RSShadow.Get());
 
 	passDesc.nameVS = "FullScreenTriangleTexcoordVS";
-	passDesc.namePS = "DebugShadowPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("DebugShadow", device, &passDesc));
+	passDesc.namePS = "DebugPS";
+	HR(pImpl->m_pEffectHelper->AddEffectPass("Debug", device, &passDesc));
 
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
 
@@ -202,7 +182,7 @@ void ShadowEffect::RenderDepthToTexture(
 {
 	deviceContext->IASetInputLayout(nullptr);
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("DebugShadow");
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Debug");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", input);
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 	deviceContext->OMSetRenderTargets(1, &output, nullptr);
@@ -235,8 +215,6 @@ void ShadowEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 	auto pStr = material.TryGet<std::string>("$Diffuse");
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : nullptr);
-	pStr = material.TryGet<std::string>("$Normal");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_NormalMap", pStr ? tm.GetTexture(*pStr) : nullptr);
 }
 
 MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)
@@ -260,29 +238,25 @@ MeshDataInput ShadowEffect::GetInputData(const MeshData& meshData)
 
 void ShadowEffect::SetRenderDefault()
 {
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("Shadow");
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
 void ShadowEffect::SetRenderAlphaClip(float alphaClipValue)
 {
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("ShadowAlphaClip");
+	pImpl->m_pCurrEffectPass->PSGetParamByName("clipValue")->SetFloat(alphaClipValue);
+	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
+	pImpl->m_CurrTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
 void ShadowEffect::Apply(ID3D11DeviceContext* deviceContext)
 {
-	XMMATRIX W = XMLoadFloat4x4(&pImpl->m_World);
-	XMMATRIX VP = XMLoadFloat4x4(&pImpl->m_View) * XMLoadFloat4x4(&pImpl->m_Proj);
-	XMMATRIX WVP = W * VP;
-	XMMATRIX WInvT = XMath::InverseTranspose(W);
-
-	W = XMMatrixTranspose(W);
-	VP = XMMatrixTranspose(VP);
+	XMMATRIX WVP = XMLoadFloat4x4(&pImpl->m_World) * XMLoadFloat4x4(&pImpl->m_View) * XMLoadFloat4x4(&pImpl->m_Proj);
 	WVP = XMMatrixTranspose(WVP);
-	WInvT = XMMatrixTranspose(WInvT);
 
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (const FLOAT*)&W);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&VP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (const FLOAT*)&WVP);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (const FLOAT*)&WInvT);
-
 
 	pImpl->m_pCurrEffectPass->Apply(deviceContext);
 }

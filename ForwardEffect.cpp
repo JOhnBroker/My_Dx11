@@ -95,91 +95,49 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	};
 
 	// 顶点着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("GeometryVS", L"HLSL\\36\\Forward.hlsl",
-		device, "GeometryVS", "vs_5_0", nullptr, blob.GetAddressOf()));
+	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("GeometryVS", L"HLSL\\36\\Rendering.hlsl",
+		device, "GeometryVS", "vs_5_0", defines, blob.GetAddressOf()));
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.ReleaseAndGetAddressOf()));
 
-	// 像素着色器
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ForwardPS", L"HLSL\\36\\Forward.hlsl",
-		device, "ForwardPS", "ps_5_0"));
-	HR(pImpl->m_pEffectHelper->CreateShaderFromFile("ForwardPlusPS", L"HLSL\\36\\Forward.hlsl",
-		device, "ForwardPlusPS", "ps_5_0"));
-
-	// |-Default Pass
-	//     VS: GeometryVS
-	//     PS: ForwardPS
-	//     DepthStencilState: GreaterEqual
+	// 前四位代表
+	// [级联级别][偏导偏移][级联间混合][级联选择]
+	std::string psName = "0000_ForwardPS";
+	std::string passName = "0000_Forward";
 	EffectPassDesc passDesc;
+
 	passDesc.nameVS = "GeometryVS";
-	passDesc.namePS = "ForwardPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("Forward", device, &passDesc));
+	HR(pImpl->m_pEffectHelper->AddEffectPass("PreZ_Forward", device, &passDesc));
+
+	for (int cascadeCount = 1; cascadeCount <= 8; ++cascadeCount)
 	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("Forward");
-		// 注意：反向Z => GREATER_EQUAL测试
-		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
+		psName[0] = passName[0] = '0' + cascadeCount;
+		defines[0].Definition = numStrs[cascadeCount];
+		for (int derivativeIdx = 0; derivativeIdx < 2; ++derivativeIdx)
+		{
+			psName[1] = passName[1] = '0' + derivativeIdx;
+			defines[1].Definition = numStrs[derivativeIdx];
+			for (int blendIdx = 0; blendIdx < 2; ++blendIdx)
+			{
+				psName[2] = passName[2] = '0' + blendIdx;
+				defines[2].Definition = numStrs[blendIdx];
+				for (int intervalIdx = 0; intervalIdx < 2; ++intervalIdx)
+				{
+					psName[3] = passName[3] = '0' + intervalIdx;
+					defines[3].Definition = numStrs[intervalIdx];
+
+					HR(pImpl->m_pEffectHelper->CreateShaderFromFile(psName, L"HLSL\\36\\Rendering.hlsl", device, "ForwardPS", "ps_5_0", defines));
+
+					passDesc.nameVS = "GeometryVS";
+					passDesc.namePS = psName;
+					HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
+				}
+			}
+		}
 	}
 
-	// |-Default Pass
-	//     VS: GeometryVS
-	//     PS: ForwardPlusPS
-	//     DepthStencilState: GreaterEqual
-	passDesc.namePS = "ForwardPlusPS";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("ForwardPlus", device, &passDesc));
-	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("ForwardPlus");
-		// 注意：反向Z => GREATER_EQUAL测试
-		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
-	}
-
-	// |-PreZ Pass
-	// |   VS: GeometryVS
-	// |   PS: nullptr
-	// |   DepthStencilState: GreaterEqual
-	passDesc.namePS = "";
-	HR(pImpl->m_pEffectHelper->AddEffectPass("PreZ", device, &passDesc));
-	{
-		auto pPass = pImpl->m_pEffectHelper->GetEffectPass("PreZ");
-		// 注意：反向Z => GREATER_EQUAL测试
-		pPass->SetDepthStencilState(RenderStates::DSSGreaterEqual.Get(), 0);
-	}
 	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
-
-	// 创建计算着色器与通道
-	UINT msaaSamples = 1;
-	passDesc.nameVS = "";
-	passDesc.namePS = "";
-	while (msaaSamples <= 8)
-	{
-		std::string msaaSamplesStr = std::to_string(msaaSamples);
-		defines[0].Definition = msaaSamplesStr.c_str();
-		std::string shaderName = "ComputeShaderTileForward_" + msaaSamplesStr + "xMSAA_CS";
-		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\ComputeShaderTile.hlsl",
-			device, "ComputeShaderTileForwardCS", "cs_5_0", defines));
-
-		passDesc.nameCS = shaderName.c_str();
-		std::string passName = "ComputeShaderTileForward_" + std::to_string(msaaSamples) + "xMSAA";
-		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
-
-		msaaSamples <<= 1;
-	}
-
-	msaaSamples = 1;
-
-	while (msaaSamples <= 8)
-	{
-		std::string msaaSamplesStr = std::to_string(msaaSamples);
-		defines[0].Definition = msaaSamplesStr.c_str();
-		std::string shaderName = "PointLightCullingForward_" + msaaSamplesStr + "xMSAA_CS";
-		HR(pImpl->m_pEffectHelper->CreateShaderFromFile(shaderName, L"HLSL\\36\\ComputeShaderTile.hlsl",
-			device, "PointLightCullingForwardCS", "cs_5_0", defines));
-
-		passDesc.nameCS = shaderName.c_str();
-		std::string passName = "PointLightCullingForward_" + std::to_string(msaaSamples) + "xMSAA";
-		HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
-
-		msaaSamples <<= 1;
-	}
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
@@ -236,7 +194,7 @@ void ForwardEffect::SetRenderDefault(bool reversedZ)
 
 void ForwardEffect::SetRenderPreZPass(bool reversedZ)
 {
-	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("PreZ");
+	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass("PreZ_Forward");
 	pImpl->m_pCurrEffectPass->SetDepthStencilState(reversedZ ? RenderStates::DSSGreaterEqual.Get() : nullptr, 0);
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
 	pImpl->m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -340,7 +298,7 @@ void ForwardEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureDiffuse", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 }
 
 MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
@@ -367,7 +325,7 @@ void ForwardEffect::SetCascadeLevels(int cascadeLevels)
 	pImpl->m_CascadeLevel = cascadeLevels;
 }
 
-void ForwardEffect::SetPCFDerivativeOffsetEnabled(bool enable)
+void ForwardEffect::SetPCFDerivativesOffsetEnabled(bool enable)
 {
 	pImpl->m_DerivativeOffset = enable;
 }
@@ -413,7 +371,7 @@ void  ForwardEffect::SetCascadeBlendArea(float blendArea)
 void  ForwardEffect::SetPCFKernelSize(int size)
 {
 	int start = -size / 2;
-	int end = size - start;
+    int end = size + start;
 	pImpl->m_PCFKernelSize = size;
 	float padding = (size / 2) / (float)pImpl->m_ShadowSize;
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PCFBlurForLoopStart")->SetSInt(start);
@@ -439,12 +397,17 @@ void  ForwardEffect::SetShadowSize(int size)
 void XM_CALLCONV ForwardEffect::SetShadowViewMatrix(DirectX::FXMMATRIX ShadowView)
 {
 	XMMATRIX ShadowViewT = XMMatrixTranspose(ShadowView);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowView")->SetFloatMatrix(4, 4, (const float*)&ShadowView);
+    pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowView")->SetFloatMatrix(4, 4, (const float *)&ShadowViewT);
 
 }
 void  ForwardEffect::SetShadowTextureArray(ID3D11ShaderResourceView* shadow)
 {
 	pImpl->m_pEffectHelper->SetShaderResourceByName("g_ShadowMap", shadow);
+}
+
+void ForwardEffect::SetLightDir(const DirectX::XMFLOAT3& dir)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_LightDir")->SetFloatVector(3, (const float*)&dir);
 }
 
 void ForwardEffect::SetMsaaSamples(UINT msaaSamples)
@@ -459,15 +422,15 @@ void ForwardEffect::Apply(ID3D11DeviceContext* deviceContext)
 	XMMATRIX P = XMLoadFloat4x4(&pImpl->m_Proj);
 
 	XMMATRIX WV = W * V;
-	XMMATRIX WVP = WV * P;
+    XMMATRIX WVP = W * V * P;
 	XMMATRIX WInvT = XMath::InverseTranspose(W);
 
+    W = XMMatrixTranspose(W);
 	WV = XMMatrixTranspose(WV);
 	WVP = XMMatrixTranspose(WVP);
 	WInvT = XMMatrixTranspose(WInvT);
-	W = XMMatrixTranspose(W);
 
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspos")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldInvTranspose")->SetFloatMatrix(4, 4, (FLOAT*)&WInvT);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldViewProj")->SetFloatMatrix(4, 4, (FLOAT*)&WVP);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_WorldView")->SetFloatMatrix(4, 4, (FLOAT*)&WV);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_World")->SetFloatMatrix(4, 4, (FLOAT*)&W);

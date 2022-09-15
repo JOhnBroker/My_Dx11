@@ -7,8 +7,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#ifndef CASCADE_SHADOW_MANAGER_H
-#define  CASCADE_SHADOW_MANAGER_H
+#ifndef CASCADED_SHADOW_MANAGER_H
+#define CASCADED_SHADOW_MANAGER_H
 
 #include "WinMin.h"
 #include <d3d11_1.h>
@@ -83,20 +83,20 @@ public:
 		DirectX::BoundingOrientedBox::CreateFromBoundingBox(obb, GetShadowAABB(cascadeIndex));
 		return obb;
 	}
-	D3D11_VIEWPORT GetShadowViewPort()const { return m_ShadowViewport; }
+	D3D11_VIEWPORT GetShadowViewport()const { return m_ShadowViewport; }
 
-private:
+public:
 	// 级联相关的配置
 	int m_ShadowSize = 1024;
 	int m_CascadeLevels = 4;
-	float m_CascadePartitionPercentage[8]
+	float m_CascadePartitionsPercentage[8]
 	{
 		0.04f,0.10f,0.25f,1.0f,1.0f,1.0f,1.0f,1.0f
 	};
 	int m_PCFKernelSize = 5;
 	float m_PCFDepthOffset = 0.001f;
 	bool m_DerivativeBasedOffset = false;
-	bool m_BlendBetweemCascades = true;
+	bool m_BlendBetweenCascades = true;
 	float m_BlendBetweenCascadesRange = 0.2f;
 
 	bool m_FixedSizeFrustumAABB = true;

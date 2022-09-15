@@ -124,7 +124,7 @@ bool SkyBoxEffect::InitAll(ID3D11Device* device)
 	//	pPass->SetRasterizerState(RenderStates::RSNoCull.Get());
 	//	pPass->SetDepthStencilState(RenderStates::DSSLessEqual.Get(), 0);
 	//}
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSLinearWrap.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerDiffuse", RenderStates::SSLinearWrap.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)

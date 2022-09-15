@@ -481,7 +481,7 @@ public:
 
 	// CSM
 	void SetCascadeLevels(int cascadeLevels);
-	void SetPCFDerivativeOffsetEnabled(bool enable);
+	void SetPCFDerivativesOffsetEnabled(bool enable);
 	void SetCascadeBlendEnabled(bool enable);
 	void SetCascadeIntervalSelectionEnabled(bool enable);
 
@@ -497,6 +497,8 @@ public:
 	void SetShadowSize(int size);
 	void XM_CALLCONV SetShadowViewMatrix(DirectX::FXMMATRIX ShadowView);
 	void SetShadowTextureArray(ID3D11ShaderResourceView* shadow);
+
+	void SetLightDir(const DirectX::XMFLOAT3& dir);
 
 	// Forward
 
