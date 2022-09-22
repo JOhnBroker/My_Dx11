@@ -3,6 +3,15 @@
 
 #include "ConstantBuffers.hlsl"
 
+// 0: Cascaded Shadow Map
+// 1: Variance Shadow Map
+// 2: Exponential Shadow Map
+// 3: Exponential Variance Shadow Map 2-Component
+// 4: Exponential Variance Shadow Map 4-Component
+#ifndef SHADOW_TYPE
+#define SHADOW_TYPE 1
+#endif
+
 // 使用偏导，将shadow map中的texels映射到正在渲染的图元的观察空间平面上
 // 该深度将会用于比较并减少阴影走样
 // 这项技术是开销昂贵的，且假定对象是平面较多的时候才有效
@@ -25,11 +34,12 @@
 
 // 级联数目
 #ifndef CASCADE_COUNT_FLAG
-#define CASCADE_COUNT_FLAG 3
+#define CASCADE_COUNT_FLAG 4
 #endif
 
 Texture2DArray g_ShadowMap : register(t10);
-SamplerComparisonState g_SamShadow : register(s10);
+SamplerComparisonState g_SamShadowCmp : register(s10);
+SamplerState g_SamShadow : register(s11);
 
 static const float4 s_CascadeColorsMultiplier[8] =
 {
@@ -42,6 +52,47 @@ static const float4 s_CascadeColorsMultiplier[8] =
     float4(0.0f, 1.0f, 5.5f, 1.0f),
     float4(0.5f, 3.5f, 0.75f, 1.0f)
 };
+
+float Linstep(float a, float b, float v)
+{
+    // pMax - amount
+    // --------------
+    //   1.0- amount
+    return saturate((v - a) / (b - a));
+}
+
+float ReduceLightBleeding(float pMax, float amount)
+{
+    return Linstep(amount, 1.0f, pMax);
+}
+
+float2 GetEVSMExponents(float positiveExponent, float negativeExponent, int is16BitShadow)
+{
+    const float maxExponent = (is16BitShadow ? 5.54f : 42.0f);
+    float2 exponent = float2(positiveExponent, negativeExponent);
+    
+    return min(exponent, maxExponent);
+}
+
+float2 ApplyEvsmExponents(float depth, float2 exponents)
+{
+    depth = 2.0f * depth - 1.0f;
+    float2 expDepth;
+    expDepth.x = exp(exponents.x * depth);
+    expDepth.y = -exp(-exponents.y * depth);
+    return expDepth;
+}
+
+float ChebyshevUpperBound(float2 moments, float receiverDepth, float minVariance, float lightBleedingReduction)
+{
+    float variance = moments.y - (moments.x * moments.x);
+    variance = max(variance, minVariance);  // 防止0除
+    
+    float d = receiverDepth - moments.x;
+    float p_max = variance / (variance - d * d);
+    
+    return (receiverDepth <= moments.x ? 1.0f : p_max);
+}
 
 //--------------------------------------------------------------------------------------
 // 为阴影空间的texels计算对应光照空间
@@ -93,7 +144,7 @@ float CalculatePCFPercentLit(int currentCascadeIndex,
             {
                 depthCmp += rightTexelDepthDelta * (float) x + upTexelDepthDelta * (float) y;
             }
-            percentLit += g_ShadowMap.SampleCmpLevelZero(g_SamShadow,
+            percentLit += g_ShadowMap.SampleCmpLevelZero(g_SamShadowCmp,
                 float3(
                     shadowTexCoord.x + (float) x * g_TexelSize,
                     shadowTexCoord.y + (float) y * g_TexelSize,
@@ -104,6 +155,65 @@ float CalculatePCFPercentLit(int currentCascadeIndex,
         }
     }
     percentLit /= blurSize;
+    return percentLit;
+}
+
+//--------------------------------------------------------------------------------------
+// VSM：采样深度图并返回着色百分比
+//--------------------------------------------------------------------------------------
+float CalculateVarianceShadow(float4 shadowTexCoord, 
+                            float4 shadowTexCoordViewSpace, 
+                            int currentCascadeIndex)
+{
+    float percenLit = 0.0f;
+    float2 moments = 0.0f;
+    
+    float3 shadowTexCoordDDX = ddx(shadowTexCoordViewSpace).xyz;
+    float3 shadowTexCoordDDY = ddy(shadowTexCoordViewSpace).xyz;
+    shadowTexCoordDDX *= g_CascadeScale[currentCascadeIndex].xyz;
+    shadowTexCoordDDY *= g_CascadeScale[currentCascadeIndex].xyz;
+    
+    moments += g_ShadowMap.SampleGrad(g_SamShadow,
+                    float3(shadowTexCoord.xy, (float) currentCascadeIndex),
+                    shadowTexCoordDDX.xy, shadowTexCoordDDY.xy);
+    
+    percenLit = ChebyshevUpperBound(moments, shadowTexCoord.z, 0.00001f, g_LightBleedingReduction);
+    
+    return percenLit;
+}
+
+//--------------------------------------------------------------------------------------
+// ESM：采样深度图并返回着色百分比
+//--------------------------------------------------------------------------------------
+
+float CalculateExponentialShadow(float4 shadowTexCoord, 
+                                float4 shadowTexCoordViewSpace, 
+                                int currentCascadeIndex)
+{
+    float percentLit = 0.0f;
+    float occluder = 0.0f;
+    
+    float3 shadowTexCoordDDX = ddx(shadowTexCoordViewSpace).xyz;
+    float3 shadowTexCoordDDY = ddy(shadowTexCoordViewSpace).xyz;
+    shadowTexCoordDDX *= g_CascadeScale[currentCascadeIndex].xyz;
+    shadowTexCoordDDY *= g_CascadeScale[currentCascadeIndex].xyz;
+    
+    occluder *= g_ShadowMap.SampleGrad(g_SamShadow, 
+                    float3(shadowTexCoord.xy, (float) currentCascadeIndex), 
+                    shadowTexCoordDDX.xy, shadowTexCoordDDY.xy);
+    
+    percentLit = saturate(exp(occluder - g_MagicPower * shadowTexCoord.z));
+    
+    return percentLit;
+}
+
+//--------------------------------------------------------------------------------------
+// EVSM：采样深度图并返回着色百分比
+//--------------------------------------------------------------------------------------
+
+float CalculateExponentialVarianceShadow(float4 shadowTexCoord, float4 shadowTexCoordViewSpace, int currentCascadeIndex)
+{
+    float percentLit = 0.0f;
     return percentLit;
 }
 
