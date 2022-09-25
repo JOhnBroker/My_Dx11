@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //  FileName    : CascadedShadowManager.h
 //  Creator     : XJun ？
@@ -17,6 +17,15 @@
 #include <memory>
 #include <CameraController.h>
 #include <Texture2D.h>
+
+enum class ShadowType
+{
+	ShadowType_CSM,
+	ShadowType_VSM,
+	ShadowType_ESM,
+	ShadowType_EVSM2,
+	ShadowType_EVSM4
+};
 
 enum class CascadeSelection
 {
@@ -71,9 +80,16 @@ public:
 		const Camera& lightCamera,
 		const DirectX::BoundingBox& sceneBoundingBox);
 
-	ID3D11DepthStencilView* GetCascadeDepthStencilView(size_t cascadeIndex)const { return m_pCSMTextureArray->GetDepthStencil(cascadeIndex); }
+	ID3D11RenderTargetView* GetCascadeRenderTargetView(size_t cascadeIndex)const { return m_pCSMTextureArray->GetRenderTarget(cascadeIndex); }
 	ID3D11ShaderResourceView* GetCascadesOutput() const { return m_pCSMTextureArray->GetShaderResource(); }
 	ID3D11ShaderResourceView* GetCascadeOutput(size_t cascadeIndex)const { return m_pCSMTextureArray->GetShaderResource(cascadeIndex); }
+	
+	ID3D11DepthStencilView* GetDepthBufferDSV()const { return m_pCSMDepthBuffer->GetDepthStencil(); }
+	ID3D11ShaderResourceView* GetDepthBufferSRV()const { return m_pCSMDepthBuffer->GetShaderResource(); }
+
+	ID3D11RenderTargetView* GetTempTextureRTV()const { return m_pCSMTempTexture->GetRenderTarget(); }
+	ID3D11ShaderResourceView* GetTempTextureOutput()const { return m_pCSMTempTexture->GetShaderResource(); }
+	
 	const float* GetCascadePartitions()const { return m_CascadePartitionsFrustum; }
 	void GetCascadePartitions(float output[8])const { memcpy_s(output, sizeof(m_CascadePartitionsFrustum), m_CascadePartitionsFrustum, sizeof(m_CascadePartitionsFrustum)); }
 	DirectX::XMMATRIX GetShadowProjectionXM(size_t cascadeIndex)const { return XMLoadFloat4x4(&m_ShadowProj[cascadeIndex]); }
@@ -83,29 +99,39 @@ public:
 		DirectX::BoundingOrientedBox::CreateFromBoundingBox(obb, GetShadowAABB(cascadeIndex));
 		return obb;
 	}
-	D3D11_VIEWPORT GetShadowViewport()const { return m_ShadowViewport; }
+    const D3D11_VIEWPORT& GetShadowViewport() const { return m_ShadowViewport; }
 
 public:
 	// 级联相关的配置
-	int m_ShadowSize = 1024;
-	int m_CascadeLevels = 4;
-	float m_CascadePartitionsPercentage[8]
+	ShadowType	m_ShadowType = ShadowType::ShadowType_VSM;
+	int			m_ShadowSize = 1024;
+	int			m_ShadowBits = 4;
+	int			m_CascadeLevels = 4;
+	bool		m_GenerateMips = false;
+
+	float		m_CascadePartitionsPercentage[8]
 	{
 		0.04f,0.10f,0.25f,1.0f,1.0f,1.0f,1.0f,1.0f
 	};
-	int m_PCFKernelSize = 5;
-	float m_PCFDepthOffset = 0.001f;
+	int m_BlurKernelSize = 5;
+	float m_GaussianBlurSigma = 3.0f;
+	float m_BlendBetweenCascadesRange = 0.2f;
+	float m_PCFDepthBias = 0.001f;
+	float m_LightBleedingReduction = 0.8f;
+	float m_MagicPower = 160.0f;
+	float m_PosExp = 5.0f;
+	float m_NegExp = 5.0f;
+
 	bool m_DerivativeBasedOffset = false;
 	bool m_BlendBetweenCascades = true;
-	float m_BlendBetweenCascadesRange = 0.2f;
 
 	bool m_FixedSizeFrustumAABB = true;
 	bool m_MoveLightTexelSize = true;
 
-	CameraSelection m_SelectedCamera = CameraSelection::CameraSelection_Eye;
-	FitProjection m_SelectedCascadesFit = FitProjection::FitProjection_ToCascade;
-	FitNearFar m_SelectedNearFarFit = FitNearFar::FitNearFar_SceneAABB_Intersection;
-	CascadeSelection m_SelectedCascadeSelection = CascadeSelection::CascadeSelection_Map;
+	CameraSelection		m_SelectedCamera = CameraSelection::CameraSelection_Eye;
+	FitProjection		m_SelectedCascadesFit = FitProjection::FitProjection_ToCascade;
+	FitNearFar			m_SelectedNearFarFit = FitNearFar::FitNearFar_SceneAABB_Intersection;
+	CascadeSelection	m_SelectedCascadeSelection = CascadeSelection::CascadeSelection_Map;
 
 private:
 	void XM_CALLCONV ComputeNearAndFar(float& outNearPlane, float& outFarPlane,
@@ -119,7 +145,9 @@ private:
 	DirectX::BoundingBox m_ShadowProjBoundingBox[8]{};
 	D3D11_VIEWPORT m_ShadowViewport{};
 
-	std::unique_ptr<Depth2DArray> m_pCSMTextureArray;
+	std::unique_ptr<Texture2DArray> m_pCSMTextureArray;
+	std::unique_ptr<Texture2D> m_pCSMTempTexture;
+	std::unique_ptr<Depth2D> m_pCSMDepthBuffer;
 };
 
 #endif

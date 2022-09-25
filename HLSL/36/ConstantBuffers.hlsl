@@ -12,29 +12,29 @@ cbuffer CBChangesEveryInstanceDrawing : register(b0)
 cbuffer CBCascadedShadow : register(b1)
 {
     matrix  g_ShadowView;
-    float4  g_CascadeOffset[8];         // ShadowPT¾ØÕóµÄÆ½ÒÆÁ¿
-    float4  g_CascadeScale[8];          // ShadowPT¾ØÕóµÄËõ·ÅÁ¿
+    float4  g_CascadeOffset[8];         // ShadowPTçŸ©é˜µçš„å¹³ç§»é‡
+    float4  g_CascadeScale[8];          // ShadowPTçŸ©é˜µçš„ç¼©æ”¾é‡
     
     float   g_MinBorderPadding;
     float   g_MaxBorderPadding;
     float   g_MagicPower;
-    int     g_VisualizeCascades;        // 1Ê¹ÓÃ²»Í¬µÄÑÕÉ«¿ÉÊÓ»¯¼¶ÁªÒõÓ°£¬0»æÖÆ³¡¾°
+    int     g_VisualizeCascades;        // 1ä½¿ç”¨ä¸åŒçš„é¢œè‰²å¯è§†åŒ–çº§è”é˜´å½±ï¼Œ0ç»˜åˆ¶åœºæ™¯
     
     float   g_CascadeBlendArea;
     float   g_TexelSize;
-    int     g_PCFBlurForLoopStart;      // Ñ­»·³õÊ¼Öµ£¬5x5µÄPCFºË´Ó-2¿ªÊ¼
-    int     g_PCFBlurForLoopEnd;        // Ñ­»·½áÊøÖµ£¬5x5µÄPCFºËÓ¦¸ÃÉèÎª3
+    int     g_PCFBlurForLoopStart;      // å¾ªç¯åˆå§‹å€¼ï¼Œ5x5çš„PCFæ ¸ä»-2å¼€å§‹
+    int     g_PCFBlurForLoopEnd;        // å¾ªç¯ç»“æŸå€¼ï¼Œ5x5çš„PCFæ ¸åº”è¯¥è®¾ä¸º3
     
     float   g_PCFDepthBias;
     float3  g_LightDir;
     
     float   g_LightBleedingReduction;
     float   g_EvsmPosExp;
-    float   g_EVsmNegExp;
+    float   g_EvsmNegExp;
     int     g_16BitShadow;
     
-    float4  g_CascadeFrustumsEyeSpaceDepthsFloat[2];
-    float4  g_CascadeFrustumsEyeSpaceDepthsFloat4[8] = (float[8]) g_CascadeFrustumsEyeSpaceDepthsData;
+    float4  g_CascadeFrustumsEyeSpaceDepthsData[2];
+    static float g_CascadeFrustumsEyeSpaceDepths[8] = (float[8]) g_CascadeFrustumsEyeSpaceDepthsData;
     
 }
 

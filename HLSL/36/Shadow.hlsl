@@ -46,7 +46,7 @@ float2 ApplyEvsmExponents(float depth, float2 exponents)
     depth = 2.0f * depth - 1.0f;
     float2 expDepth;
     expDepth.x = exp(exponents.x * depth);
-    expDepth.y = -exp(exponents.y * depth);
+    expDepth.y = -exp(-exponents.y * depth);
     return expDepth;
 }
 
@@ -84,7 +84,7 @@ float2 VarianceShadowPS(float4 posH : SV_Position, float2 texCoord : TEXCOORD) :
 
 float ExponentialShadowPS(float4 posH : SV_Position,
                         float2 texCoord : TEXCOORD, 
-                        uniform float c) : SV_TargetP
+                        uniform float c) : SV_Target
 {
     uint2 coords = uint2(posH.xy);
     return c * g_TextureShadow[coords];
@@ -99,11 +99,12 @@ float2 EVSM2CompPS(float4 posH : SV_Position, float2 texCoord : TEXCOORD) : SV_T
     return outDepth;
 }
 
-float2 EVSM4CompPS(float4 posH : SV_Position, float2 texCoord : TEXCOORD) : SV_Target
+float4 EVSM4CompPS(float4 posH : SV_Position,
+                   float2 texCoord : TEXCOORD) : SV_Target
 {
-    float2 coords = uint2(posH.xy);
+    uint2 coords = uint2(posH.xy);
     float2 depth = ApplyEvsmExponents(g_TextureShadow[coords].x, g_EvsmExponents);
-    float4 outDepth = float4(depth, depth * depth).xyzw;
+    float4 outDepth = float4(depth, depth * depth).xzyw;
     return outDepth;
 }
 
@@ -143,7 +144,7 @@ float LogGaussianBlurPS(float4 posH : SV_Position, float2 texCoord : TEXCOORD) :
         }
     }
     sum = log(sum) + cd0;
-    sum = isinf(sum) ? 84.0f : sum; // ·ÀÖ¹Òç³ö
+    sum = isinf(sum) ? 84.0f : sum; // é˜²æ­¢æº¢å‡º
     return sum;
 }
 

@@ -27,6 +27,7 @@ public:
 	XMFLOAT4X4 m_World{}, m_View{}, m_Proj{};
 
 	UINT m_MsaaSamples = 1;
+	int m_ShadowType = 0;
 	int m_CascadeLevel = 0;
 	int m_DerivativeOffset = 0;
 	int m_CascadeBlend = 0;
@@ -82,14 +83,13 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 
 	pImpl->m_pEffectHelper->SetBinaryCacheDirectory(L"HLSL\\Cache", true);
 
-	// 为了对每个着色器编译出最优版本，需要对同一个文件编译出64种版本的着色器。
+	// 为了对每个着色器编译出最优版本，需要对同一个文件编译出80种版本的着色器。
 
-	const char* numStrs[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
 	Microsoft::WRL::ComPtr<ID3DBlob> blob;
+	const char* numStrs[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
 	D3D_SHADER_MACRO defines[] = {
+		{ "SHADOW_TYPE", "0" },
 		{ "CASCADE_COUNT_FLAG", "1" },
-		{ "USE_DERIVATIVES_FOR_DEPTH_OFFSET_FLAG", "0" },
-		{ "BLEND_BETWEEN_CASCADE_LAYERS_FLAG", "0" },
 		{ "SELECT_CASCADE_BY_INTERVAL_FLAG", "0" },
 		{ nullptr, nullptr }
 	};
@@ -100,50 +100,46 @@ bool ForwardEffect::InitAll(ID3D11Device* device)
 	HR(device->CreateInputLayout(VertexPosNormalTex::GetInputLayout(), ARRAYSIZE(VertexPosNormalTex::GetInputLayout()),
 		blob->GetBufferPointer(), blob->GetBufferSize(), pImpl->m_pVertexPosNormalTexLayout.ReleaseAndGetAddressOf()));
 
-	// 前四位代表
-	// [级联级别][偏导偏移][级联间混合][级联选择]
-	std::string psName = "0000_ForwardPS";
-	std::string passName = "0000_Forward";
+	// 前三位代表
+	// [阴影类别][级联级别][级联选择]
+	std::string psName = "000_ForwardPS";
+	std::string passName = "000_Forward";
 	EffectPassDesc passDesc;
 
 	passDesc.nameVS = "GeometryVS";
 	HR(pImpl->m_pEffectHelper->AddEffectPass("PreZ_Forward", device, &passDesc));
 
-	for (int cascadeCount = 1; cascadeCount <= 8; ++cascadeCount)
+	for (int shadowType = 0; shadowType < 5; ++shadowType)
 	{
-		psName[0] = passName[0] = '0' + cascadeCount;
-		defines[0].Definition = numStrs[cascadeCount];
-		for (int derivativeIdx = 0; derivativeIdx < 2; ++derivativeIdx)
+		psName[0] = passName[0] = '0' + shadowType;
+		defines[0].Definition = numStrs[shadowType];
+		for (int cascadeCount = 1; cascadeCount <= 8; ++cascadeCount)
 		{
-			psName[1] = passName[1] = '0' + derivativeIdx;
-			defines[1].Definition = numStrs[derivativeIdx];
-			for (int blendIdx = 0; blendIdx < 2; ++blendIdx)
+			psName[1] = passName[1] = '0' + cascadeCount;
+			defines[1].Definition = numStrs[cascadeCount];
+			for (int intervalIdx = 0; intervalIdx < 2; ++intervalIdx)
 			{
-				psName[2] = passName[2] = '0' + blendIdx;
-				defines[2].Definition = numStrs[blendIdx];
-				for (int intervalIdx = 0; intervalIdx < 2; ++intervalIdx)
-				{
-					psName[3] = passName[3] = '0' + intervalIdx;
-					defines[3].Definition = numStrs[intervalIdx];
+				psName[2] = passName[2] = '0' + intervalIdx;
+				defines[2].Definition = numStrs[intervalIdx];
 
-					HR(pImpl->m_pEffectHelper->CreateShaderFromFile(psName, L"HLSL\\36\\Rendering.hlsl", device, "ForwardPS", "ps_5_0", defines));
+				HR(pImpl->m_pEffectHelper->CreateShaderFromFile(psName, L"HLSL\\36\\Rendering.hlsl", device, "ForwardPS", "ps_5_0", defines));
 
-					passDesc.nameVS = "GeometryVS";
-					passDesc.namePS = psName;
-					HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
-				}
+				passDesc.nameVS = "GeometryVS";
+				passDesc.namePS = psName;
+				HR(pImpl->m_pEffectHelper->AddEffectPass(passName, device, &passDesc));
 			}
 		}
 	}
 
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_Sam", RenderStates::SSAnistropicWrap16x.Get());
-	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamShadow", RenderStates::SSShadowPCF.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerDiffuse", RenderStates::SSAnistropicWrap16x.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerShadowCmp", RenderStates::SSShadowPCF.Get());
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerShadow", RenderStates::SSAnistropicClamp16x.Get());
 
 	// 设置调试对象名
 #if (defined(DEBUG) || defined(_DEBUG)) && (GRAPHICS_DEBUGGER_OBJECT_NAME)
 	SetDebugObjectName(pImpl->m_pVertexPosNormalTexLayout.Get(), "ForwardEffect.VertexPosNormalTexLayout");
-#endif
 	pImpl->m_pEffectHelper->SetDebugObjectName("ForwardEffect");
+#endif
 
 	return true;
 }
@@ -181,11 +177,10 @@ void ForwardEffect::SetVisualizeLightCount(bool enable)
 
 void ForwardEffect::SetRenderDefault(bool reversedZ)
 {
-	std::string passName = "0000_Forward";
-	passName[0] = '0' + pImpl->m_CascadeLevel;
-	passName[1] = '0' + pImpl->m_DerivativeOffset;
-	passName[2] = '0' + pImpl->m_CascadeBlend;
-	passName[3] = '0' + pImpl->m_CascadeSelection;
+	std::string passName = "000_Forward";
+	passName[0] = '0' + pImpl->m_ShadowType;
+	passName[1] = '0' + pImpl->m_CascadeLevel;
+	passName[2] = '0' + pImpl->m_CascadeSelection;
 	pImpl->m_pCurrEffectPass = pImpl->m_pEffectHelper->GetEffectPass(passName);
 	pImpl->m_pCurrEffectPass->SetDepthStencilState(reversedZ ? RenderStates::DSSGreaterEqual.Get() : nullptr, 0);
 	pImpl->m_pCurrInputLayout = pImpl->m_pVertexPosNormalTexLayout.Get();
@@ -298,7 +293,7 @@ void ForwardEffect::SetMaterial(const Material& material)
 	TextureManager& tm = TextureManager::Get();
 
 	auto pStr = material.TryGet<std::string>("$Diffuse");
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_DiffuseMap", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureDiffuse", pStr ? tm.GetTexture(*pStr) : tm.GetNullTexture());
 }
 
 MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
@@ -318,6 +313,13 @@ MeshDataInput ForwardEffect::GetInputData(const MeshData& meshData)
 	input.indexCount = meshData.m_IndexCount;
 
 	return input;
+}
+
+void ForwardEffect::SetShadowType(int type)
+{
+	if (type > 4 || type < 0)
+		return;
+	pImpl->m_ShadowType = type;
 }
 
 void ForwardEffect::SetCascadeLevels(int cascadeLevels)
@@ -345,6 +347,11 @@ void  ForwardEffect::SetCascadeVisulization(bool enable)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_VisualizeCascades")->SetSInt(enable);
 }
 
+void ForwardEffect::Set16BitFormatShadow(bool enable)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_16BitShadow")->SetSInt(enable);
+}
+
 void  ForwardEffect::SetCascadeOffsets(const DirectX::XMFLOAT4 offsets[8])
 {
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeOffset")->SetRaw(offsets);
@@ -357,10 +364,7 @@ void  ForwardEffect::SetCascadeScales(const DirectX::XMFLOAT4 scales[8])
 
 void  ForwardEffect::SetCascadeFrustumsEyeSpaceDepths(const float depths[8])
 {
-	float depthsArray[8][4] = { {depths[0]},{depths[1]},{depths[2]},{depths[3]},
-		{depths[4]},{depths[5]},{depths[6]},{depths[7]} };
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeFrustumsEyeSpaceDepthsFloat")->SetRaw(depths);
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeFrustumsEyeSpaceDepthsFloat4")->SetRaw(depthsArray);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_CascadeFrustumsEyeSpaceDepthsData")->SetRaw(depths);
 }
 
 void  ForwardEffect::SetCascadeBlendArea(float blendArea)
@@ -380,15 +384,15 @@ void  ForwardEffect::SetPCFKernelSize(int size)
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxBorderPadding")->SetFloat(1.0f - padding);
 }
 
-void  ForwardEffect::SetPCFDepthOffset(float bias)
+void  ForwardEffect::SetPCFDepthBias(float bias)
 {
-	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_ShadowBias")->SetFloat(bias);
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_PCFDepthBias")->SetFloat(bias);
 }
 
 void  ForwardEffect::SetShadowSize(int size)
 {
 	pImpl->m_ShadowSize = size;
-	float padding = (pImpl->m_PCFKernelSize / 2) / (float)size;
+	float padding = 1.0f / (float)size;
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_TexelSize")->SetFloat(1.0f / size);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MinBorderPadding")->SetFloat(padding);
 	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MaxBorderPadding")->SetFloat(1.0f - padding);
@@ -402,7 +406,32 @@ void XM_CALLCONV ForwardEffect::SetShadowViewMatrix(DirectX::FXMMATRIX ShadowVie
 }
 void  ForwardEffect::SetShadowTextureArray(ID3D11ShaderResourceView* shadow)
 {
-	pImpl->m_pEffectHelper->SetShaderResourceByName("g_ShadowMap", shadow);
+	pImpl->m_pEffectHelper->SetShaderResourceByName("g_TextureShadow", shadow);
+}
+
+void ForwardEffect::SetPosExponent(float posExp)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EvsmPosExp")->SetFloat(posExp);
+}
+
+void ForwardEffect::SetNegExponent(float negExp)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_EvsmNegExp")->SetFloat(negExp);
+}
+
+void ForwardEffect::SetLightBleedingReduction(float value)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_LightBleedingReduction")->SetFloat(value);
+}
+
+void ForwardEffect::SetCascadeSampler(ID3D11SamplerState* sampler)
+{
+	pImpl->m_pEffectHelper->SetSamplerStateByName("g_SamplerShadow", sampler);
+}
+
+void ForwardEffect::SetMagicPower(float power)
+{
+	pImpl->m_pEffectHelper->GetConstantBufferVariable("g_MagicPower")->SetFloat(power);
 }
 
 void ForwardEffect::SetLightDir(const DirectX::XMFLOAT3& dir)

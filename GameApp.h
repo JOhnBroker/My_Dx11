@@ -110,6 +110,7 @@ private:
 
 	// 设置
 	int m_MsaaSamples = 1;
+	int m_DebugShadowIndex = 1;
 
 	// 阴影
 	CascadedShadowManager m_CSManager;

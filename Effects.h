@@ -166,16 +166,60 @@ public:
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
 	void SetRenderDefault();
-	void SetRenderAlphaClip(float alphaClipValue);
 
-	void SetRenderDepthOnly(bool enableAlphaClip = false);
+	void SetRenderDepthOnly();
 
 	void SetRenderDepthOnlyWithDisplacement(bool enableAlphaClip = false);
+
+	// VSM ESM VESM
+	void Set16BitFormatShadow(bool enable);
+
+	void SetBlurKernelSize(int size);
+	void SetBlurSigma(float sigma);
+
+	void GaussianBlurX(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	void GaussianBlurY(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	void LogGaussianBlur(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
 
 	// 曲面细分
 	void SetEyePos(const DirectX::XMFLOAT3& eyePos);
 	void SetHeightScale(float scale);
 	void SetTessInfo(float maxTessDistance, float minTessDistance, float minTessFactor, float maxTessFactor);
+
+	void RenderVarianceShadow(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+	void RenderExponentialShadow(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp,
+		float magic_power);
+
+	void RenderExponentialVarianceShadow(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp,
+		float posExp,
+		float* optNegExp);
 
 	void RenderDepthToTexture(ID3D11DeviceContext* deviceContext,
 		ID3D11ShaderResourceView* input,
@@ -479,24 +523,41 @@ public:
 
 	MeshDataInput GetInputData(const MeshData& meshData) override;
 
+	// 0: Cascaded Shadow Map
+	// 1: Variance Shadow Map
+	// 2: Exponmential Shadow Map
+	// 3: Exponential Variance Shadow Map 2-Component
+	// 4: Exponential Variance Shadow Map 4-Component
+	void SetShadowType(int type);
+
 	// CSM
 	void SetCascadeLevels(int cascadeLevels);
+	void SetCascadeIntervalSelectionEnabled(bool enable);
+	void SetCascadeVisulization(bool enable);
+	void Set16BitFormatShadow(bool enable);
+
 	void SetPCFDerivativesOffsetEnabled(bool enable);
 	void SetCascadeBlendEnabled(bool enable);
-	void SetCascadeIntervalSelectionEnabled(bool enable);
 
-	void SetCascadeVisulization(bool enable);
 	void SetCascadeOffsets(const DirectX::XMFLOAT4 offsets[8]);
 	void SetCascadeScales(const DirectX::XMFLOAT4 scales[8]);
 	void SetCascadeFrustumsEyeSpaceDepths(const float depths[8]);
 	void SetCascadeBlendArea(float blendArea);
-
-	void SetPCFKernelSize(int size);
-	void SetPCFDepthOffset(float bias);
-
 	void SetShadowSize(int size);
 	void XM_CALLCONV SetShadowViewMatrix(DirectX::FXMMATRIX ShadowView);
 	void SetShadowTextureArray(ID3D11ShaderResourceView* shadow);
+
+	void SetPosExponent(float posExp);
+	void SetNegExponent(float negExp);
+	void SetLightBleedingReduction(float value);
+	void SetCascadeSampler(ID3D11SamplerState* sampler);
+
+	// CSM
+	void SetPCFKernelSize(int size);
+	void SetPCFDepthBias(float bias);
+
+	//VSM
+	void SetMagicPower(float power);
 
 	void SetLightDir(const DirectX::XMFLOAT3& dir);
 
