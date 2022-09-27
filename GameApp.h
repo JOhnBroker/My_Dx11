@@ -99,6 +99,7 @@ private:
 	void RenderShadowForAllCascades();
 	void RenderForward();
 	void RenderSkybox();
+	void PostProcess();
 	//void DrawScene(bool drawCenterSphere, const Camera& camera, ID3D11RenderTargetView* pRTV, ID3D11DepthStencilView* pDSV);
 
 private:
@@ -107,10 +108,15 @@ private:
 	GpuTimer m_GpuTimer_Shadow;
 	GpuTimer m_GpuTimer_Lighting;
 	GpuTimer m_GpuTimer_Skybox;
+	GpuTimer m_GpuTimer_PostProcess;
 
 	// 设置
 	int m_MsaaSamples = 1;
 	int m_DebugShadowIndex = 1;
+
+	// FXAA
+	bool m_bEnableFXAA = true;
+	bool m_bDebugFXAA = false;
 
 	// 阴影
 	CascadedShadowManager m_CSManager;
@@ -120,6 +126,7 @@ private:
 	TextureManager m_TextureManager;
 	ModelManager m_ModelManager;
 	std::unique_ptr<Texture2DMS> m_pLitBuffer;
+	std::unique_ptr<Texture2D> m_pTempBuffer;
 	std::unique_ptr<Depth2DMS> m_pDepthBuffer;
 	std::unique_ptr<Texture2D> m_pDebugShadowBuffer;
 
@@ -132,6 +139,7 @@ private:
 	ForwardEffect m_ForwardEffect;
 	ShadowEffect m_ShadowEffect;
 	SkyBoxEffect m_SkyboxEffect;
+	FXAAEffect m_FXAAEffect;
 
 	// 摄像机
 	std::shared_ptr<Camera> m_pViewerCamera;

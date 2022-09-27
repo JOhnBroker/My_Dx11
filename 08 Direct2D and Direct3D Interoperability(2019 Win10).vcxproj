@@ -171,6 +171,7 @@
     <ClCompile Include="DXTrace.cpp" />
     <ClCompile Include="EffectHelper.cpp" />
     <ClCompile Include="ForwardEffect.cpp" />
+    <ClCompile Include="FXAAEffect.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="CpuTimer.cpp" />
     <ClCompile Include="GameObject.cpp" />
@@ -259,6 +260,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HLSL\36\Shadow.hlsl">
+      <FileType>Document</FileType>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSL\36\FXAA.hlsl">
       <FileType>Document</FileType>
     </ClInclude>
   </ItemGroup>

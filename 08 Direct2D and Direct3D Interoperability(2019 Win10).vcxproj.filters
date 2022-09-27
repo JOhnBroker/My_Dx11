@@ -141,6 +141,9 @@
     <ClCompile Include="CascadedShadowManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="FXAAEffect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mouse.h">
@@ -271,6 +274,9 @@
     </ClInclude>
     <ClInclude Include="CascadedShadowManager.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HLSL\36\FXAA.hlsl">
+      <Filter>着色器</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

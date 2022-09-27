@@ -83,13 +83,13 @@ public:
 	ID3D11RenderTargetView* GetCascadeRenderTargetView(size_t cascadeIndex)const { return m_pCSMTextureArray->GetRenderTarget(cascadeIndex); }
 	ID3D11ShaderResourceView* GetCascadesOutput() const { return m_pCSMTextureArray->GetShaderResource(); }
 	ID3D11ShaderResourceView* GetCascadeOutput(size_t cascadeIndex)const { return m_pCSMTextureArray->GetShaderResource(cascadeIndex); }
-	
+
 	ID3D11DepthStencilView* GetDepthBufferDSV()const { return m_pCSMDepthBuffer->GetDepthStencil(); }
 	ID3D11ShaderResourceView* GetDepthBufferSRV()const { return m_pCSMDepthBuffer->GetShaderResource(); }
 
 	ID3D11RenderTargetView* GetTempTextureRTV()const { return m_pCSMTempTexture->GetRenderTarget(); }
 	ID3D11ShaderResourceView* GetTempTextureOutput()const { return m_pCSMTempTexture->GetShaderResource(); }
-	
+
 	const float* GetCascadePartitions()const { return m_CascadePartitionsFrustum; }
 	void GetCascadePartitions(float output[8])const { memcpy_s(output, sizeof(m_CascadePartitionsFrustum), m_CascadePartitionsFrustum, sizeof(m_CascadePartitionsFrustum)); }
 	DirectX::XMMATRIX GetShadowProjectionXM(size_t cascadeIndex)const { return XMLoadFloat4x4(&m_ShadowProj[cascadeIndex]); }
@@ -99,11 +99,11 @@ public:
 		DirectX::BoundingOrientedBox::CreateFromBoundingBox(obb, GetShadowAABB(cascadeIndex));
 		return obb;
 	}
-    const D3D11_VIEWPORT& GetShadowViewport() const { return m_ShadowViewport; }
+	const D3D11_VIEWPORT& GetShadowViewport() const { return m_ShadowViewport; }
 
 public:
 	// 级联相关的配置
-	ShadowType	m_ShadowType = ShadowType::ShadowType_VSM;
+	ShadowType	m_ShadowType = ShadowType::ShadowType_CSM;
 	int			m_ShadowSize = 1024;
 	int			m_ShadowBits = 4;
 	int			m_CascadeLevels = 4;

@@ -650,4 +650,35 @@ private:
 };
 
 
+class FXAAEffect
+{
+public:
+	FXAAEffect();
+	~FXAAEffect();
+
+	FXAAEffect(FXAAEffect&& moveForm) noexcept;
+	FXAAEffect& operator=(FXAAEffect&& moveForm) noexcept;
+
+	static FXAAEffect& Get();
+
+	bool InitAll(ID3D11Device* device);
+
+	void SetQuality(int major, int minor);
+	void SetQualitySubPix(float val);
+	void SetQualityEdgeThreshold(float threshold);
+	void SetQualityEdgeThresholdMin(float thresholdMin);
+	void EnableDebug(bool enable);
+
+	void RenderFXAA(
+		ID3D11DeviceContext* deviceContext,
+		ID3D11ShaderResourceView* input,
+		ID3D11RenderTargetView* output,
+		const D3D11_VIEWPORT& vp);
+
+private:
+	class Impl;
+	std::unique_ptr<Impl> pImpl;
+
+};
+
 #endif
